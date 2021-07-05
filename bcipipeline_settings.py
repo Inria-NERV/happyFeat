@@ -19,7 +19,8 @@ optionsTemplatesDir = [None,
 
 global templateScenFilenames
 templateScenFilenames = ["sc1-monitor-acq.xml",
-                         "sc2-extract-select-train.xml",
+                         "sc2-extract-select.xml",
+                         "sc2-train.xml",
                          "sc3-online.xml",
                          "mi-stimulations.lua"]
 

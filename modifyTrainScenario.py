@@ -11,26 +11,26 @@
 # --
 
 import xml.etree.ElementTree as ET
-from xml.dom import minidom
 import os
-from shutil import copyfile
 # import bcipipeline_settings as settings
 import tkinter as tk
 import matplotlib
+matplotlib.use("TkAgg")
 from matplotlib import pyplot as plt
 import numpy as np
 
 
 class PromptGui:
 
-    def __init__(self):
+    def __init__(self, root):
 
-        self.window = tk.Tk()
+        self.window = root
+
         self.title = tk.Label(text="Good news, BCI user! Your data is ready."
                                    "\nPlease select a set of features."
                                    "\nUse \";\" for multiple options, and \":\" for range (eg frequency band)",
                               height=6)
-        self.button = tk.Button(self.window, text="All good", command=self.modifyTrainScenario)
+        self.button = tk.Button(text="All good", command=self.modifyTrainScenario)
 
         self.parameterGuiLabelList = []
         self.parameterGuiEntryList = []
@@ -41,8 +41,8 @@ class PromptGui:
         self.title.grid(row=self.rowNb, column=1)
         self.rowNb += 1
         self.displayParameters()
-        self.button.grid(row=self.rowNb, column=1)
-        self.window.mainloop()
+        self.button.grid(row=self.rowNb, column=1, padx=2, pady=2)
+        # self.window.mainloop()
 
     def displayParameters(self):
         ###
@@ -92,11 +92,11 @@ class PromptGui:
 
         text = "Thanks for using this script!\nYour train scenario is ready."
         text += "\n\nDon't forget to double check...\nYou can now close this window."
-        label = tk.Label(text=text, height=2)
-        label.pack()
+        label = tk.Label(text=text, height=8)
+        label.grid(row=1)
 
         self.button = tk.Button(self.window, text="Close", command=self.closeWindow)
-        self.button.pack()
+        self.button.grid(row=2, padx=2, pady=2)
 
     def closeWindow(self):
         self.window.destroy()
@@ -135,8 +135,36 @@ def modifyScenario(parameterList):
 
     tree = ET.parse(xmlPath)
     root = tree.getroot()
-    for child in root:
-        print(child.tag, child.text)
+
+    # PROTOTYPE : Find "Frequency Band Selector" / "Channel Selector"
+    # and modify them
+    for boxes in root.findall('Boxes'):
+        for box in boxes.findall('Box'):
+            for name in box.findall('Name'):
+
+                if name.text == "Frequency Band Selector":
+                    # TODO : SELECTION could be done on box identifier instead
+                    print("- BOX ", name.text)
+                    for setting in box.find('Settings').findall('Setting'):
+                        if setting.find('Name').text == "Frequencies to select":
+                            value = setting.find('Value')
+                            print("-- ORIGINAL VALUE ", value.text)
+                            value.text = frequencies
+                            value.set('updated', 'yes')
+                            print("--- UPDATED VALUE ", value.text)
+
+                elif name.text == "Channel Selector":
+                    # TODO : SELECTION could be done on box identifier instead
+                    print("- BOX ", name.text)
+                    for setting in box.find('Settings').findall('Setting'):
+                        if setting.find('Name').text == "Channel List":
+                            value = setting.find('Value')
+                            print("-- ORIGINAL VALUE ", value.text)
+                            value.text = electrodes
+                            value.set('updated', 'yes')
+                            print("--- UPDATED VALUE ", value.text)
+
+    tree.write(xmlPath)
 
 
 def main():
@@ -147,15 +175,18 @@ def main():
     # ...
     # ...
     # DUMMY HEATMAP FOR NOW
-    # a = np.random.random((128, 128))
-    # plt.ion()
-    # plt.show()
-    # plt.imshow(a, cmap='hot', interpolation='nearest')
-    # plt.pause(0.001)
+
+    root = tk.Tk()
+
+    a = np.random.random((128, 128))
+    plt.imshow(a, cmap='hot', interpolation='nearest')
+    plt.pause(0.001)
 
     # OPEN GUI AND ASK USER TO SELECT FEATURES
-    gui = PromptGui()
+    gui = PromptGui(root)
     gui.run()
+
+    plt.show()
 
 
 if __name__ == "__main__":
