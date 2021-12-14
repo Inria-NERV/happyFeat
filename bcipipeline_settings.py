@@ -30,7 +30,7 @@ global scenarioSettings
 # 2 : Power Spectrum based classification
 # 3 : Connectivity
 scenarioSettings = [None,
-                    [("setting1", 1), ("setting2", 2), ("setting3", 3)],
+                    [("Trial Nb", 20), ("Stimulation 1", "LEFT"), ("Stimulation 2", "RIGHT")],
                     [("setting1", 1), ("setting2", 2), ("setting3", 3)]]
 
 
