@@ -21,8 +21,8 @@ from modifyOpenvibeScen import *
 
 class Features:
     Rsigned = []
-    electrodes = []
-    elec_2 = []
+    electrodes_orig = []
+    electrodes_final = []
     power_right = []
     power_left = []
     freqs_left = []
@@ -154,26 +154,26 @@ class Dialog(QDialog):
                                                                                               winLen, winOverlap)
 
         # Statistical Analysis
-        electrodes = channel_generator(nbElectrodes, 'TP9', 'TP10')
+        electrodes_orig = channel_generator(nbElectrodes, 'TP9', 'TP10')
         freqs_left = np.arange(0, n_bins)
         Rsigned = Compute_Rsquare_Map_Welch(power_right[:, :, :250], power_left[:, :, :250])
         print("INITIAL RSQUARE")
         for i in range(10):
             print(Rsigned[i, :5])
-        Rsigned_2, electrodes, power_left_2, power_right_2 = Reorder_Rsquare(Rsigned, electrodes, power_left, power_right)
+        Rsigned_2, electrodes_final, power_left_2, power_right_2 = Reorder_Rsquare(Rsigned, electrodes_orig, power_left, power_right)
 
         print("FINAL RSQUARE")
         for i in range(10):
             print(Rsigned_2[i, :5])
 
-        self.Features.elec_2 = electrodes
+        self.Features.electrodes_orig = electrodes_orig
         self.Features.power_right = power_right_2
         self.Features.power_left = power_left_2
         self.Features.time_left = time_left
         self.Features.time_right = time_right
         self.Features.time_length = time_length
         self.Features.freqs_left = freqs_left
-        self.Features.electrodes = electrodes
+        self.Features.electrodes_final = electrodes_final
         self.Features.Rsigned = Rsigned_2
 
         # CHANGING WINDOW TO "PLOT" LAYOUT
@@ -223,33 +223,33 @@ class Dialog(QDialog):
     def btnR2(self, fres, fmin):
         plot_stats(self.Features.Rsigned,
                    self.Features.freqs_left,
-                   self.Features.elec_2,
+                   self.Features.electrodes_final,
                    fres, fmin, int(self.userFmax.text()))
 
     def btnTimeFreq(self, fres, fmin):
         print("TimeFreq for electrode: " + self.electrodePsd.text())
         qt_plot_tf(self.Features.time_right, self.Features.time_left,
                    self.Features.time_length, self.Features.freqs_left,
-                   self.Features.electrodes, self.electrodePsd.text(), fres, fmin, int(self.userFmax.text()))
+                   self.Features.electrodes_final, self.electrodePsd.text(), fres, fmin, int(self.userFmax.text()))
 
     def btnPsd(self, fres, fmin):
         print("PSD for electrode: " + self.electrodePsd.text())
         qt_plot_psd(self.Features.power_right, self.Features.power_left,
-                    self.Features.freqs_left, self.Features.elec_2,
+                    self.Features.freqs_left, self.Features.electrodes_final,
                     self.electrodePsd.text(),
                     fres, fmin, int(self.userFmax.text()))
 
     def btnpsdR2(self, fres, fmin):
         qt_plot_psd_r2(self.Features.Rsigned,
                        self.Features.power_right, self.Features.power_left,
-                       self.Features.freqs_left, self.Features.elec_2,
+                       self.Features.freqs_left, self.Features.electrodes_final,
                        self.electrodePsd.text(),
                        fres, fmin, int(self.userFmax.text()))
 
 
     def btnTopo(self, fres, fs):
         print("Freq Topo: " + self.freqTopo.text())
-        qt_plot_topo(self.Features.Rsigned, self.Features.electrodes,
+        qt_plot_topo(self.Features.Rsigned, self.Features.electrodes_final,
                      int(self.freqTopo.text()), fres, fs)
 
     def btnSelectFeatures(self):

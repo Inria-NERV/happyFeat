@@ -520,39 +520,26 @@ def plot_Rsquare_calcul_welch(Rsquare,channel_array,freq,smoothing,fres,each_poi
 
 
 def Reorder_Rsquare(Rsquare, electrodes_orig, powerLeft, powerRight):
-    if (len(electrodes_orig)>=64):
+    if len(electrodes_orig) >= 64:
         electrodes_target = ['FP1','AF7','AF3','F7','F5','F3','F1','FT9','FT7','FC5','FC3','FC1','T7','C5','C3','C1','TP9','TP7','CP5','CP3','CP1','P7','P5','P3','P1','PO9','PO7','PO3','O1','AFz','Fz','FCz','Cz','CPz','Pz','POz','Oz','FP2','AF8','AF4','F8','F6','F4','F2','FT10','FT8','FC6','FC4','FC2','T8','C6','C4','C2','TP10','TP8','CP6','CP4','CP2','P8','P6','P4','P2','PO10','PO8','PO4','O2']
     else:
         electrodes_target = ['Fp1','F7','F3','FC5','FC1','T7','C3','CP5','CP1','P7','P3','PO9','O1','AFz','Fz','FCz','Cz','Pz','Oz','Fp2','F8','F4','FC6','FC2','T8','C4','CP6','CP2','P8','P4','PO10','O2']
     index_elec = []
-    electrod_final=[]
     for i in range(len(electrodes_orig)):
         for k in range(len(electrodes_target)):
-            if (electrodes_orig[i]==electrodes_target[k]):
+            if electrodes_orig[i] == electrodes_target[k]:
                 index_elec.append(k)
                 break
-
-    print("INTERMEDIATE RSQUARE")
-    for i in range(10):
-        print(Rsquare[i, :5])
 
     Rsquare_final = np.copy(Rsquare)
     powerLeft_final = np.copy(powerLeft)
     powerRight_final = np.copy(powerRight)
 
-    print("INTERMEDIATE 2 RSQUARE")
-    for i in range(10):
-        print(Rsquare[i, :5])
-
-    electrode_test = []
     for l in range(len(index_elec)):
-        print("index "+str(l)+" replaced by "+str(index_elec[l]))
-        electrode_test.append(index_elec[l])
-        powerLeft_final[:,l,:] = powerLeft[:,index_elec[l], :]
+        # print("index "+str(l)+" replaced by "+str(index_elec[l]))
+        powerLeft_final[:, l, :] = powerLeft[:, index_elec[l], :]
         powerRight_final[:, l, :] = powerRight[:, index_elec[l], :]
-        Rsquare_final[l] = Rsquare[index_elec[l],:]
-
-    print(electrode_test)
+        Rsquare_final[l] = Rsquare[index_elec[l], :]
 
     return Rsquare_final, electrodes_target, powerLeft_final, powerRight_final
 
