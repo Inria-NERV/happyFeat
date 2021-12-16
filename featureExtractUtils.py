@@ -9,7 +9,7 @@ def channel_generator(number_of_channel, Ground, Ref):
         for i in range(len(electrodes)):
             if (electrodes[i] == Ground):
                 index_gnd = i
-            if (electrodes[i] == Ground):
+            if (electrodes[i] == Ref):
                 index_ref = i
         electrodes[index_gnd] = 'AFz'
         electrodes[index_ref] = 'FCz'
@@ -19,7 +19,7 @@ def channel_generator(number_of_channel, Ground, Ref):
         for i in range(len(electrodes)):
             if (electrodes[i] == Ground):
                 index_gnd = i
-            if (electrodes[i] == Ground):
+            if (electrodes[i] == Ref):
                 index_ref = i
         electrodes[index_gnd] = 'AFz'
         electrodes[index_ref] = 'FCz'

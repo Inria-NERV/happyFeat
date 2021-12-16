@@ -27,7 +27,7 @@
 					<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
 					<Name>Frequencies to select</Name>
 					<DefaultValue>8:12;16:24</DefaultValue>
-					<Value>15:20</Value>
+					<Value>45</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
@@ -79,7 +79,7 @@
 					<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
 					<Name>Frequencies to select</Name>
 					<DefaultValue>8:12;16:24</DefaultValue>
-					<Value>15:20</Value>
+					<Value>45</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
@@ -1391,7 +1391,7 @@
 					<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
 					<Name>Channel List</Name>
 					<DefaultValue>-</DefaultValue>
-					<Value>C4;C5</Value>
+					<Value>FCz;T8</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>

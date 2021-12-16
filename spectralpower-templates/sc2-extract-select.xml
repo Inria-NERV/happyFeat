@@ -120,10 +120,6 @@
 					<Value>752</Value>
 				</Attribute>
 				<Attribute>
-					<Identifier>(0x341d3912, 0x1478de86)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-				<Attribute>
 					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
 					<Value>(0x6b60e2b2, 0xf4839b7d)</Value>
 				</Attribute>
@@ -203,10 +199,6 @@
 				<Attribute>
 					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
 					<Value>160</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x341d3912, 0x1478de86)</Identifier>
-					<Value>1</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
@@ -439,7 +431,7 @@
 					<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
 					<Name>Command 1</Name>
 					<DefaultValue></DefaultValue>
-					<Value>start python.exe C:\\Users\\arthur.desbois\\Documents\\dev\\openvibeScripting\\openvibe-automation\\test.py</Value>
+					<Value>start python.exe C:\\Users\\arthur.desbois\\Documents\\dev\\openvibeScripting\\openvibe-automation\\featureExtractionInterface.py</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -637,7 +629,7 @@
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Epoch intervals (in sec)</Name>
 					<DefaultValue>0.5</DefaultValue>
-					<Value>0.028</Value>
+					<Value>0.372</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
@@ -1031,7 +1023,7 @@
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Epoch intervals (in sec)</Name>
 					<DefaultValue>0.5</DefaultValue>
-					<Value>0.028</Value>
+					<Value>0.372</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
@@ -1085,7 +1077,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue></DefaultValue>
-					<Value>C:/Users/arthur.desbois/Documents/dev/MassimoExp/oscillator.ov</Value>
+					<Value>C:/Users/arthur.desbois/Documents/dev/MassimoExp/Train_2_sub_01.ov</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
