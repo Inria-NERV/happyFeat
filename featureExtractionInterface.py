@@ -75,7 +75,6 @@ class Dialog(QDialog):
         self.formLayout.addRow('Frequency to use for Topography (Hz)', self.freqTopo)
 
         self.btn_load_files = QPushButton("Load spectrum files")
-        self.btn_extract = QPushButton("Extract Features")
         self.btn_r2map = QPushButton("Plot R2Map")
         self.btn_timefreq = QPushButton("Plot Time/Freq Analysis")
         self.btn_psd = QPushButton("Plot PSD for Spec. Freq.")
@@ -85,34 +84,38 @@ class Dialog(QDialog):
         # FEATURE SELECTION PART
         self.label2 = QLabel('----- SELECT FEATURES FOR TRAINING -----')
         self.label2.setAlignment(QtCore.Qt.AlignCenter)
+        textFeatureSelect = "Enter pair : ELECTRODE;FREQUENCY (separated with \";\")"
+        textFeatureSelect = str(textFeatureSelect + "\n(Use \":\" for frequency range)")
+        textFeatureSelect = str(textFeatureSelect + "\n  Ex: FCz;14:22")
+        textFeatureSelect = str(textFeatureSelect + "\n  Ex: C4;22")
+        self.label3 = QLabel(textFeatureSelect)
 
         self.formLayoutOutput = QFormLayout()
-        # Param Output 1 : Selected Channels / Electrodes
-        self.selectedChans = QLineEdit()
-        self.selectedChans.setText('')
-        chanText = 'ELECTRODES TO SELECT\n(separated with \";\")'
-        chanText = str(chanText+"\n  ex: FC1;FC2;CP4")
-        self.formLayoutOutput.addRow(chanText, self.selectedChans)
-        # Param Output 2 : Selected Frequencies
-        self.selectedFreqs = QLineEdit()
-        self.selectedFreqs.setText('')
-        freqText = 'FREQUENCIES TO SELECT\n(freqs or ranges separated with \";\")'
-        freqText = str(freqText+"\n  ex: 14:22;24;26:32")
-        self.formLayoutOutput.addRow(freqText, self.selectedFreqs)
+        self.selectedFeats = []
+        # Param Output 1 : First selected pair of Channels / Electrodes
+        # We'll add more with a button
+        self.selectedFeats.append(QLineEdit())
+        self.selectedFeats[0].setText('')
+        pairText = "Selected Feats Pair"
+        self.formLayoutOutput.addRow(pairText, self.selectedFeats[0])
 
+        self.btn_addPair = QPushButton("Add Feature")
+        self.btn_removePair = QPushButton("Remove Last Feat")
         self.btn_selectFeatures = QPushButton("Select features & generate scenarios")
 
         self.dlgLayout.addWidget(self.label)
         self.dlgLayout.addLayout(self.formLayout)
         self.dlgLayout.addWidget(self.btn_load_files)
-        self.dlgLayout.addWidget(self.btn_extract)
         self.dlgLayout.addWidget(self.btn_r2map)
         self.dlgLayout.addWidget(self.btn_timefreq)
         self.dlgLayout.addWidget(self.btn_psd)
         self.dlgLayout.addWidget(self.btn_topo)
         self.dlgLayout.addWidget(self.btn_psd_r2)
         self.dlgLayout.addWidget(self.label2)
+        self.dlgLayout.addWidget(self.label3)
         self.dlgLayout.addLayout(self.formLayoutOutput)
+        self.dlgLayout.addWidget(self.btn_addPair)
+        self.dlgLayout.addWidget(self.btn_removePair)
         self.dlgLayout.addWidget(self.btn_selectFeatures)
 
         self.setLayout(self.dlgLayout)
@@ -136,7 +139,8 @@ class Dialog(QDialog):
         else:
             self.dataNp1 = data1.to_numpy()
             self.dataNp2 = data2.to_numpy()
-            self.extractWindow()
+            self.extract_features()
+            self.plotWindow()
 
     def extract_features(self):
         time = self.PipelineParams.trialLengthSec
@@ -156,15 +160,9 @@ class Dialog(QDialog):
         # Statistical Analysis
         electrodes_orig = channel_generator(nbElectrodes, 'TP9', 'TP10')
         freqs_left = np.arange(0, n_bins)
-        Rsigned = Compute_Rsquare_Map_Welch(power_right[:, :, :250], power_left[:, :, :250])
-        print("INITIAL RSQUARE")
-        for i in range(10):
-            print(Rsigned[i, :5])
+        Rsigned = Compute_Rsquare_Map_Welch(power_right[:, :, :(n_bins-1)], power_left[:, :, :(n_bins-1)])
+        # Rsigned = Compute_Rsquare_Map_Welch(power_right[:, :, :(fs/2)], power_left[:, :, :(fs/2)])
         Rsigned_2, electrodes_final, power_left_2, power_right_2 = Reorder_Rsquare(Rsigned, electrodes_orig, power_left, power_right)
-
-        print("FINAL RSQUARE")
-        for i in range(10):
-            print(Rsigned_2[i, :5])
 
         self.Features.electrodes_orig = electrodes_orig
         self.Features.power_right = power_right_2
@@ -176,30 +174,22 @@ class Dialog(QDialog):
         self.Features.electrodes_final = electrodes_final
         self.Features.Rsigned = Rsigned_2
 
-        # CHANGING WINDOW TO "PLOT" LAYOUT
-        self.plotWindow()
 
     def initialWindow(self):
         self.btn_load_files.clicked.connect(lambda: self.load_files(self.path1.text(), self.path2.text()))
-        self.btn_extract.setEnabled(False)
         self.btn_r2map.setEnabled(False)
         self.btn_timefreq.setEnabled(False)
         self.btn_psd.setEnabled(False)
         self.btn_topo.setEnabled(False)
         self.btn_psd_r2.setEnabled(False)
+        self.btn_addPair.setEnabled(False)
+        self.btn_removePair.setEnabled(False)
         self.btn_selectFeatures.setEnabled(False)
-        self.show()
-
-    def extractWindow(self):
-        self.btn_extract.clicked.connect(lambda: self.extract_features())
-        self.btn_load_files.setEnabled(False)
-        self.btn_extract.setEnabled(True)
+        self.selectedFeats[0].setEnabled(False)
         self.show()
 
     def plotWindow(self):
 
-        electrode = self.electrodePsd.text()
-        frequency = int(self.freqTopo.text())
         fres = 1
         fmin = 0
         fs = self.PipelineParams.fSampling
@@ -208,13 +198,19 @@ class Dialog(QDialog):
         self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq(fres, fmin))
         self.btn_psd.clicked.connect(lambda: self.btnPsd(fres, fmin))
         self.btn_topo.clicked.connect(lambda: self.btnTopo(fres, fs))
+        self.btn_addPair.clicked.connect(lambda: self.btnAddPair())
+        self.btn_removePair.clicked.connect(lambda: self.btnRemovePair())
         self.btn_selectFeatures.clicked.connect(lambda: self.btnSelectFeatures())
         self.btn_psd_r2.clicked.connect(lambda: self.btnpsdR2(fres, fmin))
 
+        self.btn_load_files.setEnabled(False)
         self.btn_r2map.setEnabled(True)
         self.btn_timefreq.setEnabled(True)
         self.btn_psd.setEnabled(True)
         self.btn_topo.setEnabled(True)
+        self.btn_addPair.setEnabled(True)
+        self.btn_removePair.setEnabled(True)
+        self.selectedFeats[0].setEnabled(True)
         self.btn_selectFeatures.setEnabled(True)
         self.btn_psd_r2.setEnabled(True)
 
@@ -233,7 +229,6 @@ class Dialog(QDialog):
                    self.Features.electrodes_final, self.electrodePsd.text(), fres, fmin, int(self.userFmax.text()))
 
     def btnPsd(self, fres, fmin):
-        print("PSD for electrode: " + self.electrodePsd.text())
         qt_plot_psd(self.Features.power_right, self.Features.power_left,
                     self.Features.freqs_left, self.Features.electrodes_final,
                     self.electrodePsd.text(),
@@ -246,13 +241,33 @@ class Dialog(QDialog):
                        self.electrodePsd.text(),
                        fres, fmin, int(self.userFmax.text()))
 
-
     def btnTopo(self, fres, fs):
         print("Freq Topo: " + self.freqTopo.text())
         qt_plot_topo(self.Features.Rsigned, self.Features.electrodes_final,
                      int(self.freqTopo.text()), fres, fs)
 
+    def btnAddPair(self):
+        self.selectedFeats.append(QLineEdit())
+        self.selectedFeats[-1].setText('')
+        self.formLayoutOutput.addRow("Selected Feats Pair", self.selectedFeats[-1])
+
+    def btnRemovePair(self):
+        if len(self.selectedFeats) > 1:
+            result = self.formLayoutOutput.getWidgetPosition(self.selectedFeats[-1])
+            self.formLayoutOutput.removeRow(result[0])
+            self.selectedFeats.pop()
+
     def btnSelectFeatures(self):
+        selectedFeats = []
+        for idx, feat in enumerate(self.selectedFeats):
+            if feat.text() == "":
+                msg = QMessageBox()
+                msg.setText("Pair "+str(idx+1)+" is empty...")
+                msg.exec_()
+                return
+            selectedFeats.append(feat.text().split(";"))
+            print(feat)
+
         # TODO : get correct scenario filename
         scenName = 'sc2-train.xml'
         sep = "/"
@@ -260,19 +275,16 @@ class Dialog(QDialog):
             sep = "\\"
         fullScenPath = os.getcwd() + sep + "generated" + sep + scenName
 
-        # TODO : Reformat selectedElectrodes & selectedFrequencies to fit...
-        selectedElectrodes = self.selectedChans.text()
-        selectedFrequencies = self.selectedFreqs.text()
-        parameterList = [["Electrodes", selectedElectrodes], ["Frequencies", selectedFrequencies]]
+        # TODO : create new function "modifyscenario", creating "branches" of pipelines
+        # modifyScenario(parameterList, fullScenPath)
 
-        modifyScenario(parameterList, fullScenPath)
+        textGoodbye = "Your training scenario using\n\n"
+        for i in range(len(selectedFeats)):
+            textGoodbye = str(textGoodbye +"  Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1])+ " Hz\n")
+        textGoodbye = str(textGoodbye + "\n... has been generated under:\n\n" + str(fullScenPath))
 
         msg = QMessageBox()
-        msg.setText("Your training scenario using\n\n"
-                    + "frequencies " + selectedFrequencies + " Hz\n"
-                    + "and channels " + selectedElectrodes + "\n\n"
-                    + "has been generated under:\n\n"
-                    + str(fullScenPath))
+        msg.setText(textGoodbye)
         msg.exec_()
         exit(0)
 
@@ -282,34 +294,38 @@ def plot_stats(Rsigned, freqs_left, electrodes, fres, fmin, fmax):
     plot_Rsquare_calcul_welch(Rsigned,np.array(electrodes)[:], freqs_left, smoothing, fres, 10, fmin, fmax)
     plt.show()
 
-def qt_plot_psd_r2(Rsigned, power_right, power_left, freqs_left, electrodes, electrode, fres, fmin, fmax):
+def qt_plot_psd_r2(Rsigned, power_right, power_left, freqs_left, electrodesList, electrodeToDisp, fres, fmin, fmax):
     electrodeExists = False
     electrodeIdx = 0
-    for i in range(len(electrodes)):
-        if electrodes[i] == electrode:
-            electrodeIdx = i
+    for idx, elec in enumerate(electrodesList):
+        if elec == electrodeToDisp:
+            electrodeIdx = idx
             electrodeExists = True
+            break
+
     if not electrodeExists:
         msg = QMessageBox()
         msg.setText("No Electrode with this name found")
         msg.exec_()
     else:
-        plot_psd2(Rsigned, power_right, power_left, freqs_left, electrodeIdx, electrodes, 10, fmin, fmax, fres)
+        plot_psd2(Rsigned, power_right, power_left, freqs_left, electrodeIdx, electrodesList, 10, fmin, fmax, fres)
         plt.show()
 
-def qt_plot_psd(power_right, power_left, freqs_left, electrodes, electrode, fres, fmin, fmax):
+def qt_plot_psd(power_right, power_left, freqs_left, electrodesList, electrodeToDisp, fres, fmin, fmax):
     electrodeExists = False
     electrodeIdx = 0
-    for i in range(len(electrodes)):
-        if electrodes[i] == electrode:
-            electrodeIdx = i
+    for idx, elec in enumerate(electrodesList):
+        if elec == electrodeToDisp:
+            electrodeIdx = idx
             electrodeExists = True
+            break
+
     if not electrodeExists:
         msg = QMessageBox()
         msg.setText("No Electrode with this name found")
         msg.exec_()
     else:
-        plot_psd(power_right, power_left, freqs_left, electrodeIdx, electrodes, 10, fmin, fmax, fres)
+        plot_psd(power_right, power_left, freqs_left, electrodeIdx, electrodesList, 10, fmin, fmax, fres)
         plt.show()
 
 
@@ -318,14 +334,14 @@ def qt_plot_topo(Rsigned, electrodes, frequency, fres, fs):
     plt.show()
 
 
-def qt_plot_tf(timefreq_right, timefreq_left, time_left, freqs_left, electrodes, electrode, fres, fmin, fmax):
-    smoothing  = False
+def qt_plot_tf(timefreq_right, timefreq_left, time_left, freqs_left, electrodesList, electrodeToDisp, fres, fmin, fmax):
     electrodeExists = False
     electrodeIdx = 0
-    for i in range(len(electrodes)):
-        if electrodes[i] == electrode:
-            electrodeIdx = i
+    for idx, elec in enumerate(electrodesList):
+        if elec == electrodeToDisp:
+            electrodeIdx = idx
             electrodeExists = True
+            break
 
     if not electrodeExists:
         msg = QMessageBox()
@@ -333,7 +349,7 @@ def qt_plot_tf(timefreq_right, timefreq_left, time_left, freqs_left, electrodes,
         msg.exec_()
     else:
         time_frequency_map_between_cond(timefreq_right, time_left, freqs_left, electrodeIdx,
-                                        fmin, fmax, fres, 10, timefreq_left, electrodes)
+                                        fmin, fmax, fres, 10, timefreq_left, electrodesList)
         plt.show()
 
 

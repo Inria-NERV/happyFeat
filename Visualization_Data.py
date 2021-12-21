@@ -334,34 +334,43 @@ def plot_psd(Power_MI, Power_Rest, freqs, channel, channel_array, each_point, fm
 
     fig, ax = plt.subplots()
     frequence = []
-    Aver_MI = Power_MI.mean(axis=0)
-    STD_MI = Power_MI.std(axis=0)
+    Aver_MI = 10 * np.log10(Power_MI[:, channel, :])
+    Aver_MI = Aver_MI.mean(0)
+    STD_MI = 10 * np.log10(Power_MI[:, channel, :])
+    STD_MI = STD_MI.std(0)
 
-    Aver_Rest = Power_Rest.mean(axis=0)
-    STD_Rest = Power_Rest.std(axis=0)
-    for i in range(len(freqs)):
-        if freqs[i] == fmin:
-            index_fmin = i
+    Aver_Rest = 10 * np.log10(Power_Rest[:, channel, :])
+    Aver_Rest = Aver_Rest.mean(0)
+    STD_Rest = 10 * np.log10(Power_Rest[:, channel, :])
+    STD_Rest = STD_Rest.std(0)
 
-    for i in range(len(freqs)):
-        if freqs[i] == fmax:
-            index_fmax = i
+    for idx, f in enumerate(freqs):
+        if f == fmin:
+            index_fmin = idx
+            break
+
+    for idx, f in enumerate(freqs):
+        if f == fmax:
+            index_fmax = idx
+            break
+
     # plt.plot(Aver_MI,freqs,Aver_Rest,freqs)
     # index_fmin = np.where(np.abs(freqs-fmin)<0.00001)
     # index_fmax = np.where(np.abs(freqs-fmax)<0.00001)
     # print(index_fmin)
-    Selected_MI = 10 * np.log10(Aver_MI[channel, index_fmin:index_fmax])
-    Selected_Rest = 10 * np.log10(Aver_Rest[channel, index_fmin:index_fmax])
+    Selected_MI = (Aver_MI[index_fmin:index_fmax])
+    Selected_Rest = (Aver_Rest[index_fmin:index_fmax])
 
-    Selected_MI_STD = 10 * np.log10(STD_MI[channel, index_fmin:index_fmax] / np.sqrt(len(freqs[index_fmin:index_fmax])))
-    Selected_Rest_STD = 10 * np.log10(STD_Rest[channel, index_fmin:index_fmax] / np.sqrt(len(freqs[index_fmin:index_fmax])))
+    Selected_MI_STD = (STD_MI[index_fmin:index_fmax] / Power_MI.shape[0])
+    Selected_Rest_STD = (STD_Rest[index_fmin:index_fmax] / Power_MI.shape[0])
 
     plt.plot(freqs[index_fmin:index_fmax], Selected_MI, label='Motor Imagery', color='blue')
 
     plt.fill_between(freqs[index_fmin:index_fmax], Selected_MI - Selected_MI_STD, Selected_MI + Selected_MI_STD,
                      color='blue', alpha=0.3)
     plt.plot(freqs[index_fmin:index_fmax], Selected_Rest, label='Resting state', color='red')
-    plt.fill_between(freqs[index_fmin:index_fmax], Selected_Rest - Selected_Rest_STD, Selected_Rest + Selected_Rest_STD,
+    plt.fill_between(freqs[index_fmin:index_fmax], Selected_Rest - Selected_Rest_STD,
+                     Selected_Rest + Selected_Rest_STD,
                      color='red', alpha=0.3)
     sizing = round(len(freqs[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
     for i in freqs[index_fmin:(index_fmax + 1)]:
@@ -402,13 +411,16 @@ def plot_psd2(Rsigned, Power_MI, Power_Rest, freqs, channel, channel_array, each
     STD_Rest = 10 * np.log10(Power_Rest[:, channel, :])
     STD_Rest = STD_Rest.std(0)
 
-    for i in range(len(freqs)):
-        if freqs[i] == fmin:
-            index_fmin = i
+    for idx, f in enumerate(freqs):
+        if f == fmin:
+            index_fmin = idx
+            break
 
-    for i in range(len(freqs)):
-        if freqs[i] == fmax:
-            index_fmax = i
+    for idx, f in enumerate(freqs):
+        if f == fmax:
+            index_fmax = idx
+            break
+
     # plt.plot(Aver_MI,freqs,Aver_Rest,freqs)
     # index_fmin = np.where(np.abs(freqs-fmin)<0.00001)
     # index_fmax = np.where(np.abs(freqs-fmax)<0.00001)
@@ -457,13 +469,16 @@ def plot_Rsquare_calcul_welch(Rsquare,channel_array,freq,smoothing,fres,each_poi
         }
     frequence = []
 
-    for i in range(len(freq)):
-        if freq[i]==fmin:
-            index_fmin = i
+    for idx, f in enumerate(freq):
+        if f == fmin:
+            index_fmin = idx
+            break
 
-    for i in range(len(freq)):
-        if freq[i]==fmax:
-            index_fmax = i
+    for idx, f in enumerate(freq):
+        if f == fmax:
+            index_fmax = idx
+            break
+
     Rsquare_reshape = Rsquare[0:64,index_fmin:index_fmax+1]
 
     top = cm.get_cmap('YlOrRd_r', 128) # r means reversed version
@@ -612,12 +627,16 @@ def plot_Pmapsigned_calcul_welch(Rsquare,channel_array,freq,smoothing,fres,each_
         'size': 14,
         }
     frequence = []
-    for i in range(len(freq)):
-        if freq[i]==fmin:
-            index_fmin = i
-    for i in range(len(freq)):
-        if freq[i]==fmax:
-            index_fmax = i
+    for idx, f in enumerate(freq):
+        if f == fmin:
+            index_fmin = idx
+            break
+
+    for idx, f in enumerate(freq):
+        if f == fmax:
+            index_fmax = idx
+            break
+
     Rsquare_reshape = Rsquare[0:64,index_fmin:index_fmax]
     for i in range(Rsquare_reshape.shape[0]):
         for k in range(Rsquare_reshape.shape[1]):
@@ -667,12 +686,15 @@ def time_frequency_map_between_cond(time_freq,time,freqs,channel,fmin,fmax,fres,
 
     time_seres = []
     print(time)
-    for i in range(len(freqs)):
-        if freqs[i]==fmin:
-            index_fmin = i
-    for i in range(len(freqs)):
-        if freqs[i]==fmax:
-            index_fmax = i
+    for idx, f in enumerate(freqs):
+        if f == fmin:
+            index_fmin = idx
+            break
+
+    for idx, f in enumerate(freqs):
+        if f == fmax:
+            index_fmax = idx
+            break
 
     rsquare_signed = rsquare_signed[index_fmin:index_fmax+1,:]
     top = cm.get_cmap('YlOrRd_r', 128) # r means reversed version
