@@ -2,7 +2,85 @@
 	<FormatVersion>2</FormatVersion>
 	<Creator>OpenViBE Designer</Creator>
 	<CreatorVersion>3.2.0</CreatorVersion>
-	<Settings></Settings>
+	<Settings>
+		<Setting>
+			<Identifier>(0xb8395975, 0xa3ef37e3)</Identifier>
+			<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
+			<Name>Directory</Name>
+			<DefaultValue>${Player_ScenarioDirectory}</DefaultValue>
+			<Value>${Player_ScenarioDirectory}</Value>
+		</Setting>
+		<Setting>
+			<Identifier>(0xd84e1a1e, 0x3991fc6e)</Identifier>
+			<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
+			<Name>EEGData</Name>
+			<DefaultValue>motor-imagery.ov</DefaultValue>
+			<Value>motor-imagery.ov</Value>
+		</Setting>
+		<Setting>
+			<Identifier>(0x16a479e0, 0xacbc5faa)</Identifier>
+			<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
+			<Name>Output1</Name>
+			<DefaultValue>spectrumAmplitude-Left.csv</DefaultValue>
+			<Value>spectrumAmplitude-Left.csv</Value>
+		</Setting>
+		<Setting>
+			<Identifier>(0xa712db6c, 0xc3a5545b)</Identifier>
+			<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
+			<Name>Output2</Name>
+			<DefaultValue>spectrumAmplitude-Right.csv</DefaultValue>
+			<Value>spectrumAmplitude-Right.csv</Value>
+		</Setting>
+		<Setting>
+			<Identifier>(0x93d077f2, 0xcf8b7937)</Identifier>
+			<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
+			<Name>ChannelNames</Name>
+			<DefaultValue>FP1;FP2;F7;F3;Fz;F4;F6;FC5;FC1;FC2;FC6;T7;C3;Cz;C4;T8;TP9;CP5;CP1;CP2;CP6;TP10;P7;P3;Pz;P4;P8;PO9;O1;Oz;O2;PO10</DefaultValue>
+			<Value>FP1;FP2;F7;F3;Fz;F4;F6;FC5;FC1;FC2;FC6;T7;C3;Cz;C4;T8;TP9;CP5;CP1;CP2;CP6;TP10;P7;P3;Pz;P4;P8;PO9;O1;Oz;O2;PO10</Value>
+		</Setting>
+		<Setting>
+			<Identifier>(0x202d02bc, 0xfe381c9a)</Identifier>
+			<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
+			<Name>StimulationEpoch</Name>
+			<DefaultValue>3</DefaultValue>
+			<Value>3</Value>
+		</Setting>
+		<Setting>
+			<Identifier>(0xb639cff8, 0xfe852b98)</Identifier>
+			<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
+			<Name>StimulationDelay</Name>
+			<DefaultValue>0</DefaultValue>
+			<Value>0</Value>
+		</Setting>
+		<Setting>
+			<Identifier>(0xa398929a, 0x8b11d0ae)</Identifier>
+			<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
+			<Name>TimeWindowLength</Name>
+			<DefaultValue>0.4</DefaultValue>
+			<Value>0.4</Value>
+		</Setting>
+		<Setting>
+			<Identifier>(0x69aaf187, 0x76d41b08)</Identifier>
+			<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
+			<Name>TimeWindowShift</Name>
+			<DefaultValue>0.372</DefaultValue>
+			<Value>0.372</Value>
+		</Setting>
+		<Setting>
+			<Identifier>(0x8b3361a8, 0xa318ece3)</Identifier>
+			<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
+			<Name>AutoRegressiveOrder</Name>
+			<DefaultValue>19</DefaultValue>
+			<Value>19</Value>
+		</Setting>
+		<Setting>
+			<Identifier>(0x61da0291, 0xe1e6b7c6)</Identifier>
+			<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
+			<Name>PsdSize</Name>
+			<DefaultValue>500</DefaultValue>
+			<Value>500</Value>
+		</Setting>
+	</Settings>
 	<Inputs></Inputs>
 	<Outputs></Outputs>
 	<Boxes>
@@ -237,7 +315,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue>record-[$core{date}-$core{time}].csv</DefaultValue>
-					<Value>${Player_ScenarioDirectory}/spectrumAmplitude-Left.csv</Value>
+					<Value>$var{Directory}/$var{Output1}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -478,70 +556,6 @@
 			</Attributes>
 		</Box>
 		<Box>
-			<Identifier>(0x00004756, 0x00003401)</Identifier>
-			<Name>Channel Rename (69 Channel)</Name>
-			<AlgorithmClassIdentifier>(0x1fe50479, 0x39040f40)</AlgorithmClassIdentifier>
-			<Inputs>
-				<Input>
-					<TypeIdentifier>(0x5ba36127, 0x195feae1)</TypeIdentifier>
-					<Name>Input matrix</Name>
-				</Input>
-			</Inputs>
-			<Outputs>
-				<Output>
-					<TypeIdentifier>(0x5ba36127, 0x195feae1)</TypeIdentifier>
-					<Name>Output matrix</Name>
-				</Output>
-			</Outputs>
-			<Settings>
-				<Setting>
-					<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
-					<Name>New channel names</Name>
-					<DefaultValue>Channel 1;Channel 2</DefaultValue>
-					<Value>Fp1;Fz;F3;F7;PO9;FC5;FC1;C3;T7;TP9;CP5;CP1;Pz;P3;P7;O1;Oz;O2;P4;P8;PO10;CP6;CP2;Cz;C4;T8;FT10;FC6;FC2;F4;F8;Fp2;AF7;AF3;AFz;F1;F5;FT7;FC3;C1;C5;TP7;CP3;P1;P5;PO7;PO3;POz;PO4;PO8;P6;P2;CPz;CP4;TP8;C6;C2;FC4;FT8;F6;AF8;AF4;F2;FCz;VEOG;HEOG;ECG;LEMG;REMG</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-			</Settings>
-			<Attributes>
-				<Attribute>
-					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
-					<Value>176</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
-					<Value>608</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x30a4e5c9, 0x83502953)</Identifier>
-					<Value></Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x341d3912, 0x1478de86)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
-					<Value>(0x74d8d30c, 0xfa7bdf43)</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x527ad68d, 0x16d746a0)</Identifier>
-					<Value></Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xc80ce8af, 0xf699f813)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xce18836a, 0x9c0eb403)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xcfad85b0, 0x7c6d841c)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-			</Attributes>
-		</Box>
-		<Box>
 			<Identifier>(0x00004756, 0x00003402)</Identifier>
 			<Name>Channel Rename (32 Channel)</Name>
 			<AlgorithmClassIdentifier>(0x1fe50479, 0x39040f40)</AlgorithmClassIdentifier>
@@ -562,7 +576,7 @@
 					<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
 					<Name>New channel names</Name>
 					<DefaultValue>Channel 1;Channel 2</DefaultValue>
-					<Value>FP1;FP2;F7;F3;Fz;F4;F6;FC5;FC1;FC2;FC6;T7;C3;Cz;C4;T8;TP9;CP5;CP1;CP2;CP6;TP10;P7;P3;Pz;P4;P8;PO9;O1;Oz;O2;PO10</Value>
+					<Value>$var{ChannelNames}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
@@ -622,14 +636,14 @@
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Epoch duration (in sec)</Name>
 					<DefaultValue>1</DefaultValue>
-					<Value>0.4</Value>
+					<Value>$var{TimeWindowLength}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Epoch intervals (in sec)</Name>
 					<DefaultValue>0.5</DefaultValue>
-					<Value>0.372</Value>
+					<Value>$var{TimeWindowShift}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
@@ -685,14 +699,14 @@
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Epoch duration (in sec)</Name>
 					<DefaultValue>1</DefaultValue>
-					<Value>3</Value>
+					<Value>$var{StimulationEpoch}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Epoch offset (in sec)</Name>
 					<DefaultValue>0.5</DefaultValue>
-					<Value>0</Value>
+					<Value>$var{StimulationDelay}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -759,14 +773,14 @@
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Epoch duration (in sec)</Name>
 					<DefaultValue>1</DefaultValue>
-					<Value>3</Value>
+					<Value>$var{StimulationEpoch}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Epoch offset (in sec)</Name>
 					<DefaultValue>0.5</DefaultValue>
-					<Value>0</Value>
+					<Value>$var{StimulationDelay}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -872,14 +886,14 @@
 					<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
 					<Name>Order</Name>
 					<DefaultValue>1</DefaultValue>
-					<Value>19</Value>
+					<Value>$var{AutoRegressiveOrder}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
 					<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
 					<Name>PSD size</Name>
 					<DefaultValue>256</DefaultValue>
-					<Value>500</Value>
+					<Value>$var{PsdSize}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -922,7 +936,7 @@
 			</Attributes>
 		</Box>
 		<Box>
-			<Identifier>(0x00007293, 0x00001002)</Identifier>
+			<Identifier>(0x00007293, 0x00001003)</Identifier>
 			<Name>AutoRegressive Coefficients</Name>
 			<AlgorithmClassIdentifier>(0xbaadc2f3, 0xb556a07b)</AlgorithmClassIdentifier>
 			<Inputs>
@@ -946,14 +960,14 @@
 					<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
 					<Name>Order</Name>
 					<DefaultValue>1</DefaultValue>
-					<Value>19</Value>
+					<Value>$var{AutoRegressiveOrder}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
 					<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
 					<Name>PSD size</Name>
 					<DefaultValue>256</DefaultValue>
-					<Value>500</Value>
+					<Value>$var{PsdSize}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -1016,14 +1030,14 @@
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Epoch duration (in sec)</Name>
 					<DefaultValue>1</DefaultValue>
-					<Value>0.4</Value>
+					<Value>$var{TimeWindowLength}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Epoch intervals (in sec)</Name>
 					<DefaultValue>0.5</DefaultValue>
-					<Value>0.372</Value>
+					<Value>$var{TimeWindowShift}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
@@ -1077,7 +1091,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue></DefaultValue>
-					<Value>C:/Users/arthur.desbois/Documents/dev/MassimoExp/Train_2_sub_01.ov</Value>
+					<Value>$var{Directory}/$var{EEGData}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
@@ -1292,6 +1306,17 @@
 	</Boxes>
 	<Links>
 		<Link>
+			<Identifier>(0x0000023e, 0x00006ac3)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x0000742e, 0x000073be)</BoxIdentifier>
+				<BoxOutputIndex>0</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x00007293, 0x00001003)</BoxIdentifier>
+				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
 			<Identifier>(0x0000061d, 0x000048b2)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x1f046833, 0x21a8a876)</BoxIdentifier>
@@ -1325,13 +1350,13 @@
 			</Target>
 		</Link>
 		<Link>
-			<Identifier>(0x0000135e, 0x000000a0)</Identifier>
+			<Identifier>(0x0000198a, 0x00001f69)</Identifier>
 			<Source>
-				<BoxIdentifier>(0x00007293, 0x00001002)</BoxIdentifier>
+				<BoxIdentifier>(0x00007293, 0x00001003)</BoxIdentifier>
 				<BoxOutputIndex>1</BoxOutputIndex>
 			</Source>
 			<Target>
-				<BoxIdentifier>(0x00002174, 0x00001c71)</BoxIdentifier>
+				<BoxIdentifier>(0x00002a3c, 0x00005dfa)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>
@@ -1354,6 +1379,17 @@
 			</Source>
 			<Target>
 				<BoxIdentifier>(0x000065af, 0x0000612b)</BoxIdentifier>
+				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
+			<Identifier>(0x00001f38, 0x00007bd6)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x00007293, 0x00001003)</BoxIdentifier>
+				<BoxOutputIndex>1</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x00002174, 0x00001c71)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>
@@ -1413,17 +1449,6 @@
 			</Target>
 		</Link>
 		<Link>
-			<Identifier>(0x000054e1, 0x00004ca0)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x00007293, 0x00001002)</BoxIdentifier>
-				<BoxOutputIndex>1</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x00002a3c, 0x00005dfa)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
 			<Identifier>(0x0000557d, 0x0000655b)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x00004756, 0x00003402)</BoxIdentifier>
@@ -1431,28 +1456,6 @@
 			</Source>
 			<Target>
 				<BoxIdentifier>(0x1396fde6, 0x1c649749)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
-			<Identifier>(0x000058be, 0x00005626)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x0000742e, 0x000073be)</BoxIdentifier>
-				<BoxOutputIndex>0</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x00007293, 0x00001002)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
-			<Identifier>(0x00005b02, 0x00000d87)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x11a6038b, 0x7157c282)</BoxIdentifier>
-				<BoxOutputIndex>1</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x00004756, 0x00003401)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>
