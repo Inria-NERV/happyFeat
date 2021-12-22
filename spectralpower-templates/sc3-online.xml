@@ -768,7 +768,7 @@
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Baseline Duration (in sec)</Name>
 					<DefaultValue>20</DefaultValue>
-					<Value>20</Value>
+					<Value>10</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -782,35 +782,35 @@
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Wait For Cue Duration (in sec)</Name>
 					<DefaultValue>1</DefaultValue>
-					<Value>1</Value>
+					<Value>1.5</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Display Cue Duration (in sec)</Name>
 					<DefaultValue>1.250</DefaultValue>
-					<Value>1.250</Value>
+					<Value>1.5</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Feedback Duration (in sec)</Name>
 					<DefaultValue>3.750</DefaultValue>
-					<Value>3.750</Value>
+					<Value>0</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>End of Trial Minimum Duration (in sec)</Name>
 					<DefaultValue>1.500</DefaultValue>
-					<Value>1.500</Value>
+					<Value>3</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>End of Trial Maximum Duration (in sec)</Name>
 					<DefaultValue>3.500</DefaultValue>
-					<Value>3.500</Value>
+					<Value>3</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>

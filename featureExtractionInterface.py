@@ -37,9 +37,18 @@ class Dialog(QDialog):
 
         super().__init__(parent)
 
-        jsonfilename = 'C:\\Users\\arthur.desbois\\Documents\\dev\\openvibeScripting\\openvibe-automation\\spectralpower-templates\\params.json'
-        readJsonFile(jsonfilename)
+        ### GET PARAMS FROM JSON FILE...
+        self.dataNp1 = []
+        self.dataNp2 = []
+        self.Features = Features()
+        # self.PipelineParams = PipelineParams()
 
+        jsonfullpath = os.path.join(os.getcwd(), "generated", "params.json")
+        # readJsonFile(jsonfullpath)
+        with open(jsonfullpath) as jsonfile:
+            self.parameterDict = json.load(jsonfile)
+
+        ### CREATE INTERFACE...
         self.setWindowTitle('Feature Extraction')
         self.dlgLayout = QVBoxLayout()
 
@@ -51,14 +60,14 @@ class Dialog(QDialog):
 
         # Param 1 : Path 1
         self.path1 = QLineEdit()
-        self.path1.setText(
-            'C:\\Users\\arthur.desbois\\Documents\\dev\\openvibeScripting\\openvibe-automation\\spectralpower-templates\\spectrumAmplitude-Left.csv')
-        self.formLayout.addRow('Path:', self.path1)
+        pathSpectrum1 = os.path.join(os.getcwd(), "generated", "spectrumAmplitude-Left.csv")
+        self.path1.setText(pathSpectrum1)
+        self.formLayout.addRow('Path1:', self.path1)
         # Param 2 : Path 2
         self.path2 = QLineEdit()
-        self.path2.setText(
-            'C:\\Users\\arthur.desbois\\Documents\\dev\\openvibeScripting\\openvibe-automation\\spectralpower-templates\\spectrumAmplitude-Right.csv')
-        self.formLayout.addRow('Name File', self.path2)
+        pathSpectrum2 = os.path.join(os.getcwd(), "generated", "spectrumAmplitude-Right.csv")
+        self.path2.setText(pathSpectrum2)
+        self.formLayout.addRow('Path2:', self.path2)
 
         # Param 3 : Electrode to use for PSD display
         self.userFmax = QLineEdit()
@@ -120,12 +129,6 @@ class Dialog(QDialog):
 
         self.setLayout(self.dlgLayout)
 
-        # Other inits...
-        self.dataNp1 = []
-        self.dataNp2 = []
-        self.Features = Features()
-        self.PipelineParams = PipelineParams()
-
         # display initial layout
         self.initialWindow()
 
@@ -143,12 +146,21 @@ class Dialog(QDialog):
             self.plotWindow()
 
     def extract_features(self):
-        time = self.PipelineParams.trialLengthSec
-        trials = self.PipelineParams.trialNb
-        nbElectrodes = len(self.PipelineParams.electrodeList)
-        n_bins = self.PipelineParams.fftBins
-        winLen = self.PipelineParams.burgWindowLength
-        winOverlap = self.PipelineParams.burgWindowOverlap
+        # time = self.PipelineParams.trialLengthSec
+        # trials = self.PipelineParams.trialNb
+        # nbElectrodes = len(self.PipelineParams.electrodeList)
+        # n_bins = self.PipelineParams.fftBins
+        # winLen = self.PipelineParams.burgWindowLength
+        # winOverlap = self.PipelineParams.burgWindowOverlap
+
+        time = float(self.parameterDict["TrialLength"])
+        trials = int(self.parameterDict["TrialNb"])
+        electrodeListStr = self.parameterDict["ChannelNames"]
+        electrodeList = electrodeListStr.split(";")
+        nbElectrodes = len(electrodeList)
+        n_bins = int((int(self.parameterDict["PsdSize"]) / 2) + 1)
+        winLen = float(self.parameterDict["TimeWindowLength"])
+        winOverlap = float(self.parameterDict["TimeWindowShift"])
 
         power_right, power_left, time_left, time_right, time_length = Extract_Data_to_compare(self.dataNp1,
                                                                                               self.dataNp2,
@@ -192,7 +204,8 @@ class Dialog(QDialog):
 
         fres = 1
         fmin = 0
-        fs = self.PipelineParams.fSampling
+        # fs = self.PipelineParams.fSampling
+        fs = 500
 
         self.btn_r2map.clicked.connect(lambda: self.btnR2(fres, fmin))
         self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq(fres, fmin))

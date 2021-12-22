@@ -36,14 +36,14 @@
 			<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
 			<Name>ChannelNames</Name>
 			<DefaultValue>FP1;FP2;F7;F3;Fz;F4;F6;FC5;FC1;FC2;FC6;T7;C3;Cz;C4;T8;TP9;CP5;CP1;CP2;CP6;TP10;P7;P3;Pz;P4;P8;PO9;O1;Oz;O2;PO10</DefaultValue>
-			<Value>FP1;FP2;F7;F3;Fz;F4;F6;FC5;FC1;FC2;FC6;T7;C3;Cz;C4;T8;TP9;CP5;CP1;CP2;CP6;TP10;P7;P3;Pz;P4;P8;PO9;O1;Oz;O2;PO10</Value>
+			<Value>Fp1;Fp2;F7;F3;Fz;F4;F8;FC5;FC1;FC2;FC6;T7;C3;Cz;C4;T8;TP9;CP5;CP1;CP2;CP6;TP10;P7;P3;Pz;P4;P8;PO9;O1;Oz;O2;PO10</Value>
 		</Setting>
 		<Setting>
 			<Identifier>(0x202d02bc, 0xfe381c9a)</Identifier>
 			<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 			<Name>StimulationEpoch</Name>
 			<DefaultValue>3</DefaultValue>
-			<Value>3</Value>
+			<Value>1</Value>
 		</Setting>
 		<Setting>
 			<Identifier>(0xb639cff8, 0xfe852b98)</Identifier>
@@ -386,7 +386,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue>record-[$core{date}-$core{time}].csv</DefaultValue>
-					<Value>${Player_ScenarioDirectory}/spectrumAmplitude-Right.csv</Value>
+					<Value>$var{Directory}/$var{Output2}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>

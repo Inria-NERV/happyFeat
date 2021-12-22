@@ -3,19 +3,24 @@ import os
 import pandas as pd
 import time
 import numpy as np
+from shutil import copyfile
 
 from PyQt5 import QtCore
-from PyQt5.QtWidgets import QApplication, QMessageBox, QLabel, QHBoxLayout, QComboBox, QFileDialog
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QHBoxLayout
+from PyQt5.QtWidgets import QVBoxLayout
+from PyQt5.QtWidgets import QFormLayout
 from PyQt5.QtWidgets import QWidget
+from PyQt5.QtWidgets import QLabel
+from PyQt5.QtWidgets import QComboBox
+from PyQt5.QtWidgets import QFileDialog
+from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtWidgets import QDialog
 from PyQt5.QtWidgets import QPushButton
-from PyQt5.QtWidgets import QFormLayout
 from PyQt5.QtWidgets import QLineEdit
-from PyQt5.QtWidgets import QVBoxLayout
 
 from parametersMgmt import *
 from modifyOpenvibeScen import *
-from generateOpenVibeScenario import *
 import bcipipeline_settings as settings
 
 class Dialog(QDialog):
@@ -30,9 +35,8 @@ class Dialog(QDialog):
         self.templateFolder = None
 
         # SCENARIO PARAMETERS...
-        self.options = settings.options
-        self.optionsNbParams = settings.optionsNbParams
-        self.parameterList = []
+        self.parameterDict = {}
+        self.parameterTextList = [] # for parsing later...
         self.electrodesList = ['Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'FC5', 'FC1', 'FC2', 'FC6', 'T7', 'C3', 'Cz', 'C4', 'T8', 'TP9', 'CP5', 'CP1', 'CP2', 'CP6', 'TP10', 'P7', 'P3', 'Pz', 'P4', 'P8', 'PO9', 'O1', 'Oz', 'O2', 'PO10']
 
         # INTERFACE INIT...
@@ -47,8 +51,8 @@ class Dialog(QDialog):
 
         self.selectedScenarioName = None
         self.combo = QComboBox(self)
-        for i in range(len(self.options)):
-            self.combo.addItem(self.options[i], i)
+        for idx, key in enumerate(settings.optionKeys):
+            self.combo.addItem(settings.optionsComboText[key], idx)
         self.combo.currentIndexChanged.connect(self.comboBoxChanged)
         self.formLayout.addWidget(self.combo)
 
@@ -79,10 +83,12 @@ class Dialog(QDialog):
 
     def comboBoxChanged(self, ix):
         if ix:
+            pipelineKey = settings.optionKeys[ix]
+
             # TODO : replace by "reset" later on ?
             self.combo.setEnabled(False)
 
-            self.templateFolder = settings.optionsTemplatesDir[ix]
+            self.templateFolder = settings.optionsTemplatesDir[pipelineKey]
             print(str("TEMPLATE FOLDER : " + self.templateFolder))
 
             self.selectedScenarioName = self.combo.currentText()
@@ -91,17 +97,20 @@ class Dialog(QDialog):
             # PARAMETER ALWAYS PRESENT : LIST OF CHANNELS
             formLayout.addRow("Electrode names file", self.electrodesFileWidget)
 
+            self.parameterDict = {}
+            self.parameterDict["pipelineType"] = pipelineKey
             # GET PARAMETER LIST FOR SELECTED BCI PIPELINE, AND DISPLAY THEM
-            for i in range(len(settings.scenarioSettings[ix])):
+            for param in settings.scenarioSettings[pipelineKey]:
                 # init params...
-                parameter = [settings.scenarioSettings[ix][i][0], settings.scenarioSettings[ix][i][1]]
-                self.parameterList.append(parameter)
+                value = settings.scenarioSettings[pipelineKey][param]
+                self.parameterDict[param] = value[0]
                 # create widgets...
                 paramWidget = QLineEdit()
-                paramWidget.setText(str(settings.scenarioSettings[ix][i][1]))
-                settingLabel = str(settings.scenarioSettings[ix][i][2])
+                paramWidget.setText(str(value[0]))
+                settingLabel = str(value[1])
                 self.paramWidgets.append(paramWidget)
-                formLayout.addRow(settingLabel, self.paramWidgets[i])
+                self.parameterTextList.append(param)
+                formLayout.addRow(settingLabel, self.paramWidgets[-1])
 
         self.dlgLayout.addLayout(formLayout)
         self.dlgLayout.addWidget(self.btn_generate)
@@ -122,9 +131,32 @@ class Dialog(QDialog):
         self.show()
 
     def generate(self):
-        # PIPELINE DEPENDENT : update params from text fields...
+        ####
+        # FIRST STEP : CREATE PARAMETER DICTIONARY
+        ###
+
+        # PIPELINE DEPENDENT :
+        # update params from text fields...
+        overlap = None
+        shift = None
+        length = None
+        idx = None
+
         for i in range(len(self.paramWidgets)):
-            self.parameterList[i][1] = self.paramWidgets[i].text()
+            param = self.parameterTextList[i]
+            if param in self.parameterDict:
+                self.parameterDict[param] = self.paramWidgets[i].text()
+            # /!\ SPECIAL CASE : Overlap becomes shift
+            if param == "TimeWindowLength":
+                length = self.parameterDict[param]
+            elif param == "TimeWindowShift":
+                overlap = self.parameterDict[param]
+                idx = i
+
+        # /!\ SPECIAL CASE : Overlap becomes shift
+        shift = float(length) - float(overlap)
+        print("!! REPLACING overlap " + overlap + " BY shift " + str(shift))
+        self.parameterDict["TimeWindowShift"] = str(shift)
 
         # ALL PIPELINES : Electrode list...
         electrodes = None
@@ -136,21 +168,32 @@ class Dialog(QDialog):
         else:
             electrodes = self.electrodesFileTextBox.text()
 
-        self.parameterList.append(["ChannelNames", electrodes])
-        print(self.parameterList)
+        self.parameterDict["ChannelNames"] = electrodes
+        print(self.parameterDict)
 
         # WRITE JSON PARAMETERS FILE
-        # TODO !
-        jsonfullpath = os.path.join(os.getcwd(), self.templateFolder, self.jsonfilename)
-        readJsonFile(jsonfullpath)
+        jsonfullpath = os.path.join(os.getcwd(), self.generatedFolder, self.jsonfilename)
+        with open(jsonfullpath, "w") as outfile:
+            json.dump(self.parameterDict, outfile, indent = 4)
 
-        # GENERATE SC1 (ACQ/MONITOR) + SC2 (FEATURE EXT) + SC2 (TRAIN) + SC3 (ONLINE)
-        # generateScenarios(self.selectedScenarioName, self.parameterList)
+        # GENERATE (list of files in settings.templateScenFilenames)
+        #   SC1 (ACQ/MONITOR)
+        #   SC2 (FEATURE EXT)
+        #   SC2 (TRAIN)
+        #   SC3 (ONLINE)
         for filename in settings.templateScenFilenames:
             srcFile = os.path.join(os.getcwd(), self.templateFolder, filename)
             destFile = os.path.join(os.getcwd(), self.generatedFolder, filename)
-            print("Copying file " + srcFile + " to " + destFile)
-            # ...
+            print("---Copying file " + srcFile + " to " + destFile)
+            copyfile(srcFile, destFile)
+            modifyScenarioGeneralSettings(destFile, self.parameterDict)
+
+        # SPECIAL CASES :
+        #   SC1 & SC3 : "GRAZ" BOX SETTINGS
+        modifyAcqScenario(os.path.join(os.getcwd(), self.generatedFolder, settings.templateScenFilenames[0]),
+                          self.parameterDict)
+        modifyAcqScenario(os.path.join(os.getcwd(), self.generatedFolder, settings.templateScenFilenames[3]),
+                          self.parameterDict)
 
         text = "Thanks for using the generation script!\nYour files are in " + os.getcwd() + "/generated/"
         text += "\n\n(Don't forget to double check the generated scenarios...!)\nYou can now close this window."

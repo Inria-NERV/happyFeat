@@ -89,21 +89,21 @@ def load_csv_cond(file):
     return data
 
 
-def Extract_Data_to_compare(Data_Mi,Data_Rest,time,Trials,N_electrodes,Bins,n_window,overlap):
+def Extract_Data_to_compare(Data_Mi, Data_Rest, time, Trials, N_electrodes, Bins, n_window, shift):
 
     mat_left = Data_Mi
     Number_of_trials = Trials
     Number_of_electrodes = N_electrodes
     Number_of_Bins = Bins
-    shift = n_window - overlap
+    #shift = n_window - overlap
     length = round((time-n_window)/shift)
-    time_leng = np.arange(0,time,shift)
-    mat_left = mat_left[:,2:]
-    mat_left = mat_left[:,:Number_of_electrodes*Number_of_Bins]
-    power_left = np.zeros([Number_of_trials,Number_of_electrodes,Number_of_Bins])
+    time_leng = np.arange(0, time, shift)
+    mat_left = mat_left[:, 2:]
+    mat_left = mat_left[:, :Number_of_electrodes*Number_of_Bins]
+    power_left = np.zeros([Number_of_trials, Number_of_electrodes, Number_of_Bins])
 
-    time_left = np.zeros([Number_of_trials,Number_of_electrodes,length,Number_of_Bins])
-    time_right = np.zeros([Number_of_trials,Number_of_electrodes,length,Number_of_Bins])
+    time_left = np.zeros([Number_of_trials, Number_of_electrodes, length, Number_of_Bins])
+    time_right = np.zeros([Number_of_trials, Number_of_electrodes, length, Number_of_Bins])
 
     for i in range(power_left.shape[0]):
         for j in range(power_left.shape[1]):

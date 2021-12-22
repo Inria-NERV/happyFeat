@@ -25,8 +25,8 @@
 			<Value>mi-stimulations.lua</Value>
 		</Setting>
 	</Settings>
-	<Inputs></Inputs>
-	<Outputs></Outputs>
+	<Inputs />
+	<Outputs />
 	<Boxes>
 		<Box>
 			<Identifier>(0x00000de5, 0x00006f3d)</Identifier>
@@ -42,7 +42,7 @@
 				<Setting>
 					<TypeIdentifier>(0xb0d0db45, 0x49cbc34a)</TypeIdentifier>
 					<Name>Lua Script</Name>
-					<DefaultValue></DefaultValue>
+					<DefaultValue />
 					<Value>$var{Directory}/$var{MI_Stimulations}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
@@ -50,7 +50,7 @@
 					<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
 					<Name>Number of Trials for Each Class</Name>
 					<DefaultValue>20</DefaultValue>
-					<Value>20</Value>
+					<Value>5</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -71,7 +71,7 @@
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Baseline Duration (in sec)</Name>
 					<DefaultValue>20</DefaultValue>
-					<Value>20</Value>
+					<Value>2</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -85,14 +85,14 @@
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Wait For Cue Duration (in sec)</Name>
 					<DefaultValue>1</DefaultValue>
-					<Value>1.5</Value>
+					<Value>1</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Display Cue Duration (in sec)</Name>
 					<DefaultValue>1.250</DefaultValue>
-					<Value>1.5</Value>
+					<Value>1</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -106,21 +106,21 @@
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>End of Trial Minimum Duration (in sec)</Name>
 					<DefaultValue>1.500</DefaultValue>
-					<Value>3</Value>
+					<Value>1</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>End of Trial Maximum Duration (in sec)</Name>
 					<DefaultValue>3.500</DefaultValue>
-					<Value>3</Value>
+					<Value>1</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
 			<Attributes>
 				<Attribute>
 					<Identifier>(0x17ee7c08, 0x94c14893)</Identifier>
-					<Value></Value>
+					<Value />
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
@@ -136,7 +136,7 @@
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x61d11811, 0x71e65362)</Identifier>
-					<Value></Value>
+					<Value />
 				</Attribute>
 				<Attribute>
 					<Identifier>(0xc80ce8af, 0xf699f813)</Identifier>
@@ -148,11 +148,11 @@
 				</Attribute>
 				<Attribute>
 					<Identifier>(0xf191c1c8, 0xa0123976)</Identifier>
-					<Value></Value>
+					<Value />
 				</Attribute>
 				<Attribute>
 					<Identifier>(0xfba64161, 0x65304e21)</Identifier>
-					<Value></Value>
+					<Value />
 				</Attribute>
 			</Attributes>
 		</Box>
@@ -205,7 +205,7 @@
 			<Attributes>
 				<Attribute>
 					<Identifier>(0x17ee7c08, 0x94c14893)</Identifier>
-					<Value></Value>
+					<Value />
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
@@ -255,7 +255,7 @@
 				<Setting>
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
-					<DefaultValue></DefaultValue>
+					<DefaultValue />
 					<Value>$var{Directory}/$var{EEGData}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
@@ -282,7 +282,7 @@
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x527ad68d, 0x16d746a0)</Identifier>
-					<Value></Value>
+					<Value />
 				</Attribute>
 				<Attribute>
 					<Identifier>(0xc46b3d00, 0x3e0454e1)</Identifier>
@@ -290,7 +290,7 @@
 				</Attribute>
 				<Attribute>
 					<Identifier>(0xfba64161, 0x65304e21)</Identifier>
-					<Value></Value>
+					<Value />
 				</Attribute>
 			</Attributes>
 		</Box>
@@ -329,7 +329,7 @@
 			<Attributes>
 				<Attribute>
 					<Identifier>(0x17ee7c08, 0x94c14893)</Identifier>
-					<Value></Value>
+					<Value />
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
@@ -341,7 +341,7 @@
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x30a4e5c9, 0x83502953)</Identifier>
-					<Value></Value>
+					<Value />
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
@@ -349,7 +349,7 @@
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x527ad68d, 0x16d746a0)</Identifier>
-					<Value></Value>
+					<Value />
 				</Attribute>
 				<Attribute>
 					<Identifier>(0xac367a9c, 0x2da95abe)</Identifier>
@@ -357,7 +357,7 @@
 				</Attribute>
 				<Attribute>
 					<Identifier>(0xfba64161, 0x65304e21)</Identifier>
-					<Value></Value>
+					<Value />
 				</Attribute>
 			</Attributes>
 		</Box>
@@ -390,7 +390,7 @@
 			<Attributes>
 				<Attribute>
 					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
-					<Value>-160</Value>
+					<Value>-144</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
@@ -581,7 +581,7 @@
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x527ad68d, 0x16d746a0)</Identifier>
-					<Value></Value>
+					<Value />
 				</Attribute>
 				<Attribute>
 					<Identifier>(0xc73e83ec, 0xf855c5bc)</Identifier>
@@ -695,7 +695,7 @@
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x527ad68d, 0x16d746a0)</Identifier>
-					<Value></Value>
+					<Value />
 				</Attribute>
 				<Attribute>
 					<Identifier>(0xc73e83ec, 0xf855c5bc)</Identifier>
@@ -952,7 +952,7 @@
 			</Target>
 		</Link>
 	</Links>
-	<Comments></Comments>
+	<Comments />
 	<Metadata>
 		<Entry>
 			<Identifier>(0x0000775c, 0x000078ff)</Identifier>
@@ -967,7 +967,7 @@
 		</Attribute>
 		<Attribute>
 			<Identifier>(0x8c1fc55b, 0x7b433dc2)</Identifier>
-			<Value></Value>
+			<Value />
 		</Attribute>
 		<Attribute>
 			<Identifier>(0x9f5c4075, 0x4a0d3666)</Identifier>
@@ -975,7 +975,7 @@
 		</Attribute>
 		<Attribute>
 			<Identifier>(0xf36a1567, 0xd13c53da)</Identifier>
-			<Value></Value>
+			<Value />
 		</Attribute>
 		<Attribute>
 			<Identifier>(0xf6b2e3fa, 0x7bd43926)</Identifier>

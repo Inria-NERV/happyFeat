@@ -2,20 +2,32 @@
 # Contains all settings / parameters / useful info
 # that the other scripts can use
 
-global options
-options = ["                       ",
-           "Power Spectrum based classification, Graz protocol",
-           "Functional Connectivity"]
+# TODO : instead of indexed lists, create option keys (PowSpectrum, Connectivity...)
+# TODO : and make options dictionaries addressed by these keys
+#     ex :
+#     optionsTemplatesDir = {"": None,
+#                            "PowSpectrum": "spectralpower-templates",
+#                            "Connectivity": "connectivity-templates"}
+
+global optionKeys
+optionKeys = ["",
+              "PowSpectrumGraz",
+              "Connectivity"]
+
+global optionsComboText
+optionsComboText = {optionKeys[0]: "",
+                    optionKeys[1]: "Power Spectrum based classification, Graz protocol",
+                    optionKeys[2]: "Functional Connectivity"}
 
 global optionsNbParams
-optionsNbParams = [0,
-                   1,
-                   2]
+optionsNbParams = {optionKeys[0]: 0,
+                   optionKeys[1]: 1,
+                   optionKeys[2]: 2}
 
 global optionsTemplatesDir
-optionsTemplatesDir = [None,
-                       "spectralpower-templates",
-                       "connectivity-templates"]
+optionsTemplatesDir = {optionKeys[0]: None,
+                       optionKeys[1]: "spectralpower-templates",
+                       optionKeys[2]: "connectivity-templates"}
 
 global templateScenFilenames
 templateScenFilenames = ["sc1-monitor-acq.xml",
@@ -28,23 +40,26 @@ global scenarioSettings
 # 1 : None
 # 2 : Power Spectrum based classification
 # 3 : Connectivity
-scenarioSettings = [None,
+scenarioSettings = {optionKeys[0]: None,
                     # POWER SPECTRUM
-                    [("TrialNb", 20, "Number of Trials"),
-                     ("Stim1", "LEFT", "Stimulation 1"),
-                     ("Stim2", "RIGHT", "Stimulation 2"),
-                     ("Baseline", 10, "Baseline duration (s)"),
-                     ("TrialWait", 1.5, "Wait for instruction (s)"),
-                     ("TrialLength", 1.5, "Instruction duration (s)"),
-                     ("EndTrial", 3, "End of trial duration (s)"),
-                     ("StimulationEpoch", 3, "Feat Extraction: Stimulation epoching (s)"),
-                     ("TimeWindowLength", 0.4, "Feat Extraction: Time Window (Burg) (s)"),
-                     ("TimeWindowShift", 0.028, "Feat Extraction: Time Window overlapping (Burg) (s)"),
-                     ("AutoRegressiveOrder", 19, "Feat Extraction: Burg estimation order"),
-                     ("PsdSize", 500, "PSD Size")],
+                    optionKeys[1]:
+                        {"TrialNb": [20, "Number of Trials"],
+                         "Stim1": ["LEFT", "Stimulation 1"],
+                         "Stim2": ["RIGHT", "Stimulation 2"],
+                         "Baseline": [10, "Baseline duration (s)"],
+                         "TrialWait": [1.5, "Wait for instruction (s)"],
+                         "TrialLength": [1.5, "Instruction duration (s)"],
+                         "EndTrial": [3, "End of trial duration (s)"],
+                         "StimulationEpoch": [3, "Feat Extraction: Stimulation epoching (s)"],
+                         "StimulationDelay": [0, "Feat Extraction: Stimulation epoching delay (s)"],
+                         "TimeWindowLength": [0.4, "Feat Extraction: Time Window (Burg) (s)"],
+                         "TimeWindowShift": [0.028, "Feat Extraction: Time Window overlapping (Burg) (s)"],
+                         "AutoRegressiveOrder": [19, "Feat Extraction: Burg estimation order"],
+                         "PsdSize": [500, "PSD Size"]},
                     # CONNECTIVITY
-                    [("setting1", 1, "Setting 1"),
-                     ("setting2", 2, "Setting 2"),
-                     ("setting3", 3, "Setting 3")]]
+                    optionKeys[2]:
+                        {"setting1": [1, "Setting 1"],
+                         "setting2": [2, "Setting 2"],
+                         "setting3": [3, "Setting 3"]}}
 
 
