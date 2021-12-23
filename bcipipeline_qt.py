@@ -60,7 +60,7 @@ class Dialog(QDialog):
 
         # Electrodes file...
         self.electrodesFile = None
-        self.btn_browse = QPushButton("Browse")
+        self.btn_browse = QPushButton("Browse for electrode file...")
         self.btn_browse.clicked.connect(lambda: self.browseForElectrodeFile())
         self.electrodesFileWidget = QWidget()
         layout_h = QHBoxLayout(self.electrodesFileWidget)
@@ -95,7 +95,7 @@ class Dialog(QDialog):
             formLayout = QFormLayout()
 
             # PARAMETER ALWAYS PRESENT : LIST OF CHANNELS
-            formLayout.addRow("Electrode names file", self.electrodesFileWidget)
+            formLayout.addRow("Electrodes List", self.electrodesFileWidget)
 
             self.parameterDict = {}
             self.parameterDict["pipelineType"] = pipelineKey

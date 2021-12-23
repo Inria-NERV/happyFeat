@@ -299,6 +299,10 @@ def time_frequency_map(time_freq,time,freqs,channel,fmin,fmax,fres,each_point,ba
     else:
         plt.imshow(tf,cmap=double,aspect='auto',origin ='lower')
     size_time = len(time)/each_point
+
+    if round(size_time) == 0:
+        size_time = 1
+
     for i in range(len(time)):
         if (i%(round(size_time))==0):
             time_seres.append(str((round(time[i],1))))
@@ -704,8 +708,12 @@ def time_frequency_map_between_cond(time_freq,time,freqs,channel,fmin,fmax,fres,
     if np.amin(rsquare_signed)<0:
         plt.imshow(rsquare_signed,cmap=double,aspect='auto',origin ='lower',vmin = -np.amax(rsquare_signed),vmax = np.amax(rsquare_signed))
     else:
-        plt.imshow(rsquare_signed,cmap=double,aspect='auto',origin ='lower') 
-    size_time = len(time)/each_point
+        plt.imshow(rsquare_signed,cmap=double,aspect='auto',origin ='lower')
+
+    size_time = len(time) / each_point
+    if round(size_time) == 0:
+        size_time = 1
+
     for i in range(len(time)):
         if (i%(round(size_time))==0):
             time_seres.append(str((round(time[i],1))))

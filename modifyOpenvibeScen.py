@@ -64,55 +64,26 @@ def modifyAcqScenario(scenXml, parameterDict):
 
     return
 
-def modifyTrainScenarioWithPairs(pairs, scenFullPath):
-
-    nbPipelines = len(pairs)
-
-    # OPEN THE XML SCENARIO FILE TO MODIFY
-    # xmlFileName = "sc2-train.xml"
-    scenXml = scenFullPath
-    sep = "/"
-    if os.name == 'nt':
-        sep = "\\"
-
+def modifyTrainScenario(chanFreqPairs, scenXml):
+    print("---Modifying " + scenXml + " with Selected Features")
     tree = ET.parse(scenXml)
     root = tree.getroot()
 
-    # PROTOTYPE :
-    # Step 1 : find the 2 already existing
-    # "Frequency Band Selector" / "Channel Selector" boxes
-    # and modify their parameters with the first Feature Pair
-    print("REPLACING EXISTING  FREQUENCY / CHANNEL PAIR")
+    # PARSE SCENARIO BOX SETTINGS
     for boxes in root.findall('Boxes'):
         for box in boxes.findall('Box'):
-            for name in box.findall('Name'):
+            if box.find('Name').text == 'Graz Motor Imagery BCI Stimulator':
+                for settings in box.findall('Settings'):
+                    for setting in settings.findall('Setting'):
+                        if setting.find('Name').text == "Number of Trials for Each Class":
+                            xmlVal = setting.find('Value')
+                            xmlVal.text = parameterDict["TrialNb"]
+                            continue
 
-                if name.text == "Frequency Band Selector":
-                    # TODO : SELECTION could be done on box identifier instead
-                    print("- BOX ", name.text)
-                    for setting in box.find('Settings').findall('Setting'):
-                        if setting.find('Name').text == "Frequencies to select":
-                            value = setting.find('Value')
-                            print("-- ORIGINAL VALUE ", value.text)
-                            value.text = pairs[0][1]
-                            print("--- UPDATED VALUE ", value.text)
-
-                elif name.text == "Channel Selector":
-                    # TODO : SELECTION could be done on box identifier instead
-                    print("- BOX ", name.text)
-                    for setting in box.find('Settings').findall('Setting'):
-                        if setting.find('Name').text == "Channel List":
-                            value = setting.find('Value')
-                            print("-- ORIGINAL VALUE ", value.text)
-                            value.text = pairs[0][1]
-                            print("--- UPDATED VALUE ", value.text)
-
-    # Step 2 :
-
-
-    # Step 3 : write new XML
+    # WRITE NEW XML
     tree.write(scenXml)
 
+    return
 
 def modifyScenario(parameterList, scenarioFilename):
     print("MODIFYING SCENARIO!")

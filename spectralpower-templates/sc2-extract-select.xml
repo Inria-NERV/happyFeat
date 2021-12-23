@@ -386,7 +386,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue>record-[$core{date}-$core{time}].csv</DefaultValue>
-					<Value>${Player_ScenarioDirectory}/spectrumAmplitude-Right.csv</Value>
+					<Value>$var{Directory}/$var{Output2}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>

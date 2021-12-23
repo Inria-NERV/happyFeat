@@ -1,23 +1,26 @@
 import sys
 import os
+import json
 import pandas as pd
 import time
 import numpy as np
 import matplotlib.pyplot as plt
 
 from PyQt5 import QtCore
-from PyQt5.QtWidgets import QApplication,QMessageBox,QLabel,QHBoxLayout
+from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QDialog
+from PyQt5.QtWidgets import QVBoxLayout
+from PyQt5.QtWidgets import QHBoxLayout
+from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtWidgets import QLabel
 from PyQt5.QtWidgets import QPushButton
 from PyQt5.QtWidgets import QFormLayout
 from PyQt5.QtWidgets import QLineEdit
-from PyQt5.QtWidgets import QVBoxLayout
 
 from Visualization_Data import *
 from featureExtractUtils import *
-from parametersMgmt import *
 from modifyOpenvibeScen import *
-
+import bcipipeline_settings as settings
 
 class Features:
     Rsigned = []
@@ -43,8 +46,10 @@ class Dialog(QDialog):
         self.Features = Features()
         # self.PipelineParams = PipelineParams()
 
-        jsonfullpath = os.path.join(os.getcwd(), "generated", "params.json")
         # readJsonFile(jsonfullpath)
+        self.scriptPath = os.path.dirname(os.path.realpath(sys.argv[0]))
+        print(self.scriptPath)
+        jsonfullpath = os.path.join(self.scriptPath, "generated", "params.json")
         with open(jsonfullpath) as jsonfile:
             self.parameterDict = json.load(jsonfile)
 
@@ -60,12 +65,12 @@ class Dialog(QDialog):
 
         # Param 1 : Path 1
         self.path1 = QLineEdit()
-        pathSpectrum1 = os.path.join(os.getcwd(), "generated", "spectrumAmplitude-Left.csv")
+        pathSpectrum1 = os.path.join(self.scriptPath, "generated", "spectrumAmplitude-Left.csv")
         self.path1.setText(pathSpectrum1)
         self.formLayout.addRow('Path1:', self.path1)
         # Param 2 : Path 2
         self.path2 = QLineEdit()
-        pathSpectrum2 = os.path.join(os.getcwd(), "generated", "spectrumAmplitude-Right.csv")
+        pathSpectrum2 = os.path.join(self.scriptPath, "generated", "spectrumAmplitude-Right.csv")
         self.path2.setText(pathSpectrum2)
         self.formLayout.addRow('Path2:', self.path2)
 
@@ -86,7 +91,7 @@ class Dialog(QDialog):
         self.btn_load_files = QPushButton("Load spectrum files")
         self.btn_r2map = QPushButton("Plot R2Map")
         self.btn_timefreq = QPushButton("Plot Time/Freq Analysis")
-        self.btn_psd = QPushButton("Plot PSD for Spec. Freq.")
+        # self.btn_psd = QPushButton("Plot PSD for Spec. Freq.")
         self.btn_topo = QPushButton("Plot Topography for Spec. Freq.")
         self.btn_psd_r2 = QPushButton("Plot R2 and PSD")
 
@@ -117,7 +122,7 @@ class Dialog(QDialog):
         self.dlgLayout.addWidget(self.btn_load_files)
         self.dlgLayout.addWidget(self.btn_r2map)
         self.dlgLayout.addWidget(self.btn_timefreq)
-        self.dlgLayout.addWidget(self.btn_psd)
+        # self.dlgLayout.addWidget(self.btn_psd)
         self.dlgLayout.addWidget(self.btn_topo)
         self.dlgLayout.addWidget(self.btn_psd_r2)
         self.dlgLayout.addWidget(self.label2)
@@ -191,7 +196,7 @@ class Dialog(QDialog):
         self.btn_load_files.clicked.connect(lambda: self.load_files(self.path1.text(), self.path2.text()))
         self.btn_r2map.setEnabled(False)
         self.btn_timefreq.setEnabled(False)
-        self.btn_psd.setEnabled(False)
+        # self.btn_psd.setEnabled(False)
         self.btn_topo.setEnabled(False)
         self.btn_psd_r2.setEnabled(False)
         self.btn_addPair.setEnabled(False)
@@ -209,7 +214,7 @@ class Dialog(QDialog):
 
         self.btn_r2map.clicked.connect(lambda: self.btnR2(fres, fmin))
         self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq(fres, fmin))
-        self.btn_psd.clicked.connect(lambda: self.btnPsd(fres, fmin))
+        # self.btn_psd.clicked.connect(lambda: self.btnPsd(fres, fmin))
         self.btn_topo.clicked.connect(lambda: self.btnTopo(fres, fs))
         self.btn_addPair.clicked.connect(lambda: self.btnAddPair())
         self.btn_removePair.clicked.connect(lambda: self.btnRemovePair())
@@ -219,7 +224,7 @@ class Dialog(QDialog):
         self.btn_load_files.setEnabled(False)
         self.btn_r2map.setEnabled(True)
         self.btn_timefreq.setEnabled(True)
-        self.btn_psd.setEnabled(True)
+        # self.btn_psd.setEnabled(True)
         self.btn_topo.setEnabled(True)
         self.btn_addPair.setEnabled(True)
         self.btn_removePair.setEnabled(True)
@@ -281,12 +286,8 @@ class Dialog(QDialog):
             selectedFeats.append(feat.text().split(";"))
             print(feat)
 
-        # TODO : get correct scenario filename
-        scenName = 'sc2-train.xml'
-        sep = "/"
-        if os.name == 'nt':
-            sep = "\\"
-        fullScenPath = os.getcwd() + sep + "generated" + sep + scenName
+        scenName = settings.templateScenFilenames[2]
+        fullScenPath = os.path.join(self.scriptPath, "generated", scenName)
 
         # TODO : create new function "modifyscenario", creating "branches" of pipelines
         # modifyScenario(parameterList, fullScenPath)
