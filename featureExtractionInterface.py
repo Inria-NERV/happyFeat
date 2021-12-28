@@ -109,7 +109,7 @@ class Dialog(QDialog):
         # Param Output 1 : First selected pair of Channels / Electrodes
         # We'll add more with a button
         self.selectedFeats.append(QLineEdit())
-        self.selectedFeats[0].setText('')
+        self.selectedFeats[0].setText('C4;22')
         pairText = "Selected Feats Pair"
         self.formLayoutOutput.addRow(pairText, self.selectedFeats[0])
 
@@ -266,7 +266,7 @@ class Dialog(QDialog):
 
     def btnAddPair(self):
         self.selectedFeats.append(QLineEdit())
-        self.selectedFeats[-1].setText('')
+        self.selectedFeats[-1].setText('C4;23')
         self.formLayoutOutput.addRow("Selected Feats Pair", self.selectedFeats[-1])
 
     def btnRemovePair(self):
@@ -277,12 +277,39 @@ class Dialog(QDialog):
 
     def btnSelectFeatures(self):
         selectedFeats = []
+
+        # Checks :
+        # No empty field
+        # frequencies in acceptable ranges
+        # channels in list
+        channelList = self.parameterDict["ChannelNames"].split(";")
+        n_bins = int((int(self.parameterDict["PsdSize"]) / 2) + 1)
         for idx, feat in enumerate(self.selectedFeats):
             if feat.text() == "":
                 msg = QMessageBox()
                 msg.setText("Pair "+str(idx+1)+" is empty...")
                 msg.exec_()
                 return
+
+            [chan, freqstr] = feat.text().split(";")
+            if chan not in channelList:
+                msg = QMessageBox()
+                msg.setText("Channel in pair " + str(idx + 1) + " (" + str(chan) + ") is not in the list...")
+                msg.exec_()
+                return
+
+            freqs = freqstr.split(":")
+            for freq in freqs:
+                if not freq.isdigit():
+                    msg = QMessageBox()
+                    msg.setText("Frequency in pair " + str(idx + 1) + " (" + str(freq) + ") has an invalid format, must be an integer...")
+                    msg.exec_()
+                    return
+                if int(freq) >= n_bins:
+                    msg = QMessageBox()
+                    msg.setText("Frequency in pair " + str(idx + 1) + " (" + str(freq) + ") is not in the acceptable range...")
+                    msg.exec_()
+                    return
             selectedFeats.append(feat.text().split(";"))
             print(feat)
 
@@ -290,7 +317,7 @@ class Dialog(QDialog):
         fullScenPath = os.path.join(self.scriptPath, "generated", scenName)
 
         # TODO : create new function "modifyscenario", creating "branches" of pipelines
-        # modifyScenario(parameterList, fullScenPath)
+        modifyTrainScenario(selectedFeats, fullScenPath)
 
         textGoodbye = "Your training scenario using\n\n"
         for i in range(len(selectedFeats)):
