@@ -42,7 +42,7 @@ function process(box)
 	-- manages baseline
 
 	box:send_stimulation(1, OVTK_StimulationId_ExperimentStart, t, 0)
-	t = t + 5
+	t = t + 2
 
 	box:send_stimulation(1, OVTK_StimulationId_BaselineStart, t, 0)
 	box:send_stimulation(1, OVTK_StimulationId_Beep, t, 0)
@@ -50,7 +50,6 @@ function process(box)
 
 	box:send_stimulation(1, OVTK_StimulationId_BaselineStop, t, 0)
 	box:send_stimulation(1, OVTK_StimulationId_Beep, t, 0)
-	t = t + 5
 
 	-- manages trials
 

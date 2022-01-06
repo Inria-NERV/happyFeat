@@ -55,38 +55,49 @@ class Dialog(QDialog):
 
         ### CREATE INTERFACE...
         self.setWindowTitle('Feature Extraction')
-        self.dlgLayout = QVBoxLayout()
+        self.dlgLayout = QHBoxLayout()
 
         # FEATURE VISUALIZATION PART
+        self.layoutLeft = QVBoxLayout()
+        self.layoutLeft.setAlignment(QtCore.Qt.AlignTop)
         self.label = QLabel('----- VISUALIZE FEATURES -----')
         self.label.setAlignment(QtCore.Qt.AlignCenter)
+        self.layoutLeft.addWidget(self.label)
 
-        self.formLayout = QFormLayout()
+        self.formLayoutExtract = QFormLayout()
 
-        # Param 1 : Path 1
+        # Param : Path 1
         self.path1 = QLineEdit()
         pathSpectrum1 = os.path.join(self.scriptPath, "generated", "spectrumAmplitude-Left.csv")
         self.path1.setText(pathSpectrum1)
-        self.formLayout.addRow('Path1:', self.path1)
-        # Param 2 : Path 2
+        self.formLayoutExtract.addRow('Path1:', self.path1)
+        # Param : Path 2
         self.path2 = QLineEdit()
         pathSpectrum2 = os.path.join(self.scriptPath, "generated", "spectrumAmplitude-Right.csv")
         self.path2.setText(pathSpectrum2)
-        self.formLayout.addRow('Path2:', self.path2)
+        self.formLayoutExtract.addRow('Path2:', self.path2)
 
-        # Param 3 : Electrode to use for PSD display
+        # Param : fmin for frequency based viz
+        self.userFmin = QLineEdit()
+        self.userFmin.setText('1')
+        self.formLayoutExtract.addRow('fMin (for PSD and r2map)', self.userFmin)
+        # Param : fmax for frequency based viz
         self.userFmax = QLineEdit()
         self.userFmax.setText('40')
-        self.formLayout.addRow('fMax (for PSD and r2map)', self.userFmax)
+        self.formLayoutExtract.addRow('fMax (for PSD and r2map)', self.userFmax)
 
-        # Param 3 : Electrode to use for PSD display
+        # Param : Electrode to use for PSD display
         self.electrodePsd = QLineEdit()
         self.electrodePsd.setText('FC1')
-        self.formLayout.addRow('Electrode to use for PSD', self.electrodePsd)
-        # Param 4 : Frequency to use for Topography
+        self.formLayoutExtract.addRow('Electrode to use for PSD', self.electrodePsd)
+        # Param : Frequency to use for Topography
         self.freqTopo = QLineEdit()
         self.freqTopo.setText('15')
-        self.formLayout.addRow('Frequency to use for Topography (Hz)', self.freqTopo)
+        self.formLayoutExtract.addRow('Frequency to use for Topography (Hz)', self.freqTopo)
+
+        self.layoutLeft.addLayout(self.formLayoutExtract)
+
+        self.layoutLeftButtons = QVBoxLayout()
 
         self.btn_load_files = QPushButton("Load spectrum files")
         self.btn_r2map = QPushButton("Plot R2Map")
@@ -95,7 +106,24 @@ class Dialog(QDialog):
         self.btn_topo = QPushButton("Plot Topography for Spec. Freq.")
         self.btn_psd_r2 = QPushButton("Plot R2 and PSD")
 
+        self.layoutLeftButtons.addWidget(self.btn_load_files)
+        self.layoutLeftButtons.addWidget(self.btn_r2map)
+        self.layoutLeftButtons.addWidget(self.btn_timefreq)
+        self.layoutLeftButtons.addWidget(self.btn_topo)
+        self.layoutLeftButtons.addWidget(self.btn_psd_r2)
+
+        self.layoutLeft.addLayout(self.layoutLeftButtons)
+        self.dlgLayout.addLayout(self.layoutLeft)
+
         # FEATURE SELECTION PART
+        self.layoutRight = QVBoxLayout()
+        self.layoutRight.setAlignment(QtCore.Qt.AlignTop)
+        self.qvBoxLayouts = [None, None]
+        self.qvBoxLayouts[0] = QFormLayout()
+        self.qvBoxLayouts[1] = QVBoxLayout()
+        self.layoutRight.addLayout(self.qvBoxLayouts[0])
+        self.layoutRight.addLayout(self.qvBoxLayouts[1])
+
         self.label2 = QLabel('----- SELECT FEATURES FOR TRAINING -----')
         self.label2.setAlignment(QtCore.Qt.AlignCenter)
         textFeatureSelect = "Enter pair : ELECTRODE;FREQUENCY (separated with \";\")"
@@ -104,37 +132,31 @@ class Dialog(QDialog):
         textFeatureSelect = str(textFeatureSelect + "\n  Ex: C4;22")
         self.label3 = QLabel(textFeatureSelect)
 
-        self.formLayoutOutput = QFormLayout()
+        self.qvBoxLayouts[0].addWidget(self.label2)
+        self.qvBoxLayouts[0].addWidget(self.label3)
+
         self.selectedFeats = []
         # Param Output 1 : First selected pair of Channels / Electrodes
         # We'll add more with a button
         self.selectedFeats.append(QLineEdit())
         self.selectedFeats[0].setText('C4;22')
         pairText = "Selected Feats Pair"
-        self.formLayoutOutput.addRow(pairText, self.selectedFeats[0])
+        self.qvBoxLayouts[0].addRow(pairText, self.selectedFeats[0])
 
         self.btn_addPair = QPushButton("Add Feature")
         self.btn_removePair = QPushButton("Remove Last Feat")
-        self.btn_selectFeatures = QPushButton("Select features & generate scenarios")
+        self.btn_selectFeatures = QPushButton("Select features and generate scenarios")
+        self.btn_runTrain = QPushButton("Run classifier training scenario")
 
-        self.dlgLayout.addWidget(self.label)
-        self.dlgLayout.addLayout(self.formLayout)
-        self.dlgLayout.addWidget(self.btn_load_files)
-        self.dlgLayout.addWidget(self.btn_r2map)
-        self.dlgLayout.addWidget(self.btn_timefreq)
-        # self.dlgLayout.addWidget(self.btn_psd)
-        self.dlgLayout.addWidget(self.btn_topo)
-        self.dlgLayout.addWidget(self.btn_psd_r2)
-        self.dlgLayout.addWidget(self.label2)
-        self.dlgLayout.addWidget(self.label3)
-        self.dlgLayout.addLayout(self.formLayoutOutput)
-        self.dlgLayout.addWidget(self.btn_addPair)
-        self.dlgLayout.addWidget(self.btn_removePair)
-        self.dlgLayout.addWidget(self.btn_selectFeatures)
+        self.qvBoxLayouts[1].addWidget(self.btn_addPair)
+        self.qvBoxLayouts[1].addWidget(self.btn_removePair)
+        self.qvBoxLayouts[1].addWidget(self.btn_selectFeatures)
+        self.qvBoxLayouts[1].addWidget(self.btn_runTrain)
 
-        self.setLayout(self.dlgLayout)
+        self.dlgLayout.addLayout(self.layoutRight)
 
         # display initial layout
+        self.setLayout(self.dlgLayout)
         self.initialWindow()
 
     def load_files(self, path1, path2):
@@ -188,7 +210,7 @@ class Dialog(QDialog):
         self.Features.time_right = time_right
         self.Features.time_length = time_length
         self.Features.freqs_left = freqs_left
-        self.Features.electrodes_final = electrodes_final
+        self.Features.electrodes_final   = electrodes_final
         self.Features.Rsigned = Rsigned_2
 
 
@@ -202,24 +224,24 @@ class Dialog(QDialog):
         self.btn_addPair.setEnabled(False)
         self.btn_removePair.setEnabled(False)
         self.btn_selectFeatures.setEnabled(False)
+        self.btn_runTrain.setEnabled(False)
         self.selectedFeats[0].setEnabled(False)
         self.show()
 
     def plotWindow(self):
 
         fres = 1
-        fmin = 0
         # fs = self.PipelineParams.fSampling
         fs = 500
 
-        self.btn_r2map.clicked.connect(lambda: self.btnR2(fres, fmin))
-        self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq(fres, fmin))
-        # self.btn_psd.clicked.connect(lambda: self.btnPsd(fres, fmin))
+        self.btn_r2map.clicked.connect(lambda: self.btnR2(fres))
+        self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq(fres))
+        # self.btn_psd.clicked.connect(lambda: self.btnPsd(fres))
         self.btn_topo.clicked.connect(lambda: self.btnTopo(fres, fs))
         self.btn_addPair.clicked.connect(lambda: self.btnAddPair())
         self.btn_removePair.clicked.connect(lambda: self.btnRemovePair())
         self.btn_selectFeatures.clicked.connect(lambda: self.btnSelectFeatures())
-        self.btn_psd_r2.clicked.connect(lambda: self.btnpsdR2(fres, fmin))
+        self.btn_psd_r2.clicked.connect(lambda: self.btnpsdR2(fres))
 
         self.btn_load_files.setEnabled(False)
         self.btn_r2map.setEnabled(True)
@@ -234,30 +256,31 @@ class Dialog(QDialog):
 
         self.show()
 
-    def btnR2(self, fres, fmin):
+    def btnR2(self, fres):
         plot_stats(self.Features.Rsigned,
                    self.Features.freqs_left,
                    self.Features.electrodes_final,
-                   fres, fmin, int(self.userFmax.text()))
+                   fres, int(self.userFmin.text()), int(self.userFmax.text()))
 
-    def btnTimeFreq(self, fres, fmin):
+    def btnTimeFreq(self, fres):
         print("TimeFreq for electrode: " + self.electrodePsd.text())
         qt_plot_tf(self.Features.time_right, self.Features.time_left,
                    self.Features.time_length, self.Features.freqs_left,
-                   self.Features.electrodes_final, self.electrodePsd.text(), fres, fmin, int(self.userFmax.text()))
+                   self.Features.electrodes_final, self.electrodePsd.text(),
+                   fres, int(self.userFmin.text()), int(self.userFmax.text()))
 
-    def btnPsd(self, fres, fmin):
+    def btnPsd(self, fres):
         qt_plot_psd(self.Features.power_right, self.Features.power_left,
                     self.Features.freqs_left, self.Features.electrodes_final,
                     self.electrodePsd.text(),
-                    fres, fmin, int(self.userFmax.text()))
+                    fres, int(self.userFmin.text()), int(self.userFmax.text()))
 
-    def btnpsdR2(self, fres, fmin):
+    def btnpsdR2(self, fres):
         qt_plot_psd_r2(self.Features.Rsigned,
                        self.Features.power_right, self.Features.power_left,
                        self.Features.freqs_left, self.Features.electrodes_final,
                        self.electrodePsd.text(),
-                       fres, fmin, int(self.userFmax.text()))
+                       fres, int(self.userFmin.text()), int(self.userFmax.text()))
 
     def btnTopo(self, fres, fs):
         print("Freq Topo: " + self.freqTopo.text())
@@ -266,13 +289,13 @@ class Dialog(QDialog):
 
     def btnAddPair(self):
         self.selectedFeats.append(QLineEdit())
-        self.selectedFeats[-1].setText('C4;23')
-        self.formLayoutOutput.addRow("Selected Feats Pair", self.selectedFeats[-1])
+        self.selectedFeats[-1].setText('C4;22')
+        self.qvBoxLayouts[0].addRow("Selected Feats Pair", self.selectedFeats[-1])
 
     def btnRemovePair(self):
         if len(self.selectedFeats) > 1:
-            result = self.formLayoutOutput.getWidgetPosition(self.selectedFeats[-1])
-            self.formLayoutOutput.removeRow(result[0])
+            result = self.qvBoxLayouts[0].getWidgetPosition(self.selectedFeats[-1])
+            self.qvBoxLayouts[0].removeRow(result[0])
             self.selectedFeats.pop()
 
     def btnSelectFeatures(self):
@@ -282,7 +305,7 @@ class Dialog(QDialog):
         # No empty field
         # frequencies in acceptable ranges
         # channels in list
-        channelList = self.parameterDict["ChannelNames"].split(";")
+        channelList = self.Features.electrodes_final
         n_bins = int((int(self.parameterDict["PsdSize"]) / 2) + 1)
         for idx, feat in enumerate(self.selectedFeats):
             if feat.text() == "":
@@ -319,7 +342,7 @@ class Dialog(QDialog):
         # TODO : create new function "modifyscenario", creating "branches" of pipelines
         modifyTrainScenario(selectedFeats, fullScenPath)
 
-        textGoodbye = "Your training scenario using\n\n"
+        textGoodbye = "The training scenario using\n\n"
         for i in range(len(selectedFeats)):
             textGoodbye = str(textGoodbye +"  Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1])+ " Hz\n")
         textGoodbye = str(textGoodbye + "\n... has been generated under:\n\n" + str(fullScenPath))
@@ -327,7 +350,8 @@ class Dialog(QDialog):
         msg = QMessageBox()
         msg.setText(textGoodbye)
         msg.exec_()
-        exit(0)
+
+
 
 
 def plot_stats(Rsigned, freqs_left, electrodes, fres, fmin, fmax):

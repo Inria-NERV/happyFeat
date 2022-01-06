@@ -47,14 +47,11 @@ class Dialog(QDialog):
         self.label = QLabel(label)
         self.label.setAlignment(QtCore.Qt.AlignCenter)
 
-        self.formLayout = QFormLayout()
-
         self.selectedScenarioName = None
         self.combo = QComboBox(self)
         for idx, key in enumerate(settings.optionKeys):
             self.combo.addItem(settings.optionsComboText[key], idx)
         self.combo.currentIndexChanged.connect(self.comboBoxChanged)
-        self.formLayout.addWidget(self.combo)
 
         self.paramWidgets = []
 
@@ -75,7 +72,8 @@ class Dialog(QDialog):
         self.btn_generate.clicked.connect(lambda: self.generate())
 
         self.dlgLayout.addWidget(self.label)
-        self.dlgLayout.addLayout(self.formLayout)
+        self.dlgLayout.addWidget(self.combo)
+        # self.dlgLayout.addLayout(self.formLayout)
         self.setLayout(self.dlgLayout)
 
         # display initial layout
@@ -96,11 +94,37 @@ class Dialog(QDialog):
 
             # PARAMETER ALWAYS PRESENT : LIST OF CHANNELS
             formLayout.addRow("Electrodes List", self.electrodesFileWidget)
+            self.dlgLayout.addLayout(formLayout)
+
+            # TWO COLUMNS OF PARAMETERS
+            hboxLayout = QHBoxLayout()
+            vBoxLayouts = [QVBoxLayout(), QVBoxLayout()]
+            hboxLayout.addLayout(vBoxLayouts[0])
+            hboxLayout.addLayout(vBoxLayouts[1])
 
             self.parameterDict = {}
+
+            labelText = [None, None]
+            label = [None, None]
+            labelText[0] = str("====== ")
+            labelText[0] = str(labelText[0] + "Acquisition scenario parameters (")
+            labelText[0] = str(labelText[0] + settings.templateScenFilenames[0]+")")
+            label[0] = QLabel(labelText[0])
+            vBoxLayouts[0].addWidget(label[0])
+
+            labelText[1] = str("====== ")
+            labelText[1] = str(labelText[1] + "Feature extraction scenario parameters (")
+            labelText[1] = str(labelText[1] + settings.templateScenFilenames[1] + ")")
+            label[1] = QLabel(labelText[1])
+            vBoxLayouts[1].addWidget(label[1])
+
+            formLayouts = [None, None]
+            formLayouts[0] = QFormLayout()
+            formLayouts[1] = QFormLayout()
+
             self.parameterDict["pipelineType"] = pipelineKey
             # GET PARAMETER LIST FOR SELECTED BCI PIPELINE, AND DISPLAY THEM
-            for param in settings.scenarioSettings[pipelineKey]:
+            for idx, param in enumerate(settings.scenarioSettings[pipelineKey]):
                 # init params...
                 value = settings.scenarioSettings[pipelineKey][param]
                 self.parameterDict[param] = value[0]
@@ -110,11 +134,19 @@ class Dialog(QDialog):
                 settingLabel = str(value[1])
                 self.paramWidgets.append(paramWidget)
                 self.parameterTextList.append(param)
-                formLayout.addRow(settingLabel, self.paramWidgets[-1])
+                if idx < settings.scenarioSettingsPartsLength[pipelineKey][0]:
+                    formLayouts[0].addRow(settingLabel, self.paramWidgets[-1])
+                else:
+                    formLayouts[1].addRow(settingLabel, self.paramWidgets[-1])
 
-        self.dlgLayout.addLayout(formLayout)
-        self.dlgLayout.addWidget(self.btn_generate)
-        self.show()
+            vBoxLayouts[0].addLayout(formLayouts[0])
+            vBoxLayouts[1].addLayout(formLayouts[1])
+            vBoxLayouts[0].setAlignment(QtCore.Qt.AlignTop)
+            vBoxLayouts[1].setAlignment(QtCore.Qt.AlignTop)
+
+            self.dlgLayout.addLayout(hboxLayout)
+            self.dlgLayout.addWidget(self.btn_generate)
+            self.show()
 
     def browseForElectrodeFile(self):
         directory = os.getcwd()
@@ -186,7 +218,8 @@ class Dialog(QDialog):
             destFile = os.path.join(os.getcwd(), self.generatedFolder, filename)
             print("---Copying file " + srcFile + " to " + destFile)
             copyfile(srcFile, destFile)
-            modifyScenarioGeneralSettings(destFile, self.parameterDict)
+            if "xml" in destFile:
+                modifyScenarioGeneralSettings(destFile, self.parameterDict)
 
         # SPECIAL CASES :
         #   SC1 & SC3 : "GRAZ" BOX SETTINGS
