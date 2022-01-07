@@ -77,4 +77,11 @@ The BCI experiment is carried out, with instruction provided on the screen. EEG 
 
 ## Online classification
 
-*coming soon...*
+1. Make sure everything is ready for acquiring EEG data! (same as Acquisition step...)
+2. Make sure the OpenViBE acquisition server is running.
+3. Open the scenario file **sc3-online.xml**, in the **generated** folder. Click "Run".
+4. Instructions are provided to the user, along with visual feedback on the classification performance.
+5. EEG data is recorded in **motor-imagery-live.ov** for replay purposes.
+
+
+
