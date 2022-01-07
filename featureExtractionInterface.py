@@ -29,6 +29,7 @@ import bcipipeline_settings as settings
 
 class Features:
     Rsigned = []
+    Wsigned = []
     electrodes_orig = []
     electrodes_final = []
     power_right = []
@@ -106,6 +107,7 @@ class Dialog(QDialog):
 
         self.btn_load_files = QPushButton("Load spectrum files")
         self.btn_r2map = QPushButton("Plot R2Map")
+        self.btn_w2map = QPushButton("Plot Wilcoxon Map")
         self.btn_timefreq = QPushButton("Plot Time/Freq Analysis")
         # self.btn_psd = QPushButton("Plot PSD for Spec. Freq.")
         self.btn_topo = QPushButton("Plot Topography for Spec. Freq.")
@@ -113,6 +115,7 @@ class Dialog(QDialog):
 
         self.layoutLeftButtons.addWidget(self.btn_load_files)
         self.layoutLeftButtons.addWidget(self.btn_r2map)
+        self.layoutLeftButtons.addWidget(self.btn_w2map)
         self.layoutLeftButtons.addWidget(self.btn_timefreq)
         self.layoutLeftButtons.addWidget(self.btn_topo)
         self.layoutLeftButtons.addWidget(self.btn_psd_r2)
@@ -217,9 +220,14 @@ class Dialog(QDialog):
         # Statistical Analysis
         electrodes_orig = channel_generator(nbElectrodes, 'TP9', 'TP10')
         freqs_left = np.arange(0, n_bins)
+
         Rsigned = Compute_Rsquare_Map_Welch(power_right[:, :, :(n_bins-1)], power_left[:, :, :(n_bins-1)])
-        # Rsigned = Compute_Rsquare_Map_Welch(power_right[:, :, :(fs/2)], power_left[:, :, :(fs/2)])
-        Rsigned_2, electrodes_final, power_left_2, power_right_2 = Reorder_Rsquare(Rsigned, electrodes_orig, power_left, power_right)
+        Wsquare, Wpvalues = Compute_Wilcoxon_Map(power_right[:, :, :(n_bins-1)], power_left[:, :, :(n_bins-1)])
+
+        Rsigned_2, Wsquare_2, Wpvalues_2, electrodes_final, power_left_2, power_right_2 \
+            = Reorder_Rsquare(Rsigned, Wsquare, Wpvalues, electrodes_orig, power_left, power_right)
+
+        # Rsigned_2, electrodes_final, power_left_2, power_right_2 = Reorder_Rsquare(Rsigned, electrodes_orig, power_left, power_right)
 
         self.Features.electrodes_orig = electrodes_orig
         self.Features.power_right = power_right_2
@@ -230,6 +238,7 @@ class Dialog(QDialog):
         self.Features.freqs_left = freqs_left
         self.Features.electrodes_final   = electrodes_final
         self.Features.Rsigned = Rsigned_2
+        self.Features.Wsigned = Wsquare_2
 
 
     def initialWindow(self):
@@ -237,6 +246,7 @@ class Dialog(QDialog):
         self.btn_runTrain.clicked.connect(lambda: self.runClassifierScenario())
 
         self.btn_r2map.setEnabled(False)
+        self.btn_w2map.setEnabled(False)
         self.btn_timefreq.setEnabled(False)
         # self.btn_psd.setEnabled(False)
         self.btn_topo.setEnabled(False)
@@ -255,6 +265,7 @@ class Dialog(QDialog):
         fs = 500
 
         self.btn_r2map.clicked.connect(lambda: self.btnR2(fres))
+        self.btn_w2map.clicked.connect(lambda: self.btnW2(fres))
         self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq(fres))
         # self.btn_psd.clicked.connect(lambda: self.btnPsd(fres))
         self.btn_topo.clicked.connect(lambda: self.btnTopo(fres, fs))
@@ -265,6 +276,7 @@ class Dialog(QDialog):
 
         self.btn_load_files.setEnabled(False)
         self.btn_r2map.setEnabled(True)
+        self.btn_w2map.setEnabled(True)
         self.btn_timefreq.setEnabled(True)
         # self.btn_psd.setEnabled(True)
         self.btn_topo.setEnabled(True)
@@ -278,6 +290,12 @@ class Dialog(QDialog):
 
     def btnR2(self, fres):
         plot_stats(self.Features.Rsigned,
+                   self.Features.freqs_left,
+                   self.Features.electrodes_final,
+                   fres, int(self.userFmin.text()), int(self.userFmax.text()))
+
+    def btnW2(self, fres):
+        plot_stats(self.Features.Wsigned,
                    self.Features.freqs_left,
                    self.Features.electrodes_final,
                    fres, int(self.userFmin.text()), int(self.userFmax.text()))

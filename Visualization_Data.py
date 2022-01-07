@@ -262,7 +262,7 @@ def _plot_topomap_test(data, pos, vmin=None, vmax=None, cmap=None, sensors=True,
     #topomap.plt_show(show)
     return im, cont, interp
 
-def time_frequency_map(time_freq,time,freqs,channel,fmin,fmax,fres,each_point,baseline,channel_array):
+def time_frequency_map(time_freq,time,freqs,channel,fmin,fmax,fres,each_point,baseline,channel_array,std_baseline):
     font = {'family': 'serif',
         'color':  'black',
         'weight': 'normal',
@@ -273,9 +273,10 @@ def time_frequency_map(time_freq,time,freqs,channel,fmin,fmax,fres,each_point,ba
     tf = time_freq.mean(axis=0)
     tf = np.transpose(tf[channel,:,:])
     PSD_baseline = baseline[channel,:]
+    PSD_STD = std_baseline[channel,:]
     A = []
     for i in range(tf.shape[1]):
-        A.append(np.divide((tf[:,i]-PSD_baseline),PSD_baseline)*100)
+        A.append(np.divide((tf[:,i]-PSD_baseline),PSD_STD))
     tf = np.transpose(A)
 
     frequence = []
@@ -295,9 +296,9 @@ def time_frequency_map(time_freq,time,freqs,channel,fmin,fmax,fres,each_point,ba
     newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)),top(np.linspace(1, 0, 128))))
     double = ListedColormap(newcolors2, name='double')
     if np.amin(tf)<0:
-        plt.imshow(tf,cmap=double,aspect='auto',origin ='lower',vmin = -np.amax(tf),vmax = np.amax(tf))
+        plt.imshow(tf,cmap='jet',aspect='auto',origin ='lower',vmin = -np.amax(tf),vmax = np.amax(tf))
     else:
-        plt.imshow(tf,cmap=double,aspect='auto',origin ='lower')
+        plt.imshow(tf,cmap='jet',aspect='auto',origin ='lower')
     size_time = len(time)/each_point
 
     if round(size_time) == 0:
@@ -315,7 +316,7 @@ def time_frequency_map(time_freq,time,freqs,channel,fmin,fmax,fres,each_point,ba
             frequence.append(str(round(i)))
         else:
             frequence.append('')
-    cm.get_cmap(double)
+    cm.get_cmap('jet')
     #plt.jet()
     ax.tick_params(axis='both', which='both', length=0)
     cbar = plt.colorbar()
@@ -347,17 +348,13 @@ def plot_psd(Power_MI, Power_Rest, freqs, channel, channel_array, each_point, fm
     Aver_Rest = Aver_Rest.mean(0)
     STD_Rest = 10 * np.log10(Power_Rest[:, channel, :])
     STD_Rest = STD_Rest.std(0)
+    for i in range(len(freqs)):
+        if freqs[i]==fmin:
+            index_fmin = i
 
-    for idx, f in enumerate(freqs):
-        if f == fmin:
-            index_fmin = idx
-            break
-
-    for idx, f in enumerate(freqs):
-        if f == fmax:
-            index_fmax = idx
-            break
-
+    for i in range(len(freqs)):
+        if freqs[i]==fmax:
+            index_fmax = i
     # plt.plot(Aver_MI,freqs,Aver_Rest,freqs)
     # index_fmin = np.where(np.abs(freqs-fmin)<0.00001)
     # index_fmax = np.where(np.abs(freqs-fmax)<0.00001)
@@ -473,16 +470,13 @@ def plot_Rsquare_calcul_welch(Rsquare,channel_array,freq,smoothing,fres,each_poi
         }
     frequence = []
 
-    for idx, f in enumerate(freq):
-        if f == fmin:
-            index_fmin = idx
-            break
+    for i in range(len(freq)):
+        if freq[i]==fmin:
+            index_fmin = i
 
-    for idx, f in enumerate(freq):
-        if f == fmax:
-            index_fmax = idx
-            break
-
+    for i in range(len(freq)):
+        if freq[i]==fmax:
+            index_fmax = i
     Rsquare_reshape = Rsquare[0:64,index_fmin:index_fmax+1]
 
     top = cm.get_cmap('YlOrRd_r', 128) # r means reversed version
@@ -491,10 +485,10 @@ def plot_Rsquare_calcul_welch(Rsquare,channel_array,freq,smoothing,fres,each_poi
     double = ListedColormap(newcolors2, name='double')
 
     if np.amin(Rsquare_reshape) < 0:
-        plt.imshow(Rsquare_reshape,cmap='bwr',aspect='auto',vmin = -np.amax(abs(Rsquare_reshape)),vmax = np.max(abs(Rsquare_reshape)))
+        plt.imshow(Rsquare_reshape,cmap='jet',aspect='auto',vmin = -np.amax(abs(Rsquare_reshape)),vmax = np.max(abs(Rsquare_reshape)))
     else:
-        plt.imshow(Rsquare_reshape,cmap='bwr',aspect='auto')
-    cm.get_cmap(double)
+        plt.imshow(Rsquare_reshape,cmap='jet',aspect='auto')
+    cm.get_cmap('jet')
     #plt.jet()
     cbar = plt.colorbar()
     cbar.set_label('Signed R^2', rotation=270,labelpad = 10)
@@ -538,30 +532,44 @@ def plot_Rsquare_calcul_welch(Rsquare,channel_array,freq,smoothing,fres,each_poi
     #plt.show()
 
 
-def Reorder_Rsquare(Rsquare, electrodes_orig, powerLeft, powerRight):
+# def Reorder_Rsquare(Rsquare, Wsquare, Wpvalues, electrodes_orig, powerLeft, powerRight,timeleft,timeright):
+def Reorder_Rsquare(Rsquare, Wsquare, Wpvalues, electrodes_orig, powerLeft, powerRight):
     if len(electrodes_orig) >= 64:
         electrodes_target = ['FP1','AF7','AF3','F7','F5','F3','F1','FT9','FT7','FC5','FC3','FC1','T7','C5','C3','C1','TP9','TP7','CP5','CP3','CP1','P7','P5','P3','P1','PO9','PO7','PO3','O1','AFz','Fz','FCz','Cz','CPz','Pz','POz','Oz','FP2','AF8','AF4','F8','F6','F4','F2','FT10','FT8','FC6','FC4','FC2','T8','C6','C4','C2','TP10','TP8','CP6','CP4','CP2','P8','P6','P4','P2','PO10','PO8','PO4','O2']
     else:
         electrodes_target = ['Fp1','F7','F3','FC5','FC1','T7','C3','CP5','CP1','P7','P3','PO9','O1','AFz','Fz','FCz','Cz','Pz','Oz','Fp2','F8','F4','FC6','FC2','T8','C4','CP6','CP2','P8','P4','PO10','O2']
     index_elec = []
-    for i in range(len(electrodes_orig)):
-        for k in range(len(electrodes_target)):
-            if electrodes_orig[i] == electrodes_target[k]:
-                index_elec.append(k)
+
+    for k in range(len(electrodes_target)):
+        for i in range(len(electrodes_orig)):
+            if (electrodes_orig[i] == electrodes_target[k]):
+                index_elec.append(i)
                 break
 
-    Rsquare_final = np.copy(Rsquare)
-    powerLeft_final = np.copy(powerLeft)
-    powerRight_final = np.copy(powerRight)
 
+    print(index_elec)
+    Rsquare_final = np.zeros([Rsquare.shape[0],Rsquare.shape[1]])
+    Wsquare_final = np.zeros([Wsquare.shape[0],Wsquare.shape[1]])
+    Wpvalues_final =np.zeros([Wpvalues.shape[0],Wpvalues.shape[1]])
+    print(powerLeft.shape)
+    powerLeft_final = np.zeros([powerLeft.shape[0],powerLeft.shape[1],powerLeft.shape[2]])
+    powerRight_final = np.zeros([powerRight.shape[0],powerRight.shape[1],powerRight.shape[2]])
+    # timeleftfinal = np.zeros([timeleft.shape[0],timeleft.shape[1],timeleft.shape[2],timeleft.shape[3]])
+    # timerightfinal = np.zeros([timeright.shape[0],timeright.shape[1],timeright.shape[2],timeleft.shape[3]])
+
+    electrode_test = []
     for l in range(len(index_elec)):
         # print("index "+str(l)+" replaced by "+str(index_elec[l]))
+        electrode_test.append(index_elec[l])
         powerLeft_final[:, l, :] = powerLeft[:, index_elec[l], :]
         powerRight_final[:, l, :] = powerRight[:, index_elec[l], :]
-        Rsquare_final[l] = Rsquare[index_elec[l], :]
+        # timeleftfinal[:,l,:,:] = timeleft[:,index_elec[l], :,:]
+        # timerightfinal[:, l, :,:] = timeright[:, index_elec[l], :,:]
+        Rsquare_final[l, :] = Rsquare[index_elec[l], :]
+        Wsquare_final[l,:] = Wsquare[index_elec[l],:]
+        Wpvalues_final[l,:] = Wpvalues[index_elec[l],:]
 
-    return Rsquare_final, electrodes_target, powerLeft_final, powerRight_final
-
+    return Rsquare_final, Wsquare_final, Wpvalues_final,electrodes_target, powerLeft_final, powerRight_final # ,timeleftfinal,timerightfinal
 
 def topo_plot(Rsquare, freq, electrodes, fres, fs, Stat_method):
     fig,ax = plt.subplots()
@@ -618,12 +626,12 @@ def topo_plot(Rsquare, freq, electrodes, fres, fs, Stat_method):
     bottom = cm.get_cmap('YlGnBu_r', 128)
     newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)),top(np.linspace(1, 0, 128))))
     double = ListedColormap(newcolors2, name='double')
-    plot_topomap_data_viz(sizer, fake_evoked.info,sensors = False,names = biosemi_montage.ch_names,show_names = True,res = 256,mask_params = dict(marker='', markerfacecolor='w', markeredgecolor='k',linewidth=0, markersize=0),contours = 0,image_interp='gaussian',show=True, extrapolate='head',cmap=double,freq = freq,Stat_method=Stat_method)
+    plot_topomap_data_viz(sizer, fake_evoked.info,sensors = False,names = biosemi_montage.ch_names,show_names = True,res = 256,mask_params = dict(marker='', markerfacecolor='w', markeredgecolor='k',linewidth=0, markersize=0),contours = 0,image_interp='gaussian',show=True, extrapolate='head',cmap='jet',freq = freq,Stat_method=Stat_method)
 
 
 
 
-def plot_Pmapsigned_calcul_welch(Rsquare,channel_array,freq,smoothing,fres,each_point,fmin,fmax):
+def plot_Wsquare_calcul_welch(Rsquare,channel_array,freq,smoothing,fres,each_point,fmin,fmax):
     fig,ax = plt.subplots()
     font = {'family': 'serif',
         'color':  'black',
@@ -631,33 +639,35 @@ def plot_Pmapsigned_calcul_welch(Rsquare,channel_array,freq,smoothing,fres,each_
         'size': 14,
         }
     frequence = []
-    for idx, f in enumerate(freq):
-        if f == fmin:
-            index_fmin = idx
-            break
 
-    for idx, f in enumerate(freq):
-        if f == fmax:
-            index_fmax = idx
-            break
+    for i in range(len(freq)):
+        if freq[i]==fmin:
+            index_fmin = i
 
-    Rsquare_reshape = Rsquare[0:64,index_fmin:index_fmax]
-    for i in range(Rsquare_reshape.shape[0]):
-        for k in range(Rsquare_reshape.shape[1]):
-            if Rsquare_reshape[i,k] >=0:
-                Rsquare_reshape[i,k] = 1-Rsquare_reshape[i,k]
-            else:
-                Rsquare_reshape[i,k] = -1-Rsquare_reshape[i,k]
-    plt.imshow(Rsquare_reshape,cmap='bwr',aspect='auto')
-    cm.get_cmap(name = 'bwr')
+    for i in range(len(freq)):
+        if freq[i]==fmax:
+            index_fmax = i
+    Rsquare_reshape = Rsquare[0:64,index_fmin:index_fmax+1]
+
+    top = cm.get_cmap('YlOrRd_r', 128) # r means reversed version
+    bottom = cm.get_cmap('YlGnBu_r', 128)
+    newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)),top(np.linspace(1, 0, 128))))
+    double = ListedColormap(newcolors2, name='double')
+
+    if np.amin(Rsquare_reshape) < 0:
+        plt.imshow(Rsquare_reshape,cmap='jet',aspect='auto',vmin = -np.amax(abs(Rsquare_reshape)),vmax = np.max(abs(Rsquare_reshape)))
+    else:
+        plt.imshow(Rsquare_reshape,cmap='jet',aspect='auto')
+    cm.get_cmap('jet')
     #plt.jet()
     cbar = plt.colorbar()
-    cbar.set_label('Confidence level', rotation=270,labelpad = 10)
+    cbar.set_label('Wilcoxon Signed Values', rotation=270,labelpad = 10)
     plt.yticks(range(len(channel_array)),channel_array)
     freq_real = range(0,round(freq[len(freq)-1]),2)
-    for i in range(len(freq)):
-        if (i%(round(each_point*1/fres))==0):
-            frequence.append(str(round(freq[i])))
+    sizing = round(len(freq[index_fmin:(index_fmax+1)])/(each_point*1/fres))
+    for i in freq[index_fmin:(index_fmax+1)]:
+        if (i%(round(sizing*1/fres))==0):
+            frequence.append(str(round(i)))
         else:
             frequence.append('')
 
@@ -667,12 +677,25 @@ def plot_Pmapsigned_calcul_welch(Rsquare,channel_array,freq,smoothing,fres,each_
         # plt.xticks(range(0,len(freq)-1,round(2/fres)),freq_real)
         #plt.xlim(0,round(70/fres))
         ax.tick_params(axis='both', which='both', length=0)
-        plt.xticks(range(len(freq[index_fmin:index_fmax])),frequence[index_fmin:index_fmax],fontsize = 10)
+        plt.xticks(range(len(freq[index_fmin:index_fmax+1])),frequence,fontsize = 10)
         # plt.xlim(0,round(72/fres))
     plt.xlabel('Frequency (Hz)', fontdict=font)
     plt.ylabel('Sensors', fontdict=font)
 
-    plt.show()
+    # Major ticks
+    ax.set_xticks(np.arange(0, len(freq[index_fmin:index_fmax+1]), 1))
+    ax.set_yticks(np.arange(0, len(channel_array), 1))
+
+    # Labels for major ticks
+    ax.set_xticklabels(frequence)
+    ax.set_yticklabels(channel_array)
+
+    # Minor ticks
+
+    ax.set_yticks(np.arange(-.5, len(channel_array), 1), minor=True)
+    ax.set_xticks(np.arange(-.5, len(freq[index_fmin:index_fmax+1]), 1), minor=True)
+    # Gridlines based on minor ticks
+    ax.grid(which='minor', color='black', linestyle='-', linewidth=1)
 
 
 
@@ -690,15 +713,12 @@ def time_frequency_map_between_cond(time_freq,time,freqs,channel,fmin,fmax,fres,
 
     time_seres = []
     print(time)
-    for idx, f in enumerate(freqs):
-        if f == fmin:
-            index_fmin = idx
-            break
-
-    for idx, f in enumerate(freqs):
-        if f == fmax:
-            index_fmax = idx
-            break
+    for i in range(len(freqs)):
+        if freqs[i]==fmin:
+            index_fmin = i
+    for i in range(len(freqs)):
+        if freqs[i]==fmax:
+            index_fmax = i
 
     rsquare_signed = rsquare_signed[index_fmin:index_fmax+1,:]
     top = cm.get_cmap('YlOrRd_r', 128) # r means reversed version
@@ -706,10 +726,9 @@ def time_frequency_map_between_cond(time_freq,time,freqs,channel,fmin,fmax,fres,
     newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)),top(np.linspace(1, 0, 128))))
     double = ListedColormap(newcolors2, name='double')
     if np.amin(rsquare_signed)<0:
-        plt.imshow(rsquare_signed,cmap=double,aspect='auto',origin ='lower',vmin = -np.amax(rsquare_signed),vmax = np.amax(rsquare_signed))
+        plt.imshow(rsquare_signed,cmap='jet',aspect='auto',origin ='lower',vmin = -np.amax(rsquare_signed),vmax = np.amax(rsquare_signed))
     else:
-        plt.imshow(rsquare_signed,cmap=double,aspect='auto',origin ='lower')
-
+        plt.imshow(rsquare_signed,cmap='jet',aspect='auto',origin ='lower')
     size_time = len(time) / each_point
     if round(size_time) == 0:
         size_time = 1
@@ -726,7 +745,7 @@ def time_frequency_map_between_cond(time_freq,time,freqs,channel,fmin,fmax,fres,
             frequence.append(str(round(i)))
         else:
             frequence.append('')
-    cm.get_cmap(double)
+    cm.get_cmap('jet')
     #plt.jet()
     ax.tick_params(axis='both', which='both', length=0)
     cbar = plt.colorbar()
