@@ -1,10 +1,13 @@
 import sys
 import os
+import subprocess
+import platform
 import json
 import pandas as pd
 import time
 import numpy as np
 import matplotlib.pyplot as plt
+from shutil import copyfile
 
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QApplication
@@ -16,6 +19,8 @@ from PyQt5.QtWidgets import QLabel
 from PyQt5.QtWidgets import QPushButton
 from PyQt5.QtWidgets import QFormLayout
 from PyQt5.QtWidgets import QLineEdit
+from PyQt5.QtWidgets import QFileDialog
+from PyQt5.QtWidgets import QWidget
 
 from Visualization_Data import *
 from featureExtractUtils import *
@@ -148,9 +153,22 @@ class Dialog(QDialog):
         self.btn_selectFeatures = QPushButton("Select features and generate scenarios")
         self.btn_runTrain = QPushButton("Run classifier training scenario")
 
+        # OpenViBE designer file...
+        self.designer = None
+        self.btn_browse = QPushButton("Browse for OpenViBE folder")
+        self.btn_browse.clicked.connect(lambda: self.browseForDesigner())
+        self.designerWidget = QWidget()
+        layout_h = QHBoxLayout(self.designerWidget)
+        self.designerTextBox = QLineEdit()
+        self.designerTextBox.setText(str(os.getcwd() + "\\openvibe-designer.cmd"))
+        self.designerTextBox.setEnabled(False)
+        layout_h.addWidget(self.designerTextBox)
+        layout_h.addWidget(self.btn_browse)
+
         self.qvBoxLayouts[1].addWidget(self.btn_addPair)
         self.qvBoxLayouts[1].addWidget(self.btn_removePair)
         self.qvBoxLayouts[1].addWidget(self.btn_selectFeatures)
+        self.qvBoxLayouts[1].addWidget(self.designerWidget)
         self.qvBoxLayouts[1].addWidget(self.btn_runTrain)
 
         self.dlgLayout.addLayout(self.layoutRight)
@@ -216,6 +234,8 @@ class Dialog(QDialog):
 
     def initialWindow(self):
         self.btn_load_files.clicked.connect(lambda: self.load_files(self.path1.text(), self.path2.text()))
+        self.btn_runTrain.clicked.connect(lambda: self.runClassifierScenario())
+
         self.btn_r2map.setEnabled(False)
         self.btn_timefreq.setEnabled(False)
         # self.btn_psd.setEnabled(False)
@@ -298,6 +318,14 @@ class Dialog(QDialog):
             self.qvBoxLayouts[0].removeRow(result[0])
             self.selectedFeats.pop()
 
+    def browseForDesigner(self):
+        directory = os.getcwd()
+        self.electrodesFile, dummy = QFileDialog.getOpenFileName(self, "OpenViBE designer", str(directory))
+        if "openvibe-designer.cmd" in self.electrodesFile:
+            self.designerTextBox.setText(self.electrodesFile)
+        
+        return
+
     def btnSelectFeatures(self):
         selectedFeats = []
 
@@ -336,23 +364,81 @@ class Dialog(QDialog):
             selectedFeats.append(feat.text().split(";"))
             print(feat)
 
-        scenName = settings.templateScenFilenames[2]
-        fullScenPath = os.path.join(self.scriptPath, "generated", scenName)
+        # FIRST RE-COPY sc2 & sc3 FROM TEMPLATE, SO THE USER CAN DO THIS MULTIPLE TIMES...
+        pipelineType = self.parameterDict["pipelineType"]
+        templateFolder = settings.optionsTemplatesDir[pipelineType]
+        generatedFolder = "generated"
 
-        # TODO : create new function "modifyscenario", creating "branches" of pipelines
-        modifyTrainScenario(selectedFeats, fullScenPath)
+        for i in [2, 3]:
+            scenName = settings.templateScenFilenames[i]
+            srcFile = os.path.join(self.scriptPath, templateFolder, scenName)
+            destFile = os.path.join(self.scriptPath, generatedFolder, scenName)
+            print("---Copying file " + srcFile + " to " + destFile)
+            copyfile(srcFile, destFile)
+            modifyScenarioGeneralSettings(destFile, self.parameterDict)
+            # TODO
+            if i == 2:
+                modifyTrainScenario(selectedFeats, destFile)
 
         textGoodbye = "The training scenario using\n\n"
         for i in range(len(selectedFeats)):
             textGoodbye = str(textGoodbye +"  Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1])+ " Hz\n")
-        textGoodbye = str(textGoodbye + "\n... has been generated under:\n\n" + str(fullScenPath))
+        textGoodbye = str(textGoodbye + "\n... has been generated under:\n\n")
+        textGoodbye = str(textGoodbye + os.path.join(self.scriptPath, generatedFolder, settings.templateScenFilenames[2]) )
+        textGoodbye = str(textGoodbye + "\n\n" + os.path.join(self.scriptPath, generatedFolder, settings.templateScenFilenames[3]))
 
         msg = QMessageBox()
         msg.setText(textGoodbye)
         msg.exec_()
 
+        self.btn_runTrain.setEnabled(True)
+        return
 
+    def runClassifierScenario(self):
+        scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[2])
+        command = self.designerTextBox.text()
+        if platform.system() == 'Windows':
+            command = command.replace("/", "\\")
 
+        printCommand = True
+        if printCommand:
+            cmd = str(self.designerTextBox.text().replace("/", "\\") + " --no-gui --play-fast ")
+            cmd = str(cmd + str(scenFile))
+            print(cmd)
+
+        p = subprocess.Popen([command, "--no-gui", "--play-fast", scenFile],
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+
+        classifierScoreStr = ""
+        activateScoreMsgBox = False
+        while True:
+            output = p.stdout.readline()
+            if p.poll() is not None:
+                break
+            if output:
+                print(str(output))
+                if "Application terminated" in str(output):
+                    break
+                if "Cross-validation test" in str(output):
+                    activateScoreMsgBox = True
+                if activateScoreMsgBox:
+                    stringToWrite = str(output).replace("\\r\\n\'", "")
+                    stringToWrite = stringToWrite.split("trainer> ")
+                    classifierScoreStr = str(classifierScoreStr + stringToWrite[1] + "\n")
+
+        if activateScoreMsgBox:
+            classifierScoreStr = str(classifierScoreStr + "\n")
+            classifierScoreStr = str(classifierScoreStr + "Results written in file :\n   classifier-weights.xml\n\n")
+            classifierScoreStr = str(classifierScoreStr + "If those results are satisfying, you can now open\n   sc3-online.xml")
+            msg = QMessageBox()
+            msg.setText(classifierScoreStr)
+            msg.setStyleSheet("QLabel{min-width: 1200px;}")
+            msg.setWindowTitle("Classifier Training Score")
+            msg.exec_()
+
+        return
+
+### STATIC FUNCTIONS
 
 def plot_stats(Rsigned, freqs_left, electrodes, fres, fmin, fmax):
     smoothing  = False
@@ -416,6 +502,7 @@ def qt_plot_tf(timefreq_right, timefreq_left, time_left, freqs_left, electrodesL
         time_frequency_map_between_cond(timefreq_right, time_left, freqs_left, electrodeIdx,
                                         fmin, fmax, fres, 10, timefreq_left, electrodesList)
         plt.show()
+
 
 
 if __name__ == '__main__':
