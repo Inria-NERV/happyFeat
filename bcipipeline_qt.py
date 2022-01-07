@@ -19,7 +19,6 @@ from PyQt5.QtWidgets import QDialog
 from PyQt5.QtWidgets import QPushButton
 from PyQt5.QtWidgets import QLineEdit
 
-from parametersMgmt import *
 from modifyOpenvibeScen import *
 import bcipipeline_settings as settings
 
