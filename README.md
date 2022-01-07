@@ -70,6 +70,11 @@ The BCI experiment is carried out, with instruction provided on the screen. EEG 
   - when the training is done, a score (confusion matrix) is displayed
 8. If you want to try another set of features, just repeat steps 5 to 7 as many times as needed!
 
+**Note**: you can use this feature selection GUI as a "standalone app", once the scenario **sc2-extract-select.xml** *has been run once*: 
+- just run the script **featureExtractionInterface.py**
+- the spectral data files needed for analysis are already entered. If you want to use other data, just use the Path1 / Path2 fields.
+- **important**: in this use case, you need to browse and find the file **openvibe-designer.cmd** in your OpenViBE installation folder. Otherwise running the classifier scenario won't work.
+
 ## Online classification
 
 *coming soon...*
