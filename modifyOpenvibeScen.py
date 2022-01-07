@@ -147,6 +147,92 @@ def modifyTrainScenario(chanFreqPairs, scenXml):
 
     return
 
+def modifyOnlineScenario(chanFreqPairs, scenXml):
+    print("---Modifying " + scenXml + " with Selected Features")
+    tree = ET.parse(scenXml)
+    root = tree.getroot()
+
+    channelSelectorBox = None
+    # FIRST STEP AND
+    # SIMPLEST CASE : just modify existing branches in the scenario.
+    for boxes in root.findall('Boxes'):
+        for box in boxes.findall('Box'):
+
+            if box.find('Name').text == 'Channel Selector':
+                print("-- CHANNEL SELECTOR BOX ")
+                # keep box in memory for later...
+                channelSelectorBoxIdx = box.find('Identifier').text
+                for settings in box.findall('Settings'):
+                    for setting in settings.findall('Setting'):
+                        if setting.find('Name').text == "Channel List":
+                            xmlVal = setting.find('Value')
+                            print("       replacing " + xmlVal.text)
+                            xmlVal.text = chanFreqPairs[0][0]
+                            print("            with " + xmlVal.text)
+                            break
+
+            if box.find('Name').text == 'Frequency Band Selector':
+                print("-- FREQ SELECTION BOX ")
+                for settings in box.findall('Settings'):
+                    for setting in settings.findall('Setting'):
+                        if setting.find('Name').text == "Frequencies to select":
+                            xmlVal = setting.find('Value')
+                            print("       replacing " + xmlVal.text)
+                            xmlVal.text = chanFreqPairs[0][1]
+                            print("            with " + xmlVal.text)
+                            break
+
+    if len(chanFreqPairs) > 1:
+        # TOUGHEST CASE : NEED TO COPY/PASTE MULTIPLE PROCESSING
+        # BRANCHES WITH CHANNEL SELECTOR, TIME EPOCH, AR COEFFS,
+        # FREQ BAND SELECTOR AND SPECTRUM AVERAGE
+
+        # first box in the chain : box preceding Channel Selector
+        firstBox = findPreviousBox(root, channelSelectorBoxIdx)
+        firstboxId = firstBox.find("Identifier").text
+        # Last box in the chain: Classifier processor
+        boxLast = findBox(root, "Classifier processor")
+        boxLastId = boxLast.find("Identifier").text
+
+        featAggInputIdx = 0
+        locOffset = 120
+
+        # Find all chained box btw those two
+        if firstboxId is not None and boxLastId is not None:
+            boxList = findChainedBoxes(root, firstboxId, boxLastId)
+
+            for idxPair, [chan, freq] in enumerate(chanFreqPairs):
+                # Don't do it for the first pair, it was done earlier in the function
+                if idxPair == 0:
+                    continue
+
+                pair = [chan, freq]
+                # Copy list of chained boxes (except first (identity)
+                # and 2 last (feature aggreg, classifier trainer) and chain them.
+                listofBoxesToChain, nbOfOutputs = copyBoxList(root, boxList, locOffset, pair)
+                locOffset += locOffset
+
+                # Add an input to Feature Aggregator box in the current chain
+                addInputToBox(root, listofBoxesToChain[-1])
+                featAggInputIdx += 1
+                linkBoxes(root, listofBoxesToChain, nbOfOutputs, featAggInputIdx)
+
+    # WRITE NEW XML
+    tree.write(scenXml)
+
+    return
+
+def findPreviousBox(root, boxIdx):
+    for links in root.findall('Links'):
+        for link in links.findall('Link'):
+            targetBox = link.find("Target")
+            if targetBox.find('BoxIdentifier').text == boxIdx:
+                sourceBox = link.find("Source")
+                previousBox = findBoxId(root, sourceBox.find('BoxIdentifier').text)
+                return previousBox
+
+    return None
+
 def addInputToBox(root, featAggBoxIdx):
     box = findBoxId(root, featAggBoxIdx)
     inputs = box.find('Inputs')

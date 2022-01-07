@@ -178,6 +178,54 @@ class Dialog(QDialog):
         self.setLayout(self.dlgLayout)
         self.initialWindow()
 
+
+    def initialWindow(self):
+        self.btn_load_files.clicked.connect(lambda: self.load_files(self.path1.text(), self.path2.text()))
+        self.btn_runTrain.clicked.connect(lambda: self.runClassifierScenario())
+
+        self.btn_r2map.setEnabled(False)
+        self.btn_w2map.setEnabled(False)
+        self.btn_timefreq.setEnabled(False)
+        # self.btn_psd.setEnabled(False)
+        self.btn_topo.setEnabled(False)
+        self.btn_psd_r2.setEnabled(False)
+        self.btn_addPair.setEnabled(False)
+        self.btn_removePair.setEnabled(False)
+        self.btn_selectFeatures.setEnabled(False)
+        self.btn_runTrain.setEnabled(False)
+        self.selectedFeats[0].setEnabled(False)
+        self.show()
+
+    def plotWindow(self):
+
+        fres = 1
+        # fs = self.PipelineParams.fSampling
+        fs = 500
+
+        self.btn_r2map.clicked.connect(lambda: self.btnR2(fres))
+        self.btn_w2map.clicked.connect(lambda: self.btnW2(fres))
+        self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq(fres))
+        # self.btn_psd.clicked.connect(lambda: self.btnPsd(fres))
+        self.btn_topo.clicked.connect(lambda: self.btnTopo(fres, fs))
+        self.btn_addPair.clicked.connect(lambda: self.btnAddPair())
+        self.btn_removePair.clicked.connect(lambda: self.btnRemovePair())
+        self.btn_selectFeatures.clicked.connect(lambda: self.btnSelectFeatures())
+        self.btn_psd_r2.clicked.connect(lambda: self.btnpsdR2(fres))
+
+        self.btn_load_files.setEnabled(False)
+        self.btn_r2map.setEnabled(True)
+        self.btn_w2map.setEnabled(True)
+        self.btn_timefreq.setEnabled(True)
+        # self.btn_psd.setEnabled(True)
+        self.btn_topo.setEnabled(True)
+        self.btn_addPair.setEnabled(True)
+        self.btn_removePair.setEnabled(True)
+        self.selectedFeats[0].setEnabled(True)
+        self.btn_selectFeatures.setEnabled(True)
+        self.btn_psd_r2.setEnabled(True)
+
+        self.show()
+
     def load_files(self, path1, path2):
         data1 = load_csv_cond(path1)
         data2 = load_csv_cond(path2)
@@ -237,54 +285,6 @@ class Dialog(QDialog):
         self.Features.electrodes_final   = electrodes_final
         self.Features.Rsigned = Rsigned_2
         self.Features.Wsigned = Wsquare_2
-
-
-    def initialWindow(self):
-        self.btn_load_files.clicked.connect(lambda: self.load_files(self.path1.text(), self.path2.text()))
-        self.btn_runTrain.clicked.connect(lambda: self.runClassifierScenario())
-
-        self.btn_r2map.setEnabled(False)
-        self.btn_w2map.setEnabled(False)
-        self.btn_timefreq.setEnabled(False)
-        # self.btn_psd.setEnabled(False)
-        self.btn_topo.setEnabled(False)
-        self.btn_psd_r2.setEnabled(False)
-        self.btn_addPair.setEnabled(False)
-        self.btn_removePair.setEnabled(False)
-        self.btn_selectFeatures.setEnabled(False)
-        self.btn_runTrain.setEnabled(False)
-        self.selectedFeats[0].setEnabled(False)
-        self.show()
-
-    def plotWindow(self):
-
-        fres = 1
-        # fs = self.PipelineParams.fSampling
-        fs = 500
-
-        self.btn_r2map.clicked.connect(lambda: self.btnR2(fres))
-        self.btn_w2map.clicked.connect(lambda: self.btnW2(fres))
-        self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq(fres))
-        # self.btn_psd.clicked.connect(lambda: self.btnPsd(fres))
-        self.btn_topo.clicked.connect(lambda: self.btnTopo(fres, fs))
-        self.btn_addPair.clicked.connect(lambda: self.btnAddPair())
-        self.btn_removePair.clicked.connect(lambda: self.btnRemovePair())
-        self.btn_selectFeatures.clicked.connect(lambda: self.btnSelectFeatures())
-        self.btn_psd_r2.clicked.connect(lambda: self.btnpsdR2(fres))
-
-        self.btn_load_files.setEnabled(False)
-        self.btn_r2map.setEnabled(True)
-        self.btn_w2map.setEnabled(True)
-        self.btn_timefreq.setEnabled(True)
-        # self.btn_psd.setEnabled(True)
-        self.btn_topo.setEnabled(True)
-        self.btn_addPair.setEnabled(True)
-        self.btn_removePair.setEnabled(True)
-        self.selectedFeats[0].setEnabled(True)
-        self.btn_selectFeatures.setEnabled(True)
-        self.btn_psd_r2.setEnabled(True)
-
-        self.show()
 
     def btnR2(self, fres):
         plot_stats(self.Features.Rsigned,
@@ -392,9 +392,11 @@ class Dialog(QDialog):
             print("---Copying file " + srcFile + " to " + destFile)
             copyfile(srcFile, destFile)
             modifyScenarioGeneralSettings(destFile, self.parameterDict)
-            # TODO
             if i == 2:
                 modifyTrainScenario(selectedFeats, destFile)
+            elif i == 3:
+                modifyOnlineScenario(selectedFeats, destFile)
+
 
         textGoodbye = "The training scenario using\n\n"
         for i in range(len(selectedFeats)):
