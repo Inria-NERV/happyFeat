@@ -50,9 +50,7 @@ class Dialog(QDialog):
         self.dataNp1 = []
         self.dataNp2 = []
         self.Features = Features()
-        # self.PipelineParams = PipelineParams()
 
-        # readJsonFile(jsonfullpath)
         self.scriptPath = os.path.dirname(os.path.realpath(sys.argv[0]))
         print(self.scriptPath)
         jsonfullpath = os.path.join(self.scriptPath, "generated", "params.json")
