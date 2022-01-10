@@ -40,7 +40,9 @@ scenarioSettings = {optionKeys[0]: None,
                          "Baseline": [10, "Duration before first trial (s)"],
                          "TrialWait": [1.5, "\"Get set\" duration (s)"],
                          "TrialLength": [1.5, "Trial duration (s)"],
-                         "EndTrial": [3, "Inter-trial duration (s)"],
+                         "EndTrialMin": [2.5, "Inter-trial min duration (s)"],
+                         "EndTrialMax": [3.5, "Inter-trial max duration (s)"],
+                         "FeedbackLength": [3, "Feedback duration (s)"],
 
                          "StimulationEpoch": [3, "Epoch of Interest (EOI) (s)"],
                          "StimulationDelay": [0, "EOI offset (s)"],
@@ -57,7 +59,9 @@ scenarioSettings = {optionKeys[0]: None,
                          "Baseline": [10, "Duration before first trial (s)"],
                          "TrialWait": [1.5, "\"Get set\" duration (s)"],
                          "TrialLength": [1.5, "Trial duration (s)"],
-                         "EndTrial": [3, "Inter-trial duration (s)"],
+                         "EndTrialMin": [2.5, "Inter-trial min duration (s)"],
+                         "EndTrialMax": [3.5, "Inter-trial max duration (s)"],
+                         "FeedbackLength": [3, "Feedback duration (s)"],
 
                          "StimulationEpoch": [3, "Epoch of Interest (EOI) (s)"],
                          "StimulationDelay": [0, "EOI offset (s)"],
@@ -71,5 +75,5 @@ scenarioSettings = {optionKeys[0]: None,
 
 global scenarioSettingsPartsLength
 scenarioSettingsPartsLength = {optionKeys[0]: [0, 0],
-                               optionKeys[1]: [7, 6],
-                               optionKeys[2]: [7, 9]}
+                               optionKeys[1]: [9, 6],
+                               optionKeys[2]: [9, 9]}

@@ -224,9 +224,9 @@ class Dialog(QDialog):
         # SPECIAL CASES :
         #   SC1 & SC3 : "GRAZ" BOX SETTINGS
         modifyAcqScenario(os.path.join(os.getcwd(), self.generatedFolder, settings.templateScenFilenames[0]),
-                          self.parameterDict)
+                          self.parameterDict, False)
         modifyAcqScenario(os.path.join(os.getcwd(), self.generatedFolder, settings.templateScenFilenames[3]),
-                          self.parameterDict)
+                          self.parameterDict, True)
 
         text = "Thanks for using the generation script!\nYour files are in " + os.getcwd() + "/generated/"
         text += "\n\n(Don't forget to double check the generated scenarios...!)\nYou can now close this window."

@@ -24,7 +24,7 @@ def modifyScenarioGeneralSettings(scenXml, parameterDict):
 
     return
 
-def modifyAcqScenario(scenXml, parameterDict):
+def modifyAcqScenario(scenXml, parameterDict, boolOnline):
     print("---Modifying " + scenXml + " Graz Variables")
     tree = ET.parse(scenXml)
     root = tree.getroot()
@@ -54,12 +54,21 @@ def modifyAcqScenario(scenXml, parameterDict):
                             continue
                         elif setting.find('Name').text == "End of Trial Minimum Duration (in sec)":
                             xmlVal = setting.find('Value')
-                            xmlVal.text = parameterDict["EndTrial"]
+                            xmlVal.text = parameterDict["EndTrialMin"]
                             continue
                         elif setting.find('Name').text == "End of Trial Maximum Duration (in sec)":
                             xmlVal = setting.find('Value')
-                            xmlVal.text = parameterDict["EndTrial"]
+                            xmlVal.text = parameterDict["EndTrialMax"]
                             continue
+                        elif setting.find('Name').text == "Feedback Duration (in sec)":
+                            if boolOnline:
+                                xmlVal = setting.find('Value')
+                                xmlVal.text = parameterDict["EndTrialMax"]
+                                continue
+                            else:
+                                xmlVal = setting.find('Value')
+                                xmlVal.text = str(0)
+                                continue
 
     # WRITE NEW XML
     tree.write(scenXml)

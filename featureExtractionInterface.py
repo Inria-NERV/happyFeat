@@ -346,9 +346,9 @@ class Dialog(QDialog):
         selectedFeats = []
 
         # Checks :
-        # No empty field
-        # frequencies in acceptable ranges
-        # channels in list
+        # - No empty field
+        # - frequencies in acceptable ranges
+        # - channels in list
         channelList = self.Features.electrodes_final
         n_bins = int((int(self.parameterDict["PsdSize"]) / 2) + 1)
         for idx, feat in enumerate(self.selectedFeats):
@@ -395,6 +395,7 @@ class Dialog(QDialog):
             if i == 2:
                 modifyTrainScenario(selectedFeats, destFile)
             elif i == 3:
+                modifyAcqScenario(destFile, self.parameterDict, True)
                 modifyOnlineScenario(selectedFeats, destFile)
 
 
@@ -418,15 +419,19 @@ class Dialog(QDialog):
         if platform.system() == 'Windows':
             command = command.replace("/", "\\")
 
+        # For debugging purposes
         printCommand = True
         if printCommand:
             cmd = str(self.designerTextBox.text().replace("/", "\\") + " --no-gui --play-fast ")
             cmd = str(cmd + str(scenFile))
             print(cmd)
 
+        # Run actual command (openvibe-designer.cmd --no-gui --play-fast <scen.xml>)
         p = subprocess.Popen([command, "--no-gui", "--play-fast", scenFile],
                              stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
+        # Read console output to detect end of process
+        # and prompt user with classification score. Quite artisanal but works
         classifierScoreStr = ""
         activateScoreMsgBox = False
         while True:
