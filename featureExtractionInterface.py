@@ -57,6 +57,10 @@ class Dialog(QDialog):
         with open(jsonfullpath) as jsonfile:
             self.parameterDict = json.load(jsonfile)
 
+        # TODO : get from interface/files !!
+        self.fres = 1
+        self.fs = 500
+
         ### CREATE INTERFACE...
         self.setWindowTitle('Feature Extraction')
         self.dlgLayout = QHBoxLayout()
@@ -198,19 +202,15 @@ class Dialog(QDialog):
 
     def plotWindow(self):
 
-        fres = 1
-        # fs = self.PipelineParams.fSampling
-        fs = 500
-
-        self.btn_r2map.clicked.connect(lambda: self.btnR2(fres))
-        self.btn_w2map.clicked.connect(lambda: self.btnW2(fres))
-        self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq(fres))
-        # self.btn_psd.clicked.connect(lambda: self.btnPsd(fres))
-        self.btn_topo.clicked.connect(lambda: self.btnTopo(fres, fs))
+        self.btn_r2map.clicked.connect(lambda: self.btnR2())
+        self.btn_w2map.clicked.connect(lambda: self.btnW2())
+        self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq())
+        # self.btn_psd.clicked.connect(lambda: self.btnPsd())
+        self.btn_topo.clicked.connect(lambda: self.btnTopo())
         self.btn_addPair.clicked.connect(lambda: self.btnAddPair())
         self.btn_removePair.clicked.connect(lambda: self.btnRemovePair())
         self.btn_selectFeatures.clicked.connect(lambda: self.btnSelectFeatures())
-        self.btn_psd_r2.clicked.connect(lambda: self.btnpsdR2(fres))
+        self.btn_psd_r2.clicked.connect(lambda: self.btnpsdR2())
 
         self.btn_load_files.setEnabled(False)
         self.btn_r2map.setEnabled(True)
@@ -240,13 +240,6 @@ class Dialog(QDialog):
             self.plotWindow()
 
     def extract_features(self):
-        # time = self.PipelineParams.trialLengthSec
-        # trials = self.PipelineParams.trialNb
-        # nbElectrodes = len(self.PipelineParams.electrodeList)
-        # n_bins = self.PipelineParams.fftBins
-        # winLen = self.PipelineParams.burgWindowLength
-        # winOverlap = self.PipelineParams.burgWindowOverlap
-
         time = float(self.parameterDict["TrialLength"])
         trials = int(self.parameterDict["TrialNb"])
         electrodeListStr = self.parameterDict["ChannelNames"]
@@ -282,46 +275,57 @@ class Dialog(QDialog):
         self.Features.time_right = time_right
         self.Features.time_length = time_length
         self.Features.freqs_left = freqs_left
-        self.Features.electrodes_final   = electrodes_final
+        self.Features.electrodes_final = electrodes_final
         self.Features.Rsigned = Rsigned_2
         self.Features.Wsigned = Wsquare_2
 
-    def btnR2(self, fres):
-        plot_stats(self.Features.Rsigned,
-                   self.Features.freqs_left,
-                   self.Features.electrodes_final,
-                   fres, int(self.userFmin.text()), int(self.userFmax.text()))
+    def btnR2(self):
+        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.fs):
+            plot_stats(self.Features.Rsigned,
+                       self.Features.freqs_left,
+                       self.Features.electrodes_final,
+                       self.fres, int(self.userFmin.text()), int(self.userFmax.text()))
 
-    def btnW2(self, fres):
-        plot_stats(self.Features.Wsigned,
-                   self.Features.freqs_left,
-                   self.Features.electrodes_final,
-                   fres, int(self.userFmin.text()), int(self.userFmax.text()))
+    def btnW2(self):
+        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.fs):
+            plot_stats(self.Features.Wsigned,
+                       self.Features.freqs_left,
+                       self.Features.electrodes_final,
+                       self.fres, int(self.userFmin.text()), int(self.userFmax.text()))
 
-    def btnTimeFreq(self, fres):
-        print("TimeFreq for electrode: " + self.electrodePsd.text())
-        qt_plot_tf(self.Features.time_right, self.Features.time_left,
-                   self.Features.time_length, self.Features.freqs_left,
-                   self.Features.electrodes_final, self.electrodePsd.text(),
-                   fres, int(self.userFmin.text()), int(self.userFmax.text()))
+    def btnTimeFreq(self):
+        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.fs):
+            print("TimeFreq for electrode: " + self.electrodePsd.text())
+            qt_plot_tf(self.Features.time_right, self.Features.time_left,
+                       self.Features.time_length, self.Features.freqs_left,
+                       self.Features.electrodes_final, self.electrodePsd.text(),
+                       self.fres, int(self.userFmin.text()), int(self.userFmax.text()))
 
-    def btnPsd(self, fres):
-        qt_plot_psd(self.Features.power_right, self.Features.power_left,
-                    self.Features.freqs_left, self.Features.electrodes_final,
-                    self.electrodePsd.text(),
-                    fres, int(self.userFmin.text()), int(self.userFmax.text()))
+    def btnPsd(self):
+        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.fs):
+            qt_plot_psd(self.Features.power_right, self.Features.power_left,
+                        self.Features.freqs_left, self.Features.electrodes_final,
+                        self.electrodePsd.text(),
+                        self.fres, int(self.userFmin.text()), int(self.userFmax.text()))
 
-    def btnpsdR2(self, fres):
-        qt_plot_psd_r2(self.Features.Rsigned,
-                       self.Features.power_right, self.Features.power_left,
-                       self.Features.freqs_left, self.Features.electrodes_final,
-                       self.electrodePsd.text(),
-                       fres, int(self.userFmin.text()), int(self.userFmax.text()))
+    def btnpsdR2(self):
+        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.fs):
+            qt_plot_psd_r2(self.Features.Rsigned,
+                           self.Features.power_right, self.Features.power_left,
+                           self.Features.freqs_left, self.Features.electrodes_final,
+                           self.electrodePsd.text(),
+                           self.fres, int(self.userFmin.text()), int(self.userFmax.text()))
 
-    def btnTopo(self, fres, fs):
-        print("Freq Topo: " + self.freqTopo.text())
-        qt_plot_topo(self.Features.Rsigned, self.Features.electrodes_final,
-                     int(self.freqTopo.text()), fres, fs)
+    def btnTopo(self):
+        if self.freqTopo.text().isdigit() \
+                and 0 < int(self.freqTopo.text()) < (self.fs / 2):
+            print("Freq Topo: " + self.freqTopo.text())
+            qt_plot_topo(self.Features.Rsigned, self.Features.electrodes_final,
+                         int(self.freqTopo.text()), self.fres, self.fs)
+        else:
+            msg = QMessageBox()
+            msg.setText("Invalid frequency for topography")
+            msg.exec_()
 
     def btnAddPair(self):
         self.selectedFeats.append(QLineEdit())
@@ -462,6 +466,26 @@ class Dialog(QDialog):
         return
 
 ### STATIC FUNCTIONS
+
+def checkFreqsMinMax(fmin, fmax, fs):
+    ok = True
+    if not fmin.isdigit() or not fmax.isdigit():
+        ok = False
+    elif int(fmin) < 0 or int(fmax) < 0:
+        ok = False
+    elif int(fmin) > (fs/2)+1 or int(fmax) > (fs/2)+1:
+        ok = False
+    elif int(fmin) >= int(fmax):
+        ok = False
+
+    if not ok:
+        errorStr = str("fMin and fMax should be numbers between 0 and " + str(fs / 2 + 1))
+        errorStr = str(errorStr + "\n and fMin < fMax")
+        msg = QMessageBox()
+        msg.setText(errorStr)
+        msg.exec_()
+
+    return ok
 
 def plot_stats(Rsigned, freqs_left, electrodes, fres, fmin, fmax):
     smoothing  = False
