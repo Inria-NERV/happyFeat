@@ -40,10 +40,10 @@ class Dialog(QDialog):
         self.electrodesList = ['Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'FC5', 'FC1', 'FC2', 'FC6', 'T7', 'C3', 'Cz', 'C4', 'T8', 'TP9', 'CP5', 'CP1', 'CP2', 'CP6', 'TP10', 'P7', 'P3', 'Pz', 'P4', 'P8', 'PO9', 'O1', 'Oz', 'O2', 'PO10']
 
         # INTERFACE INIT...
-        self.setWindowTitle('BCI Pipeline - Scenario generation')
+        self.setWindowTitle('goodViBEs - an easy openViBE-based GUI')
         self.dlgLayout = QVBoxLayout()
 
-        label = str("Welcome, BCI user! What experiment would you like to prepare?")
+        label = str("Protocol Selection")
         self.label = QLabel(label)
         self.label.setAlignment(QtCore.Qt.AlignCenter)
 
@@ -106,16 +106,18 @@ class Dialog(QDialog):
 
             labelText = [None, None]
             label = [None, None]
-            labelText[0] = str("====== ")
-            labelText[0] = str(labelText[0] + "Acquisition scenario parameters (")
-            labelText[0] = str(labelText[0] + settings.templateScenFilenames[0]+")")
+            labelText[0] = str("=== ")
+            labelText[0] = str(labelText[0] + "Acquisition and Stimulation")
+            labelText[0] = str(labelText[0] + " ===")
             label[0] = QLabel(labelText[0])
+            label[0].setAlignment(QtCore.Qt.AlignCenter)
             vBoxLayouts[0].addWidget(label[0])
 
-            labelText[1] = str("====== ")
-            labelText[1] = str(labelText[1] + "Feature extraction scenario parameters (")
-            labelText[1] = str(labelText[1] + settings.templateScenFilenames[1] + ")")
+            labelText[1] = str("=== ")
+            labelText[1] = str(labelText[1] + "Feature Extraction")
+            labelText[1] = str(labelText[1] + " ===")
             label[1] = QLabel(labelText[1])
+            label[1].setAlignment(QtCore.Qt.AlignCenter)
             vBoxLayouts[1].addWidget(label[1])
 
             formLayouts = [None, None]

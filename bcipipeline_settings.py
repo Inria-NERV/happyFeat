@@ -9,8 +9,8 @@ optionKeys = ["",
 
 global optionsComboText
 optionsComboText = {optionKeys[0]: "",
-                    optionKeys[1]: "Power Spectrum based classification, Graz protocol (2 classes)",
-                    optionKeys[2]: "Functional Connectivity"}
+                    optionKeys[1]: "GrazBCI - Power Spectrum Features (2 classes)",
+                    optionKeys[2]: "GrazBCI - Connectivity Features"}
 
 global optionsNbParams
 optionsNbParams = {optionKeys[0]: 0,
@@ -34,34 +34,34 @@ scenarioSettings = {optionKeys[0]: None,
 
                     # POWER SPECTRUM
                     optionKeys[1]:
-                        {"TrialNb": [20, "Number of Trials"],
+                        {"TrialNb": [20, "Nb Trials per class"],
                          "Class1": ["LEFT", "Class / Stimulation 1"],
                          "Class2": ["RIGHT", "Class / Stimulation 2"],
-                         "Baseline": [10, "Duration before first trial (s)"],
-                         "TrialWait": [1.5, "\"Get set\" duration (s)"],
+                         "Baseline": [10, "\Get Set\" time (s)"],
+                         "TrialWait": [1.5, "Pre-Stimulus time (s)"],
                          "TrialLength": [1.5, "Trial duration (s)"],
-                         "EndTrialMin": [2.5, "Inter-trial min duration (s)"],
-                         "EndTrialMax": [3.5, "Inter-trial max duration (s)"],
-                         "FeedbackLength": [3, "Feedback duration (s)"],
+                         "EndTrialMin": [2.5, "Inter-trial interval min (s)"],
+                         "EndTrialMax": [3.5, "Inter-trial interval max (s)"],
+                         "FeedbackLength": [3, "Feedback time (s) (online scenario)"],
 
                          "StimulationEpoch": [1.5, "Epoch of Interest (EOI) (s)"],
                          "StimulationDelay": [0, "EOI offset (s)"],
                          "TimeWindowLength": [0.4, "Sliding Window (Burg) (s)"],
                          "TimeWindowShift": [0.028, "Overlap (Burg) (s)"],
-                         "AutoRegressiveOrder": [19, "AR Burg estimation order"],
+                         "AutoRegressiveOrder": [19, "AR Burg Order"],
                          "PsdSize": [500, "FFT Size"]},
 
                     # CONNECTIVITY
                     optionKeys[2]:
-                        {"TrialNb": [20, "Number of Trials"],
+                        {"TrialNb": [20, "Nb Trials per class"],
                          "Class1": ["LEFT", "Class / Stimulation 1"],
                          "Class2": ["RIGHT", "Class / Stimulation 2"],
-                         "Baseline": [10, "Duration before first trial (s)"],
-                         "TrialWait": [1.5, "\"Get set\" duration (s)"],
+                         "Baseline": [10, "\Get Set\" time (s)"],
+                         "TrialWait": [1.5, "Pre-Stimulus time (s)"],
                          "TrialLength": [1.5, "Trial duration (s)"],
-                         "EndTrialMin": [2.5, "Inter-trial min duration (s)"],
-                         "EndTrialMax": [3.5, "Inter-trial max duration (s)"],
-                         "FeedbackLength": [3, "Feedback duration (s)"],
+                         "EndTrialMin": [2.5, "Inter-trial interval min (s)"],
+                         "EndTrialMax": [3.5, "Inter-trial interval max (s)"],
+                         "FeedbackLength": [3, "Feedback time (s) (online scenario)"],
 
                          "StimulationEpoch": [1.5, "Epoch of Interest (EOI) (s)"],
                          "StimulationDelay": [0, "EOI offset (s)"],
