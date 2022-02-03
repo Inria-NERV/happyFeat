@@ -21,7 +21,29 @@ def modifyScenarioGeneralSettings(scenXml, parameterDict):
 
     # WRITE NEW XML
     tree.write(scenXml)
+    return
 
+def modifyExtractionIO(scenXml, newFilename, newOutput1, newOutput2):
+    print("---Modifying " + scenXml + " input and output")
+    tree = ET.parse(scenXml)
+    root = tree.getroot()
+
+    # PARSE SCENARIO GENERAL SETTINGS, AND MODIFY THEM ACCORDING TO THE PROVIDED
+    # PARAMETER LIST
+    for settings in root.findall('Settings'):
+        for setting in settings.findall('Setting'):
+            if setting.find('Name').text == "EEGData":
+                xmlVal = setting.find('Value')
+                xmlVal.text = newFilename
+            elif setting.find('Name').text == "Output1":
+                xmlVal = setting.find('Value')
+                xmlVal.text = newOutput1
+            elif setting.find('Name').text == "Output2":
+                xmlVal = setting.find('Value')
+                xmlVal.text = newOutput2
+
+    # WRITE NEW XML
+    tree.write(scenXml)
     return
 
 def modifyAcqScenario(scenXml, parameterDict, boolOnline):
@@ -72,7 +94,6 @@ def modifyAcqScenario(scenXml, parameterDict, boolOnline):
 
     # WRITE NEW XML
     tree.write(scenXml)
-
     return
 
 def modifyTrainScenario(chanFreqPairs, scenXml):
@@ -153,7 +174,6 @@ def modifyTrainScenario(chanFreqPairs, scenXml):
 
     # WRITE NEW XML
     tree.write(scenXml)
-
     return
 
 def modifyTrainPartitions(trainParts, scenXml):
@@ -175,6 +195,23 @@ def modifyTrainPartitions(trainParts, scenXml):
                             xmlVal.text = str(trainParts)
                             print("            with " + xmlVal.text)
                             break
+
+    # WRITE NEW XML
+    tree.write(scenXml)
+    return
+
+def modifyTrainInput(newFilename, scenXml):
+    print("---Modifying " + scenXml + " input")
+    tree = ET.parse(scenXml)
+    root = tree.getroot()
+
+    # PARSE SCENARIO GENERAL SETTINGS, AND MODIFY THEM ACCORDING TO THE PROVIDED
+    # PARAMETER LIST
+    for settings in root.findall('Settings'):
+        for setting in settings.findall('Setting'):
+            if setting.find('Name').text == "EEGData":
+                xmlVal = setting.find('Value')
+                xmlVal.text = newFilename
 
     # WRITE NEW XML
     tree.write(scenXml)
@@ -252,7 +289,6 @@ def modifyOnlineScenario(chanFreqPairs, scenXml):
 
     # WRITE NEW XML
     tree.write(scenXml)
-
     return
 
 def findPreviousBox(root, boxIdx):
@@ -437,66 +473,3 @@ def findChainedBoxes(root, firstBoxId, lastBoxId):
     print(boxList)
     return boxList
 
-
-def modifyScenario(parameterList, scenarioFilename):
-    print("MODIFYING SCENARIO!")
-
-    # First, parse the parameters list...
-    # TODO :
-    # For now the two parameters are set (frequencies and electrodes)
-    # but in the long run they'll have to be parametrized
-
-    frequencies = []
-    electrodes = []
-
-    # List of parameters is a list of pairs (text, parameters-as-string)
-    for parameter in parameterList:
-        parameterLabel = parameter[0]
-        parameterString = parameter[1]
-        print("Parameter ", parameterLabel, " : ", parameterString)
-        if parameterLabel == "Frequencies":
-            # Frequencies
-            frequencies = parameterString
-        elif parameterLabel == "Electrodes":
-            # Electrodes
-            electrodes = parameterString
-
-    # OPEN THE XML SCENARIO FILE TO MODIFY
-    # xmlFileName = "sc2-train.xml"
-    xmlFileName = scenarioFilename
-    sep = "/"
-    if os.name == 'nt':
-        sep = "\\"
-
-    # xmlPath = os.getcwd() + sep + "generated" + sep + xmlFileName
-    # tree = ET.parse(xmlPath)
-    tree = ET.parse(xmlFileName)
-    root = tree.getroot()
-
-    # PROTOTYPE : Find "Frequency Band Selector" / "Channel Selector"
-    # and modify them
-    for boxes in root.findall('Boxes'):
-        for box in boxes.findall('Box'):
-            for name in box.findall('Name'):
-
-                if name.text == "Frequency Band Selector":
-                    # TODO : SELECTION could be done on box identifier instead
-                    print("- BOX ", name.text)
-                    for setting in box.find('Settings').findall('Setting'):
-                        if setting.find('Name').text == "Frequencies to select":
-                            value = setting.find('Value')
-                            print("-- ORIGINAL VALUE ", value.text)
-                            value.text = frequencies
-                            print("--- UPDATED VALUE ", value.text)
-
-                elif name.text == "Channel Selector":
-                    # TODO : SELECTION could be done on box identifier instead
-                    print("- BOX ", name.text)
-                    for setting in box.find('Settings').findall('Setting'):
-                        if setting.find('Name').text == "Channel List":
-                            value = setting.find('Value')
-                            print("-- ORIGINAL VALUE ", value.text)
-                            value.text = electrodes
-                            print("--- UPDATED VALUE ", value.text)
-
-    tree.write(xmlFileName)

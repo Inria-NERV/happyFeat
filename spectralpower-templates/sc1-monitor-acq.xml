@@ -15,7 +15,7 @@
 			<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 			<Name>EEGData</Name>
 			<DefaultValue>example.ov</DefaultValue>
-			<Value>motor-imagery.ov</Value>
+			<Value>MI-[$core{date}-$core{time}].ov</Value>
 		</Setting>
 		<Setting>
 			<Identifier>(0xfa3e9b11, 0x9fe2a448)</Identifier>

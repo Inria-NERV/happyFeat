@@ -146,9 +146,38 @@ class Dialog(QDialog):
             vBoxLayouts[0].setAlignment(QtCore.Qt.AlignTop)
             vBoxLayouts[1].setAlignment(QtCore.Qt.AlignTop)
 
+            # OpenViBE designer file...
+            labelOv = QLabel()
+            labelOvtxt = str("OpenViBE designer script (openvibe-designer.cmd)")
+            labelOvtxt = str(labelOvtxt + "\n(in your OpenViBE installation folder)")
+            labelOv.setText(labelOvtxt)
+            labelOv.setAlignment(QtCore.Qt.AlignCenter)
+            vBoxLayouts[1].addWidget(labelOv)
+
+            self.btn_browseOV = QPushButton("Browse...")
+            self.btn_browseOV.clicked.connect(lambda: self.browseForDesigner())
+            self.designerWidget = QWidget()
+            layout_h = QHBoxLayout(self.designerWidget)
+            self.designerTextBox = QLineEdit()
+            self.designerTextBox.setText("")
+            self.designerTextBox.setEnabled(False)
+            layout_h.addWidget(self.designerTextBox)
+            layout_h.addWidget(self.btn_browseOV)
+            vBoxLayouts[1].addWidget(self.designerWidget)
+
             self.dlgLayout.addLayout(hboxLayout)
             self.dlgLayout.addWidget(self.btn_generate)
             self.show()
+
+    def browseForDesigner(self):
+        directory = os.getcwd()
+        self.ovScript, dummy = QFileDialog.getOpenFileName(self, "OpenViBE designer script", str(directory))
+        if "openvibe-designer.cmd" in self.ovScript:
+            self.designerTextBox.setText(self.ovScript)
+        else:
+            self.ovScript = None
+
+        return
 
     def browseForElectrodeFile(self):
         directory = os.getcwd()
@@ -202,7 +231,15 @@ class Dialog(QDialog):
         else:
             electrodes = self.electrodesFileTextBox.text()
 
+        # ALL PIPELINES : OpenViBE Path...
+        if self.ovScript == None:
+            msg = QMessageBox()
+            msg.setText("Please enter a valid path for the openViBE designer script")
+            msg.exec_()
+            return
+
         self.parameterDict["ChannelNames"] = electrodes
+        self.parameterDict["ovDesignerPath"] = self.ovScript
         print(self.parameterDict)
 
         # WRITE JSON PARAMETERS FILE

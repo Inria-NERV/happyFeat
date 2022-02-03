@@ -546,6 +546,10 @@
 					<Value>688</Value>
 				</Attribute>
 				<Attribute>
+					<Identifier>(0x341d3912, 0x1478de86)</Identifier>
+					<Value>1</Value>
+				</Attribute>
+				<Attribute>
 					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
 					<Value>(0xe44a71e7, 0x7964dd76)</Value>
 				</Attribute>
