@@ -156,6 +156,30 @@ def modifyTrainScenario(chanFreqPairs, scenXml):
 
     return
 
+def modifyTrainPartitions(trainParts, scenXml):
+    print("---Modifying " + scenXml + " with train partitions: " + str(trainParts))
+    tree = ET.parse(scenXml)
+    root = tree.getroot()
+
+    # FIRST STEP AND
+    # SIMPLEST CASE : just modify existing branches in the scenario.
+    for boxes in root.findall('Boxes'):
+        for box in boxes.findall('Box'):
+            if box.find('Name').text == 'Classifier trainer':
+                print("-- CLASSIFIER TRAINER BOX ")
+                for settings in box.findall('Settings'):
+                    for setting in settings.findall('Setting'):
+                        if setting.find('Name').text == "Number of partitions for k-fold cross-validation test":
+                            xmlVal = setting.find('Value')
+                            print("       replacing " + xmlVal.text)
+                            xmlVal.text = str(trainParts)
+                            print("            with " + xmlVal.text)
+                            break
+
+    # WRITE NEW XML
+    tree.write(scenXml)
+    return
+
 def modifyOnlineScenario(chanFreqPairs, scenXml):
     print("---Modifying " + scenXml + " with Selected Features")
     tree = ET.parse(scenXml)

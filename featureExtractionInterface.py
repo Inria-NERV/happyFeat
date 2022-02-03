@@ -146,12 +146,20 @@ class Dialog(QDialog):
         self.qvBoxLayouts[0].addWidget(self.label3)
 
         self.selectedFeats = []
-        # Param Output 1 : First selected pair of Channels / Electrodes
+        # Parameter for feat selection/training : First selected pair of Channels / Electrodes
         # We'll add more with a button
         self.selectedFeats.append(QLineEdit())
         self.selectedFeats[0].setText('C4;22')
         pairText = "Selected Feats Pair"
         self.qvBoxLayouts[0].addRow(pairText, self.selectedFeats[0])
+
+        # Param for training
+        self.trainingLayout = QFormLayout()
+        self.trainingPartitions = QLineEdit()
+        self.trainingPartitions.setText(str(10))
+        self.trainingPartitions.setEnabled(False)
+        partitionsText = "Nb of training partitions"
+        self.trainingLayout.addRow(partitionsText, self.trainingPartitions)
 
         self.btn_addPair = QPushButton("Add Feature")
         self.btn_removePair = QPushButton("Remove Last Feat")
@@ -174,6 +182,7 @@ class Dialog(QDialog):
         self.qvBoxLayouts[1].addWidget(self.btn_removePair)
         self.qvBoxLayouts[1].addWidget(self.btn_selectFeatures)
         self.qvBoxLayouts[1].addWidget(self.designerWidget)
+        self.qvBoxLayouts[1].addLayout(self.trainingLayout)
         self.qvBoxLayouts[1].addWidget(self.btn_runTrain)
 
         self.dlgLayout.addLayout(self.layoutRight)
@@ -216,13 +225,15 @@ class Dialog(QDialog):
         self.btn_r2map.setEnabled(True)
         self.btn_w2map.setEnabled(True)
         self.btn_timefreq.setEnabled(True)
+        self.btn_psd_r2.setEnabled(True)
         # self.btn_psd.setEnabled(True)
         self.btn_topo.setEnabled(True)
+
         self.btn_addPair.setEnabled(True)
         self.btn_removePair.setEnabled(True)
         self.selectedFeats[0].setEnabled(True)
+        self.trainingPartitions.setEnabled(True)
         self.btn_selectFeatures.setEnabled(True)
-        self.btn_psd_r2.setEnabled(True)
 
         self.show()
 
@@ -419,6 +430,24 @@ class Dialog(QDialog):
 
     def runClassifierScenario(self):
         scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[2])
+
+        # FIRST AND FOREMOST, get training param from GUI
+        # and modify training scenario
+        err = True
+        if self.trainingPartitions.text().isdigit():
+            if int(self.trainingPartitions.text()) > 0:
+                trainingSize = int(self.trainingPartitions.text())
+                err = False
+
+        if err:
+            msg = QMessageBox()
+            msg.setText("Training partitions should be a positive number")
+            msg.exec_()
+            return
+
+        modifyTrainPartitions(trainingSize, scenFile)
+
+        # BUILD THE COMMAND (use designer.cmd from GUI)
         command = self.designerTextBox.text()
         if platform.system() == 'Windows':
             command = command.replace("/", "\\")
