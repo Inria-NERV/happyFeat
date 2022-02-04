@@ -175,6 +175,13 @@ class Dialog(QDialog):
         self.btn_topo = QPushButton("Plot Brain Topography")
         # self.btn_w2map = QPushButton("Plot Wilcoxon Map")
         # self.btn_psd_r2 = QPushButton("Plot PSD comparison between classes")
+        self.btn_load_extract.clicked.connect(lambda: self.load_extract())
+        self.btn_r2map.clicked.connect(lambda: self.btnR2())
+        self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq())
+        self.btn_psd.clicked.connect(lambda: self.btnPsd())
+        self.btn_topo.clicked.connect(lambda: self.btnTopo())
+        # self.btn_w2map.clicked.connect(lambda: self.btnW2())
+        # self.btn_psd_r2.clicked.connect(lambda: self.btnpsdR2())
 
         self.layoutVizButtons.addWidget(self.btn_load_extract)
         self.layoutVizButtons.addWidget(self.btn_r2map)
@@ -219,7 +226,6 @@ class Dialog(QDialog):
         self.trainingLayout = QFormLayout()
         self.trainingPartitions = QLineEdit()
         self.trainingPartitions.setText(str(10))
-        self.trainingPartitions.setEnabled(False)
         partitionsText = "Number of k-fold for classification"
         self.trainingLayout.addRow(partitionsText, self.trainingPartitions)
 
@@ -229,6 +235,9 @@ class Dialog(QDialog):
         self.btn_addPair = QPushButton("Add feature")
         self.btn_removePair = QPushButton("Remove last feature in the list")
         self.btn_selectFeatures = QPushButton("TRAIN CLASSIFIER using selected files and features")
+        self.btn_addPair.clicked.connect(lambda: self.btnAddPair())
+        self.btn_removePair.clicked.connect(lambda: self.btnRemovePair())
+        self.btn_selectFeatures.clicked.connect(lambda: self.btnSelectFeatures())
         # self.btn_runTrain = QPushButton("Run classifier training scenario")
 
         self.qvBoxLayouts[1].addWidget(self.btn_addPair)
@@ -260,52 +269,25 @@ class Dialog(QDialog):
         # ----------
         # Init buttons & fields, set enabled/disabled states in the interface
         # ----------
-
-        self.btn_load_extract.clicked.connect(lambda: self.load_extract())
-        # self.btn_runTrain.clicked.connect(lambda: self.runClassifierScenario())
-
         self.btn_r2map.setEnabled(False)
-        # self.btn_w2map.setEnabled(False)
         self.btn_timefreq.setEnabled(False)
         self.btn_psd.setEnabled(False)
         self.btn_topo.setEnabled(False)
+        # self.btn_w2map.setEnabled(False)
         # self.btn_psd_r2.setEnabled(False)
-        self.btn_addPair.setEnabled(False)
-        self.btn_removePair.setEnabled(False)
-        self.btn_selectFeatures.setEnabled(False)
-        # self.btn_runTrain.setEnabled(False)
-        self.selectedFeats[0].setEnabled(False)
         self.show()
 
     def plotWindow(self):
         # ----------
         # Update interface once spectrum/feature files have been read
         # ----------
-
-        self.btn_r2map.clicked.connect(lambda: self.btnR2())
-        # self.btn_w2map.clicked.connect(lambda: self.btnW2())
-        self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq())
-        self.btn_psd.clicked.connect(lambda: self.btnPsd())
-        self.btn_topo.clicked.connect(lambda: self.btnTopo())
-        self.btn_addPair.clicked.connect(lambda: self.btnAddPair())
-        self.btn_removePair.clicked.connect(lambda: self.btnRemovePair())
-        self.btn_selectFeatures.clicked.connect(lambda: self.btnSelectFeatures())
-        # self.btn_psd_r2.clicked.connect(lambda: self.btnpsdR2())
-
         self.btn_load_extract.setEnabled(True)
         self.btn_r2map.setEnabled(True)
-        # self.btn_w2map.setEnabled(True)
         self.btn_timefreq.setEnabled(True)
-        # self.btn_psd_r2.setEnabled(True)
         self.btn_psd.setEnabled(True)
         self.btn_topo.setEnabled(True)
-
-        self.btn_addPair.setEnabled(True)
-        self.btn_removePair.setEnabled(True)
-        self.selectedFeats[0].setEnabled(True)
-        self.trainingPartitions.setEnabled(True)
-        self.btn_selectFeatures.setEnabled(True)
-
+        # self.btn_w2map.setEnabled(True)
+        # self.btn_psd_r2.setEnabled(True)
         self.show()
 
     def refreshLists(self, workingFolder):
@@ -349,7 +331,7 @@ class Dialog(QDialog):
         # Refresh available CSV spectrum files.
         # Only mention current class (set in parameters), and check that both classes are present
         # ----------
-        
+
         # self.availableSpectraList.clear()
         class1label = self.parameterDict["Class1"]
         class2label = self.parameterDict["Class2"]
@@ -366,8 +348,8 @@ class Dialog(QDialog):
         # iterate over existing items in widget and delete those who don't exist anymore
         for x in range(self.availableSpectraList.count() - 1, 0, -1):
             tempitem = self.availableSpectraList.item(x).text()
-            tempitem.removesuffix(str("("+class1label+"/"+class2label+")"))
-            if tempitem not in availableCsvs:
+            suffix = str("("+class1label+"/"+class2label+")")
+            if tempitem.removesuffix(suffix) not in availableCsvs:
                 self.availableSpectraList.takeItem(x)
 
         # iterate over filelist and add new files to listwidget
@@ -387,6 +369,12 @@ class Dialog(QDialog):
         # Use extraction scenario (sc2-extract-select.xml) to
         # generate CSV files, used for visualization
         # ----------
+        if not self.fileListWidget.selectedItems():
+            msg = QMessageBox()
+            msg.setText("Please select a set of files for feature extraction")
+            msg.exec_()
+            return
+
         self.fileListWidget.setEnabled(False)
         self.btn_runExtractionScenario.setEnabled(False)
 
@@ -437,9 +425,9 @@ class Dialog(QDialog):
         # ----------
         # Load CSV files of selected extracted spectra for visualization
         # ----------
-        if not self.availableSpectraList.count():
+        if not self.availableSpectraList.selectedItems():
             msg = QMessageBox()
-            msg.setText("No available file for analysis")
+            msg.setText("Please select a set of files for analysis")
             msg.exec_()
             return
 
@@ -635,6 +623,13 @@ class Dialog(QDialog):
         # launch openvibe with sc2-train.xml (in the background) to train the classifier,
         # provide the classification score/accuracy as a textbox
         # ----------
+
+        if not self.fileListWidgetTrain.selectedItems():
+            msg = QMessageBox()
+            msg.setText("Please select a set of files for training")
+            msg.exec_()
+            return
+
         selectedFeats = []
 
         # Checks :
@@ -705,8 +700,8 @@ class Dialog(QDialog):
         scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[2])
         modifyTrainPartitions(trainingSize, scenFile)
 
-        print("Selected file for training: " + self.fileListWidget.selectedItems()[0].text())
-        signalFile = self.fileListWidget.selectedItems()[0].text()
+        print("Selected file for training: " + self.fileListWidgetTrain.selectedItems()[0].text())
+        signalFile = self.fileListWidgetTrain.selectedItems()[0].text()
         modifyTrainInput(signalFile, scenFile)
 
         # RUN THE CLASSIFIER TRAINING SCENARIO
