@@ -1,2 +1,5 @@
-# ignore all csv files
+*.bak
 *.csv
+*.ov
+venv/
+__pycache__/
