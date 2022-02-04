@@ -23,6 +23,8 @@ from PyQt5.QtWidgets import QListWidget
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtWidgets import QWidget
 
+from PyQt5.QtCore import QTimer
+
 from Visualization_Data import *
 from featureExtractUtils import *
 from modifyOpenvibeScen import *
@@ -74,7 +76,7 @@ class Dialog(QDialog):
         # Left-most: layoutExtract (for running sc2-extract)
         # Center: Visualization
         # Right-most: Feature Selection & classifier training
-        self.setWindowTitle('goodViBEs - Feature Selection Interface')
+        self.setWindowTitle('goodViBEs / happyFeatS - Feature Selection interface')
         self.dlgLayout = QHBoxLayout()
 
         # -----------------------------------------------------------------------
@@ -91,30 +93,38 @@ class Dialog(QDialog):
         self.designerTextBox.setEnabled(False)
         layout_h.addWidget(self.designerTextBox)
         layout_h.addWidget(self.btn_browseOvScript)
-        self.layoutExtract.addWidget(self.designerWidget)
 
         # FILE LOADING (from .ov file(s)) 
         # AND RUNNING SCENARIO FOR SPECTRA EXTRACTION
-        labelSignal = str("===== Feature extraction from signal files =====")
+        labelSignal = str("===== FEATURE EXTRACTION FROM SIGNAL FILES =====")
         self.labelSignal = QLabel(labelSignal)
         self.labelSignal.setAlignment(QtCore.Qt.AlignCenter)
 
         self.fileListWidget = QListWidget()
         self.fileListWidget.setSelectionMode(QListWidget.MultiSelection)
-        self.refreshSignalList()
-
-        # Refresh button
-        self.btn_refreshSignalList = QPushButton("Refresh list")
-        self.btn_refreshSignalList.clicked.connect(lambda: self.refreshSignalList())
 
         # Generate button
         self.btn_runExtractionScenario = QPushButton("Generate Spectrum Files")
         self.btn_runExtractionScenario.clicked.connect(lambda: self.runExtractionScenario())
 
+        # Label + un-editable list of parameters for reminder
+        labelReminder = str("--- Used parameters (set in Generator GUI) ---")
+        self.labelReminder = QLabel(labelReminder)
+        self.labelReminder.setAlignment(QtCore.Qt.AlignCenter)
+
+        self.paramListWidget = QListWidget()
+        self.paramListWidget.setEnabled(False)
+        self.extractParamDict = self.getProtocolExtractionParams()
+        for idx, (key, val) in enumerate(self.extractParamDict.items()):
+            self.paramListWidget.addItem(str(key) + ": \t" + str(val))
+
+        # Arrange all widgets in the layout
         self.layoutExtract.addWidget(self.labelSignal)
         self.layoutExtract.addWidget(self.fileListWidget)
-        self.layoutExtract.addWidget(self.btn_refreshSignalList)
         self.layoutExtract.addWidget(self.btn_runExtractionScenario)
+        self.layoutExtract.addWidget(self.labelReminder)
+        self.layoutExtract.addWidget(self.paramListWidget)
+        self.layoutExtract.addWidget(self.designerWidget)
 
         self.dlgLayout.addLayout(self.layoutExtract)
 
@@ -131,26 +141,10 @@ class Dialog(QDialog):
         # LIST OF AVAILABLE SPECTRA WITH CURRENT CLASS
         self.availableSpectraList = QListWidget()
         self.availableSpectraList.setSelectionMode(QListWidget.MultiSelection)
-        self.refreshAvailableSpectraList()
-
-        self.btn_refreshSpectraList = QPushButton("Refresh list")
-        self.btn_refreshSpectraList.clicked.connect(lambda: self.refreshAvailableSpectraList())
-
         self.layoutViz.addWidget(self.availableSpectraList)
-        self.layoutViz.addWidget(self.btn_refreshSpectraList)
 
         self.path1 = ""
         self.path2 = ""
-
-        # self.path1 = QLineEdit()
-        # pathSpectrum1 = os.path.join(self.scriptPath, "generated", "spectrumAmplitude-Left.csv")
-        # self.path1.setText(pathSpectrum1)
-        # self.formLayoutExtract.addRow('Class 1 path:', self.path1)
-        # Param : Path 2
-        # self.path2 = QLineEdit()
-        # pathSpectrum2 = os.path.join(self.scriptPath, "generated", "spectrumAmplitude-Right.csv")
-        # self.path2.setText(pathSpectrum2)
-        # self.formLayoutExtract.addRow('Class 2 path:', self.path2)
 
         # Param : fmin for frequency based viz
         self.userFmin = QLineEdit()
@@ -229,14 +223,18 @@ class Dialog(QDialog):
         partitionsText = "Number of k-fold for classification"
         self.trainingLayout.addRow(partitionsText, self.trainingPartitions)
 
+        self.fileListWidgetTrain = QListWidget()
+        # self.fileListWidgetTrain.setSelectionMode(QListWidget.MultiSelection)
+
         self.btn_addPair = QPushButton("Add feature")
         self.btn_removePair = QPushButton("Remove last feature in the list")
-        self.btn_selectFeatures = QPushButton("Validate selection -- TRAIN CLASSIFIER")
+        self.btn_selectFeatures = QPushButton("TRAIN CLASSIFIER using selected files and features")
         # self.btn_runTrain = QPushButton("Run classifier training scenario")
 
         self.qvBoxLayouts[1].addWidget(self.btn_addPair)
         self.qvBoxLayouts[1].addWidget(self.btn_removePair)
         self.qvBoxLayouts[1].addLayout(self.trainingLayout)
+        self.qvBoxLayouts[1].addWidget(self.fileListWidgetTrain)
         self.qvBoxLayouts[1].addWidget(self.btn_selectFeatures)
         # self.qvBoxLayouts[1].addWidget(self.btn_runTrain)
         self.dlgLayout.addLayout(self.layoutTrain)
@@ -244,6 +242,15 @@ class Dialog(QDialog):
         # display initial layout
         self.setLayout(self.dlgLayout)
         self.initialWindow()
+
+        self.refreshLists(os.path.join(self.scriptPath, "generated"))
+
+        # Timing loop every 2s to get files in working folder
+        self.timer = QtCore.QTimer(self)
+        self.timer.setSingleShot(False)
+        self.timer.setInterval(4000)  # in milliseconds
+        self.timer.timeout.connect(lambda: self.refreshLists(os.path.join(self.scriptPath, "generated")))
+        self.timer.start()
 
     # -----------------------------------------------------------------------
     # CLASS METHODS
@@ -301,27 +308,77 @@ class Dialog(QDialog):
 
         self.show()
 
-    def refreshSignalList(self):
-        self.fileListWidget.clear()
-        for filename in os.listdir(os.path.join(self.scriptPath, "generated")):
-            if filename.endswith(".ov"):
-                self.fileListWidget.addItem(filename)
+    def refreshLists(self, workingFolder):
+        # ----------
+        # Refresh all lists. Called once at the init, then once every timer click (see init method)
+        # ----------
+        self.refreshSignalList(self.fileListWidget, workingFolder)
+        self.refreshSignalList(self.fileListWidgetTrain, workingFolder)
+        self.refreshAvailableSpectraList(workingFolder)
         return
 
-    def refreshAvailableSpectraList(self):
-        self.availableSpectraList.clear()
+    def refreshSignalList(self, listwidget, workingFolder):
+        # ----------
+        # Refresh list of available signal (.ov) files
+        # ----------
+
+        # first get a list of all files in workingfolder that match the condition
+        filelist = []
+        for filename in os.listdir(workingFolder):
+            if filename.endswith(".ov"):
+                filelist.append(filename)
+
+        # iterate over existing items in widget and delete those who don't exist anymore
+        for x in range(listwidget.count()-1, 0, -1):
+            tempitem = listwidget.item(x).text()
+            if tempitem not in filelist:
+                listwidget.takeItem(x)
+
+        # iterate over filelist and add new files to listwidget
+        # for that, create temp list of items in listwidget
+        items = []
+        for x in range (listwidget.count()):
+            items.append(listwidget.item(x).text())
+        for filename in filelist:
+            if filename not in items:
+                listwidget.addItem(filename)
+        return
+
+    def refreshAvailableSpectraList(self, workingFolder):
+        # ----------
+        # Refresh available CSV spectrum files.
+        # Only mention current class (set in parameters), and check that both classes are present
+        # ----------
+        
+        # self.availableSpectraList.clear()
         class1label = self.parameterDict["Class1"]
         class2label = self.parameterDict["Class2"]
-        for filename in os.listdir(os.path.join(self.scriptPath, "generated")):
-            if filename.endswith(str(class1label + ".csv")):
-                otherClass = filename.removesuffix(str(class1label + ".csv"))
-                otherClass = str(otherClass + class2label + ".csv")
-                if otherClass in os.listdir(os.path.join(self.scriptPath, "generated")):
-                    available = filename.removesuffix(str(class1label + ".csv"))
-                    self.availableSpectraList.addItem(str(available + "(" + class1label + "/" + class2label + ")"))
 
-        if self.availableSpectraList.count():
-            self.availableSpectraList.setCurrentRow(0)
+        # first get a list of all csv files in workingfolder that match the condition
+        availableCsvs = []
+        for filename in os.listdir(workingFolder):
+            if filename.endswith(str(class1label + ".csv")):
+                basename = filename.removesuffix(str(class1label + ".csv"))
+                otherClass = str(basename + class2label + ".csv")
+                if otherClass in os.listdir(workingFolder):
+                    availableCsvs.append(basename)
+
+        # iterate over existing items in widget and delete those who don't exist anymore
+        for x in range(self.availableSpectraList.count() - 1, 0, -1):
+            tempitem = self.availableSpectraList.item(x).text()
+            tempitem.removesuffix(str("("+class1label+"/"+class2label+")"))
+            if tempitem not in availableCsvs:
+                self.availableSpectraList.takeItem(x)
+
+        # iterate over filelist and add new files to listwidget
+        # for that, create temp list of items in listwidget
+        items = []
+        for x in range(self.availableSpectraList.count()):
+            items.append(self.availableSpectraList.item(x).text())
+        for basename in availableCsvs:
+            basenameSuffix = str(basename+"("+class1label+"/"+class2label+")")
+            if basenameSuffix not in items:
+                self.availableSpectraList.addItem(basenameSuffix)
 
         return
 
@@ -331,7 +388,6 @@ class Dialog(QDialog):
         # generate CSV files, used for visualization
         # ----------
         self.fileListWidget.setEnabled(False)
-        self.btn_refreshSignalList.setEnabled(False)
         self.btn_runExtractionScenario.setEnabled(False)
 
         scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[1])
@@ -371,10 +427,7 @@ class Dialog(QDialog):
 
         self.btn_runExtractionScenario.setText(str("Generate Spectrum Files"))
         self.fileListWidget.setEnabled(True)
-        self.btn_refreshSignalList.setEnabled(True)
         self.btn_runExtractionScenario.setEnabled(True)
-
-        self.refreshAvailableSpectraList()
 
         self.show()
 
@@ -564,6 +617,9 @@ class Dialog(QDialog):
             self.selectedFeats.pop()
 
     def browseForDesigner(self):
+        # ----------
+        # Allow user to browse for the "openvibe-designer.cmd" windows cmd
+        # ----------
         directory = os.getcwd()
         newPath, dummy = QFileDialog.getOpenFileName(self, "OpenViBE designer", str(directory))
         if "openvibe-designer.cmd" in newPath:
@@ -573,6 +629,12 @@ class Dialog(QDialog):
         return
 
     def btnSelectFeatures(self):
+        # ----------
+        # Callback from button :
+        # Select features in fields, check if they're correctly formatted,
+        # launch openvibe with sc2-train.xml (in the background) to train the classifier,
+        # provide the classification score/accuracy as a textbox
+        # ----------
         selectedFeats = []
 
         # Checks :
@@ -669,19 +731,16 @@ class Dialog(QDialog):
         return
 
     def runClassifierScenario(self):
+        # ----------
+        # Run the classifier training scen (sc2-train.xml), using the provided parameters
+        # and features
+        # ----------
         scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[2])
 
         # BUILD THE COMMAND (use designer.cmd from GUI)
         command = self.ovScript
         if platform.system() == 'Windows':
             command = command.replace("/", "\\")
-
-        # For debugging purposes
-        printCommand = True
-        if printCommand:
-            cmd = str(self.ovScript.replace("/", "\\") + " --no-gui --play-fast ")
-            cmd = str(cmd + str(scenFile))
-            print(cmd)
 
         # Run actual command (openvibe-designer.cmd --no-gui --play-fast <scen.xml>)
         p = subprocess.Popen([command, "--no-gui", "--play-fast", scenFile],
@@ -712,6 +771,24 @@ class Dialog(QDialog):
             classifierScoreStr = str(classifierScoreStr + "If those results are satisfying, you can now open\n   sc3-online.xml")
 
         return classifierScoreStr
+
+    def getProtocolExtractionParams(self):
+        # ----------
+        # Get "extraction" parameters from the JSON parameters
+        # A bit artisanal, but we'll see if we keep that...
+        # ----------
+        pipelineKey = self.parameterDict['pipelineType']
+        nbParamsExp = settings.scenarioSettingsPartsLength[pipelineKey][0]
+        nbParamsExtract = settings.scenarioSettingsPartsLength[pipelineKey][1]
+
+        newDict = {}
+        newDict['pipelineType'] = pipelineKey
+        for idx, param in enumerate(settings.scenarioSettings[pipelineKey]):
+            if nbParamsExp <= idx < (nbParamsExp + nbParamsExtract + 1):
+                newDict[param] = self.parameterDict[param]
+
+        print(newDict)
+        return newDict
 
 # ------------------------------------------------------
 # STATIC FUNCTIONS
