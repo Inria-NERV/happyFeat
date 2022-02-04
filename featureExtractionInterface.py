@@ -53,6 +53,9 @@ class Dialog(QDialog):
         self.dataNp2 = []
         self.Features = Features()
 
+        # Sampling Freq: to be loaded later, in Spectrum CSV files
+        self.samplingFreq = None
+
         self.scriptPath = os.path.dirname(os.path.realpath(sys.argv[0]))
         print(self.scriptPath)
         jsonfullpath = os.path.join(self.scriptPath, "generated", "params.json")
@@ -67,19 +70,16 @@ class Dialog(QDialog):
 
         # -----------------------------------------------------------------------
         # CREATE INTERFACE...
-        # dlgLayoutMeta : Entire Window, separated in 2 Vertical zones.
-        # Top vertical zone : extractLayout (for running sc2-extract)
-        # Bottom vertical zone : dlgLayout, 2 Horizontal pannels
-        # - Left Pannel : Visualization
-        # - Right Pannel : Feature Selection & classifier training        
+        # dlgLayout : Entire Window, separated in horizontal pannels
+        # Left-most: layoutExtract (for running sc2-extract)
+        # Center: Visualization
+        # Right-most: Feature Selection & classifier training
         self.setWindowTitle('goodViBEs - Feature Selection Interface')
-        self.dlgLayoutMeta = QVBoxLayout()
-        self.extractLayout = QVBoxLayout()
-        self.dlgLayout = QHBoxLayout()        
-        self.dlgLayoutMeta.addLayout(self.extractLayout)
-        self.dlgLayoutMeta.addLayout(self.dlgLayout)
+        self.dlgLayout = QHBoxLayout()
 
         # -----------------------------------------------------------------------
+        # LEFT PART : Extraction from signal files (sc2-extract.xml)
+        self.layoutExtract = QVBoxLayout()
 
         # TODO : keep this part ? OPENVIBE DESIGNER FINDER
         self.btn_browseOvScript = QPushButton("Browse for OpenViBE designer script")
@@ -91,7 +91,7 @@ class Dialog(QDialog):
         self.designerTextBox.setEnabled(False)
         layout_h.addWidget(self.designerTextBox)
         layout_h.addWidget(self.btn_browseOvScript)
-        self.extractLayout.addWidget(self.designerWidget)
+        self.layoutExtract.addWidget(self.designerWidget)
 
         # FILE LOADING (from .ov file(s)) 
         # AND RUNNING SCENARIO FOR SPECTRA EXTRACTION
@@ -111,18 +111,20 @@ class Dialog(QDialog):
         self.btn_runExtractionScenario = QPushButton("Generate Spectrum Files")
         self.btn_runExtractionScenario.clicked.connect(lambda: self.runExtractionScenario())
 
-        self.extractLayout.addWidget(self.labelSignal)
-        self.extractLayout.addWidget(self.fileListWidget)
-        self.extractLayout.addWidget(self.btn_refreshSignalList)
-        self.extractLayout.addWidget(self.btn_runExtractionScenario)
+        self.layoutExtract.addWidget(self.labelSignal)
+        self.layoutExtract.addWidget(self.fileListWidget)
+        self.layoutExtract.addWidget(self.btn_refreshSignalList)
+        self.layoutExtract.addWidget(self.btn_runExtractionScenario)
+
+        self.dlgLayout.addLayout(self.layoutExtract)
 
         # -----------------------------------------------------------------------
         # FEATURE VISUALIZATION PART
-        self.layoutLeft = QVBoxLayout()
-        self.layoutLeft.setAlignment(QtCore.Qt.AlignTop)
+        self.layoutViz = QVBoxLayout()
+        self.layoutViz.setAlignment(QtCore.Qt.AlignTop)
         self.label = QLabel('===== VISUALIZE FEATURES =====')
         self.label.setAlignment(QtCore.Qt.AlignCenter)
-        self.layoutLeft.addWidget(self.label)
+        self.layoutViz.addWidget(self.label)
 
         self.formLayoutExtract = QFormLayout()
 
@@ -134,8 +136,8 @@ class Dialog(QDialog):
         self.btn_refreshSpectraList = QPushButton("Refresh list")
         self.btn_refreshSpectraList.clicked.connect(lambda: self.refreshAvailableSpectraList())
 
-        self.layoutLeft.addWidget(self.availableSpectraList)
-        self.layoutLeft.addWidget(self.btn_refreshSpectraList)
+        self.layoutViz.addWidget(self.availableSpectraList)
+        self.layoutViz.addWidget(self.btn_refreshSpectraList)
 
         self.path1 = ""
         self.path2 = ""
@@ -168,9 +170,9 @@ class Dialog(QDialog):
         self.freqTopo.setText('15')
         self.formLayoutExtract.addRow('Frequency for Topography (Hz)', self.freqTopo)
 
-        self.layoutLeft.addLayout(self.formLayoutExtract)
+        self.layoutViz.addLayout(self.formLayoutExtract)
 
-        self.layoutLeftButtons = QVBoxLayout()
+        self.layoutVizButtons = QVBoxLayout()
 
         self.btn_load_extract = QPushButton("Load spectrum file - extract features")
         self.btn_r2map = QPushButton("Plot Frequency-channel R² map")
@@ -180,26 +182,26 @@ class Dialog(QDialog):
         # self.btn_w2map = QPushButton("Plot Wilcoxon Map")
         # self.btn_psd_r2 = QPushButton("Plot PSD comparison between classes")
 
-        self.layoutLeftButtons.addWidget(self.btn_load_extract)
-        self.layoutLeftButtons.addWidget(self.btn_r2map)
-        self.layoutLeftButtons.addWidget(self.btn_psd)
-        self.layoutLeftButtons.addWidget(self.btn_timefreq)
-        self.layoutLeftButtons.addWidget(self.btn_topo)
-        # self.layoutLeftButtons.addWidget(self.btn_w2map)
-        # self.layoutLeftButtons.addWidget(self.btn_psd_r2)
+        self.layoutVizButtons.addWidget(self.btn_load_extract)
+        self.layoutVizButtons.addWidget(self.btn_r2map)
+        self.layoutVizButtons.addWidget(self.btn_psd)
+        self.layoutVizButtons.addWidget(self.btn_timefreq)
+        self.layoutVizButtons.addWidget(self.btn_topo)
+        # self.layoutVizButtons.addWidget(self.btn_w2map)
+        # self.layoutVizButtons.addWidget(self.btn_psd_r2)
 
-        self.layoutLeft.addLayout(self.layoutLeftButtons)
-        self.dlgLayout.addLayout(self.layoutLeft)
+        self.layoutViz.addLayout(self.layoutVizButtons)
+        self.dlgLayout.addLayout(self.layoutViz)
 
         # -----------------------------------------------------------------------
         # FEATURE SELECTION PART
-        self.layoutRight = QVBoxLayout()
-        self.layoutRight.setAlignment(QtCore.Qt.AlignTop)
+        self.layoutTrain = QVBoxLayout()
+        self.layoutTrain.setAlignment(QtCore.Qt.AlignTop)
         self.qvBoxLayouts = [None, None]
         self.qvBoxLayouts[0] = QFormLayout()
         self.qvBoxLayouts[1] = QVBoxLayout()
-        self.layoutRight.addLayout(self.qvBoxLayouts[0])
-        self.layoutRight.addLayout(self.qvBoxLayouts[1])
+        self.layoutTrain.addLayout(self.qvBoxLayouts[0])
+        self.layoutTrain.addLayout(self.qvBoxLayouts[1])
 
         self.label2 = QLabel('===== SELECT FEATURES FOR TRAINING =====')
         self.label2.setAlignment(QtCore.Qt.AlignCenter)
@@ -237,10 +239,10 @@ class Dialog(QDialog):
         self.qvBoxLayouts[1].addLayout(self.trainingLayout)
         self.qvBoxLayouts[1].addWidget(self.btn_selectFeatures)
         # self.qvBoxLayouts[1].addWidget(self.btn_runTrain)
-        self.dlgLayout.addLayout(self.layoutRight)
+        self.dlgLayout.addLayout(self.layoutTrain)
 
         # display initial layout
-        self.setLayout(self.dlgLayoutMeta)
+        self.setLayout(self.dlgLayout)
         self.initialWindow()
 
     # -----------------------------------------------------------------------
@@ -391,6 +393,8 @@ class Dialog(QDialog):
         self.dataNp1 = []
         self.dataNp2 = []
 
+        listSampFreq = []
+
         for selectedItem in self.availableSpectraList.selectedItems():
             selectedSpectra = selectedItem.text()
             class1label = self.parameterDict["Class1"]
@@ -403,6 +407,22 @@ class Dialog(QDialog):
             data1 = load_csv_cond(path1)
             data2 = load_csv_cond(path2)
 
+            # Sampling frequency
+            # Infos in the columns header of the CSVs in format "Time:32x251:500"
+            # (Column zero contains starting time of the row)
+            # 32 is channels, 251 is freq bins, 500 is sampling frequency)
+            sampFreq1 = int(data1.columns.values[0].split(":")[-1])
+            sampFreq2 = int(data2.columns.values[0].split(":")[-1])
+            if sampFreq1 != sampFreq2:
+                msg = QMessageBox()
+                errMsg = str("Error when loading " + path1 + "\n" + " and " + path2)
+                errMsg = str(errMsg + "sampling frequency mismatch (" + str(sampFreq1) + " vs " + str(sampFreq2) + ")")
+                msg.setText(errMsg)
+                msg.exec_()
+                return
+
+            listSampFreq.append(sampFreq1)
+
             # if data1.empty or data2.empty:
             #     msg = QMessageBox()
             #     msg.setText(str("Error loading files " + selectedItem.text() + \
@@ -412,6 +432,18 @@ class Dialog(QDialog):
 
             self.dataNp1.append(data1.to_numpy())
             self.dataNp2.append(data2.to_numpy())
+
+        # Check if all files have the same sampling freq. If not, for now, we don't process further
+        if not all(freqsamp == listSampFreq[0] for freqsamp in listSampFreq):
+            msg = QMessageBox()
+            errMsg = str("Error when loading CSV files\n")
+            errMsg = str(errMsg + "Sampling frequency mismatch (" + str(listSampFreq) + ")")
+            msg.setText(errMsg)
+            msg.exec_()
+            return
+        else:
+            self.samplingFreq = listSampFreq[0]
+            print("Sampling Frequency for selected files : " + str(self.samplingFreq))
 
         # ----------
         # Compute the features used for visualization
@@ -425,6 +457,11 @@ class Dialog(QDialog):
         winLen = float(self.parameterDict["TimeWindowLength"])
         winOverlap = float(self.parameterDict["TimeWindowShift"])
 
+
+        # For multiple runs (ie. multiple selected CSV files), we just concatenate
+        # the trials from all files. Then the displayed spectral features (R²map, PSD, topography)
+        # will be computed as averages over all the trials.
+        # Time/freq analysis will need a specific process (TODO)
         power_right_final = None
         power_left_final = None
         for run in range(len(self.dataNp1)):
