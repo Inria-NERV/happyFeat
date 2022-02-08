@@ -7,7 +7,7 @@
 			<Identifier>(0xb327ca82, 0x2716f636)</Identifier>
 			<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
 			<Name>Directory</Name>
-			<DefaultValue>${Player_ScenarioDirectory}/</DefaultValue>
+			<DefaultValue>${Player_ScenarioDirectory}</DefaultValue>
 			<Value>${Player_ScenarioDirectory}</Value>
 		</Setting>
 		<Setting>
@@ -23,6 +23,13 @@
 			<Name>MI_Stimulations</Name>
 			<DefaultValue>mi-stimulations.lua</DefaultValue>
 			<Value>mi-stimulations.lua</Value>
+		</Setting>
+		<Setting>
+			<Identifier>(0x0b819f60, 0xe914a026)</Identifier>
+			<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
+			<Name>SignalsDirectory</Name>
+			<DefaultValue>signals</DefaultValue>
+			<Value>signals</Value>
 		</Setting>
 	</Settings>
 	<Inputs></Inputs>
@@ -256,7 +263,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue></DefaultValue>
-					<Value>$var{Directory}/$var{EEGData}</Value>
+					<Value>$var{Directory}/$var{SignalsDirectory}/$var{EEGData}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>

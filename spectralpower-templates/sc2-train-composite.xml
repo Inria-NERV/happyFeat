@@ -15,7 +15,21 @@
 			<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 			<Name>EEGData</Name>
 			<DefaultValue>motor-imagery.ov</DefaultValue>
-			<Value>motor-imagery-TRAINCOMPOSITE-LEFT-RIGHT.csv</Value>
+			<Value>MI-[2022.02.02-15.51.48]-TRAINCOMPOSITE-LEFT-RIGHT.csv</Value>
+		</Setting>
+		<Setting>
+			<Identifier>(0x5916d702, 0x7d50cd0e)</Identifier>
+			<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
+			<Name>SignalsPath</Name>
+			<DefaultValue>signals</DefaultValue>
+			<Value>signals</Value>
+		</Setting>
+		<Setting>
+			<Identifier>(0x9f4a6c0b, 0x1e0de8e9)</Identifier>
+			<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
+			<Name>TrainingPath</Name>
+			<DefaultValue>training</DefaultValue>
+			<Value>training</Value>
 		</Setting>
 		<Setting>
 			<Identifier>(0x48f5b68c, 0xc44ba9f1)</Identifier>
@@ -98,7 +112,7 @@
 					<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
 					<Name>Frequencies to select</Name>
 					<DefaultValue>8:12;16:24</DefaultValue>
-					<Value>22</Value>
+					<Value>12:15</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
@@ -150,7 +164,7 @@
 					<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
 					<Name>Frequencies to select</Name>
 					<DefaultValue>8:12;16:24</DefaultValue>
-					<Value>22</Value>
+					<Value>12:15</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
@@ -483,7 +497,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue></DefaultValue>
-					<Value>$var{Directory}/$var{EEGData}</Value>
+					<Value>$var{Directory}/$var{SignalsPath}/$var{TrainingPath}/$var{EEGData}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
@@ -826,7 +840,7 @@
 					<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
 					<Name>Channel List</Name>
 					<DefaultValue>:</DefaultValue>
-					<Value>C4</Value>
+					<Value>CP5</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -900,7 +914,7 @@
 					<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
 					<Name>Channel List</Name>
 					<DefaultValue>:</DefaultValue>
-					<Value>C4</Value>
+					<Value>CP5</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>

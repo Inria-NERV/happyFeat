@@ -72,7 +72,6 @@ class Dialog(QDialog):
 
         # TODO : get from interface/files !!
         self.fres = 1
-        self.fs = 500
 
         # -----------------------------------------------------------------------
         # CREATE INTERFACE...
@@ -269,13 +268,13 @@ class Dialog(QDialog):
         self.setLayout(self.dlgLayout)
         self.initialWindow()
 
-        self.refreshLists(os.path.join(self.scriptPath, "generated"))
+        self.refreshLists(os.path.join(self.scriptPath, "generated", "signals"))
 
         # Timing loop every 2s to get files in working folder
         self.timer = QtCore.QTimer(self)
         self.timer.setSingleShot(False)
         self.timer.setInterval(4000)  # in milliseconds
-        self.timer.timeout.connect(lambda: self.refreshLists(os.path.join(self.scriptPath, "generated")))
+        self.timer.timeout.connect(lambda: self.refreshLists(os.path.join(self.scriptPath, "generated", "signals")))
         self.timer.start()
 
     # -----------------------------------------------------------------------
@@ -312,7 +311,6 @@ class Dialog(QDialog):
         # Refresh all lists. Called once at the init, then once every timer click (see init method)
         # ----------
         self.refreshSignalList(self.fileListWidget, workingFolder)
-        # self.refreshSignalList(self.fileListWidgetTrain, workingFolder)
         self.refreshAvailableSpectraList(workingFolder)
         self.refreshAvailableTrainSignalList(workingFolder)
         return
@@ -344,12 +342,13 @@ class Dialog(QDialog):
                 listwidget.addItem(filename)
         return
 
-    def refreshAvailableSpectraList(self, workingFolder):
+    def refreshAvailableSpectraList(self, signalFolder):
         # ----------
         # Refresh available CSV spectrum files.
         # Only mention current class (set in parameters), and check that both classes are present
         # ----------
 
+        workingFolder = os.path.join(signalFolder, "analysis")
         # self.availableSpectraList.clear()
         class1label = self.parameterDict["Class1"]
         class2label = self.parameterDict["Class2"]
@@ -382,12 +381,13 @@ class Dialog(QDialog):
 
         return
 
-    def refreshAvailableTrainSignalList(self, workingFolder):
+    def refreshAvailableTrainSignalList(self, signalFolder):
         # ----------
         # Refresh available EDF training files.
         # Only mention current class (set in parameters), and check that both classes are present
         # ----------
 
+        workingFolder = os.path.join(signalFolder, "training")
         # self.availableSpectraList.clear()
         class1label = self.parameterDict["Class1"]
         class2label = self.parameterDict["Class2"]
@@ -500,8 +500,8 @@ class Dialog(QDialog):
             class2label = self.parameterDict["Class2"]
             selectedBasename = selectedSpectra.removesuffix(str("("+class1label+"/"+class2label+")"))
 
-            path1 = os.path.join(self.scriptPath, "generated", str(selectedBasename + class1label + ".csv"))
-            path2 = os.path.join(self.scriptPath, "generated", str(selectedBasename + class2label + ".csv"))
+            path1 = os.path.join(self.scriptPath, "generated", "signals", "analysis", str(selectedBasename + class1label + ".csv"))
+            path2 = os.path.join(self.scriptPath, "generated", "signals", "analysis", str(selectedBasename + class2label + ".csv"))
 
             data1 = load_csv_cond(path1)
             data2 = load_csv_cond(path2)
@@ -604,21 +604,21 @@ class Dialog(QDialog):
         self.plotWindow()
 
     def btnR2(self):
-        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.fs):
+        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             plot_stats(self.Features.Rsigned,
                        self.Features.freqs_left,
                        self.Features.electrodes_final,
                        self.fres, int(self.userFmin.text()), int(self.userFmax.text()))
 
     def btnW2(self):
-        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.fs):
+        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             plot_stats(self.Features.Wsigned,
                        self.Features.freqs_left,
                        self.Features.electrodes_final,
                        self.fres, int(self.userFmin.text()), int(self.userFmax.text()))
 
     def btnTimeFreq(self):
-        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.fs):
+        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             print("TimeFreq for sensor: " + self.electrodePsd.text())
             qt_plot_tf(self.Features.time_right, self.Features.time_left,
                        self.Features.time_length, self.Features.freqs_left,
@@ -626,14 +626,14 @@ class Dialog(QDialog):
                        self.fres, int(self.userFmin.text()), int(self.userFmax.text()))
 
     def btnPsd(self):
-        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.fs):
+        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             qt_plot_psd(self.Features.power_right, self.Features.power_left,
                         self.Features.freqs_left, self.Features.electrodes_final,
                         self.electrodePsd.text(),
                         self.fres, int(self.userFmin.text()), int(self.userFmax.text()))
 
     def btnpsdR2(self):
-        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.fs):
+        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             qt_plot_psd_r2(self.Features.Rsigned,
                            self.Features.power_right, self.Features.power_left,
                            self.Features.freqs_left, self.Features.electrodes_final,
@@ -642,10 +642,10 @@ class Dialog(QDialog):
 
     def btnTopo(self):
         if self.freqTopo.text().isdigit() \
-                and 0 < int(self.freqTopo.text()) < (self.fs / 2):
+                and 0 < int(self.freqTopo.text()) < (self.samplingFreq / 2):
             print("Freq Topo: " + self.freqTopo.text())
             qt_plot_topo(self.Features.Rsigned, self.Features.electrodes_final,
-                         int(self.freqTopo.text()), self.fres, self.fs)
+                         int(self.freqTopo.text()), self.fres, self.samplingFreq)
         else:
             msg = QMessageBox()
             msg.setText("Invalid frequency for topography")
@@ -765,7 +765,7 @@ class Dialog(QDialog):
             suffix = str("-(" + self.parameterDict["Class1"] + "/" + self.parameterDict["Class2"] + ")")
             filenameWithoutSuffix = selectedItem.text().removesuffix(suffix)
             filenameWithoutSuffix = os.path.basename(filenameWithoutSuffix)
-            path = os.path.join(self.scriptPath, "generated", str(filenameWithoutSuffix))
+            path = os.path.join(self.scriptPath, "generated", "signals", "training", str(filenameWithoutSuffix))
             compositeSigList.append(path)
 
         print("Creating composite file, using stimulations " + self.parameterDict["Class1"] + "/" + self.parameterDict["Class2"])
