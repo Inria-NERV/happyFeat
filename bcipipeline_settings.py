@@ -25,7 +25,7 @@ optionsTemplatesDir = {optionKeys[0]: None,
 global templateScenFilenames
 templateScenFilenames = ["sc1-monitor-acq.xml",
                          "sc2-extract-select.xml",
-                         "sc2-train.xml",
+                         "sc2-train-composite.xml",
                          "sc3-online.xml",
                          "mi-stimulations.lua"]
 

@@ -23,7 +23,7 @@ def modifyScenarioGeneralSettings(scenXml, parameterDict):
     tree.write(scenXml)
     return
 
-def modifyExtractionIO(scenXml, newFilename, newOutput1, newOutput2):
+def modifyExtractionIO(scenXml, newFilename, newOutput1, newOutput2, outputEdf1, outputEdf2):
     print("---Modifying " + scenXml + " input and output")
     tree = ET.parse(scenXml)
     root = tree.getroot()
@@ -35,12 +35,18 @@ def modifyExtractionIO(scenXml, newFilename, newOutput1, newOutput2):
             if setting.find('Name').text == "EEGData":
                 xmlVal = setting.find('Value')
                 xmlVal.text = newFilename
-            elif setting.find('Name').text == "Output1":
+            elif setting.find('Name').text == "OutputSpect1":
                 xmlVal = setting.find('Value')
                 xmlVal.text = newOutput1
-            elif setting.find('Name').text == "Output2":
+            elif setting.find('Name').text == "OutputSpect2":
                 xmlVal = setting.find('Value')
                 xmlVal.text = newOutput2
+            elif setting.find('Name').text == "OutputCond1":
+                xmlVal = setting.find('Value')
+                xmlVal.text = outputEdf1
+            elif setting.find('Name').text == "OutputCond2":
+                xmlVal = setting.find('Value')
+                xmlVal.text = outputEdf2
 
     # WRITE NEW XML
     tree.write(scenXml)

@@ -22,12 +22,16 @@ from PyQt5.QtWidgets import QLineEdit
 from PyQt5.QtWidgets import QListWidget
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtWidgets import QWidget
+from PyQt5.QtWidgets import QFrame
+from PyQt5.QtWidgets import QSizePolicy
 
 from PyQt5.QtCore import QTimer
 
 from Visualization_Data import *
 from featureExtractUtils import *
 from modifyOpenvibeScen import *
+from mergeRuns import mergeRuns
+
 import bcipipeline_settings as settings
 
 class Features:
@@ -126,7 +130,14 @@ class Dialog(QDialog):
         self.layoutExtract.addWidget(self.paramListWidget)
         self.layoutExtract.addWidget(self.designerWidget)
 
+        # Add separator...
+        separator = QFrame()
+        separator.setFrameShape(QFrame.VLine)
+        separator.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding)
+        separator.setLineWidth(1)
+
         self.dlgLayout.addLayout(self.layoutExtract)
+        self.dlgLayout.addWidget(separator)
 
         # -----------------------------------------------------------------------
         # FEATURE VISUALIZATION PART
@@ -192,10 +203,18 @@ class Dialog(QDialog):
         # self.layoutVizButtons.addWidget(self.btn_psd_r2)
 
         self.layoutViz.addLayout(self.layoutVizButtons)
+
+        # Add separator...
+        separator2 = QFrame()
+        separator2.setFrameShape(QFrame.VLine)
+        separator2.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding)
+        separator2.setLineWidth(1)
+
         self.dlgLayout.addLayout(self.layoutViz)
+        self.dlgLayout.addWidget(separator2)
 
         # -----------------------------------------------------------------------
-        # FEATURE SELECTION PART
+        # FEATURE SELECTION + TRAINING PART
         self.layoutTrain = QVBoxLayout()
         self.layoutTrain.setAlignment(QtCore.Qt.AlignTop)
         self.qvBoxLayouts = [None, None]
@@ -230,7 +249,7 @@ class Dialog(QDialog):
         self.trainingLayout.addRow(partitionsText, self.trainingPartitions)
 
         self.fileListWidgetTrain = QListWidget()
-        # self.fileListWidgetTrain.setSelectionMode(QListWidget.MultiSelection)
+        self.fileListWidgetTrain.setSelectionMode(QListWidget.MultiSelection)
 
         self.btn_addPair = QPushButton("Add feature")
         self.btn_removePair = QPushButton("Remove last feature in the list")
@@ -238,14 +257,12 @@ class Dialog(QDialog):
         self.btn_addPair.clicked.connect(lambda: self.btnAddPair())
         self.btn_removePair.clicked.connect(lambda: self.btnRemovePair())
         self.btn_selectFeatures.clicked.connect(lambda: self.btnSelectFeatures())
-        # self.btn_runTrain = QPushButton("Run classifier training scenario")
 
         self.qvBoxLayouts[1].addWidget(self.btn_addPair)
         self.qvBoxLayouts[1].addWidget(self.btn_removePair)
         self.qvBoxLayouts[1].addLayout(self.trainingLayout)
         self.qvBoxLayouts[1].addWidget(self.fileListWidgetTrain)
         self.qvBoxLayouts[1].addWidget(self.btn_selectFeatures)
-        # self.qvBoxLayouts[1].addWidget(self.btn_runTrain)
         self.dlgLayout.addLayout(self.layoutTrain)
 
         # display initial layout
@@ -295,8 +312,9 @@ class Dialog(QDialog):
         # Refresh all lists. Called once at the init, then once every timer click (see init method)
         # ----------
         self.refreshSignalList(self.fileListWidget, workingFolder)
-        self.refreshSignalList(self.fileListWidgetTrain, workingFolder)
+        # self.refreshSignalList(self.fileListWidgetTrain, workingFolder)
         self.refreshAvailableSpectraList(workingFolder)
+        self.refreshAvailableTrainSignalList(workingFolder)
         return
 
     def refreshSignalList(self, listwidget, workingFolder):
@@ -364,6 +382,44 @@ class Dialog(QDialog):
 
         return
 
+    def refreshAvailableTrainSignalList(self, workingFolder):
+        # ----------
+        # Refresh available EDF training files.
+        # Only mention current class (set in parameters), and check that both classes are present
+        # ----------
+
+        # self.availableSpectraList.clear()
+        class1label = self.parameterDict["Class1"]
+        class2label = self.parameterDict["Class2"]
+
+        # first get a list of all csv files in workingfolder that match the condition
+        availableTrainSigs = []
+        for filename in os.listdir(workingFolder):
+            if filename.endswith(str(class1label + ".edf")):
+                basename = filename.removesuffix(str(class1label + ".edf"))
+                otherClass = str(basename + class2label + ".edf")
+                if otherClass in os.listdir(workingFolder):
+                    availableTrainSigs.append(basename)
+
+        # iterate over existing items in widget and delete those who don't exist anymore
+        for x in range(self.fileListWidgetTrain.count() - 1, 0, -1):
+            tempitem = self.fileListWidgetTrain.item(x).text()
+            suffix = str("("+class1label+"/"+class2label+")")
+            if tempitem.removesuffix(suffix) not in availableTrainSigs:
+                self.fileListWidgetTrain.takeItem(x)
+
+        # iterate over filelist and add new files to listwidget
+        # for that, create temp list of items in listwidget
+        items = []
+        for x in range(self.fileListWidgetTrain.count()):
+            items.append(self.fileListWidgetTrain.item(x).text())
+        for basename in availableTrainSigs:
+            basenameSuffix = str(basename+"("+class1label+"/"+class2label+")")
+            if basenameSuffix not in items:
+                self.fileListWidgetTrain.addItem(basenameSuffix)
+
+        return
+
     def runExtractionScenario(self):
         # ----------
         # Use extraction scenario (sc2-extract-select.xml) to
@@ -394,9 +450,11 @@ class Dialog(QDialog):
             self.btn_runExtractionScenario.setText(str("Processing file : " + signalFile) + "...")
 
             filename = signalFile.removesuffix(".ov")
-            output1 = str(filename + "-Spectrum-" + self.parameterDict["Class1"] + ".csv")
-            output2 = str(filename + "-Spectrum-" + self.parameterDict["Class2"] + ".csv")
-            modifyExtractionIO(scenFile, signalFile, output1, output2)
+            output1 = str(filename + "-" + self.parameterDict["Class1"] + ".csv")
+            output2 = str(filename + "-" + self.parameterDict["Class2"] + ".csv")
+            outputEdf1 = str(filename + "-" + self.parameterDict["Class1"] + ".edf")
+            outputEdf2 = str(filename + "-" + self.parameterDict["Class2"] + ".edf")
+            modifyExtractionIO(scenFile, signalFile, output1, output2, outputEdf1, outputEdf2)
 
             # Run command (openvibe-designer.cmd --no-gui --play-fast <scen.xml>)
             p = subprocess.Popen([command, "--no-gui", "--play-fast", scenFile],
@@ -636,7 +694,7 @@ class Dialog(QDialog):
         # - No empty field
         # - frequencies in acceptable ranges
         # - channels in list
-        channelList = self.Features.electrodes_final
+        channelList = self.parameterDict["ChannelNames"].split(";") +self.Features.electrodes_final
         n_bins = int((int(self.parameterDict["PsdSize"]) / 2) + 1)
         for idx, feat in enumerate(self.selectedFeats):
             if feat.text() == "":
@@ -700,9 +758,28 @@ class Dialog(QDialog):
         scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[2])
         modifyTrainPartitions(trainingSize, scenFile)
 
-        print("Selected file for training: " + self.fileListWidgetTrain.selectedItems()[0].text())
-        signalFile = self.fileListWidgetTrain.selectedItems()[0].text()
-        modifyTrainInput(signalFile, scenFile)
+        # Create composite file from selected items
+        compositeSigList = []
+        for selectedItem in self.fileListWidgetTrain.selectedItems():
+            print("Selected file for training: " + selectedItem.text())
+            suffix = str("-(" + self.parameterDict["Class1"] + "/" + self.parameterDict["Class2"] + ")")
+            filenameWithoutSuffix = selectedItem.text().removesuffix(suffix)
+            filenameWithoutSuffix = os.path.basename(filenameWithoutSuffix)
+            path = os.path.join(self.scriptPath, "generated", str(filenameWithoutSuffix))
+            compositeSigList.append(path)
+
+        print("Creating composite file, using stimulations " + self.parameterDict["Class1"] + "/" + self.parameterDict["Class2"])
+        class1Stim = "OVTK_GDF_Left"
+        class2Stim = "OVTK_GDF_Right"
+        tmin = 0
+        epoch = self.parameterDict["StimulationEpoch"]
+        delay = self.parameterDict["StimulationDelay"]
+        tmax = float(self.parameterDict["StimulationEpoch"]) - float(self.parameterDict["StimulationDelay"])
+        compositeCsv = mergeRuns(compositeSigList, self.parameterDict["Class1"], self.parameterDict["Class2"], class1Stim, class2Stim, tmin, tmax)
+
+        print("Composite file for training: " + compositeCsv)
+        compositeCsvBasename = os.path.basename(compositeCsv)
+        modifyTrainInput(compositeCsvBasename, scenFile)
 
         # RUN THE CLASSIFIER TRAINING SCENARIO
         classifierScoreStr = self.runClassifierScenario()

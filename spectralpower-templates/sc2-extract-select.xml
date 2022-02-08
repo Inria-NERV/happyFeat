@@ -20,30 +20,44 @@
 		<Setting>
 			<Identifier>(0x16a479e0, 0xacbc5faa)</Identifier>
 			<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
-			<Name>Output1</Name>
+			<Name>OutputSpect1</Name>
 			<DefaultValue>spectrumAmplitude-Left.csv</DefaultValue>
 			<Value>spectrumAmplitude-Left.csv</Value>
 		</Setting>
 		<Setting>
 			<Identifier>(0xa712db6c, 0xc3a5545b)</Identifier>
 			<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
-			<Name>Output2</Name>
+			<Name>OutputSpect2</Name>
 			<DefaultValue>spectrumAmplitude-Right.csv</DefaultValue>
 			<Value>spectrumAmplitude-Right.csv</Value>
+		</Setting>
+		<Setting>
+			<Identifier>(0xe633130d, 0x97900f36)</Identifier>
+			<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
+			<Name>OutputCond1</Name>
+			<DefaultValue>motor-imagery-Left.edf</DefaultValue>
+			<Value>motor-imagery-Left.edf</Value>
+		</Setting>
+		<Setting>
+			<Identifier>(0x1a6e1c04, 0x20b83453)</Identifier>
+			<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
+			<Name>OutputCond2</Name>
+			<DefaultValue>motor-imagery-Right.edf</DefaultValue>
+			<Value>motor-imagery-Right.edf</Value>
 		</Setting>
 		<Setting>
 			<Identifier>(0x93d077f2, 0xcf8b7937)</Identifier>
 			<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
 			<Name>ChannelNames</Name>
 			<DefaultValue>FP1;FP2;F7;F3;Fz;F4;F6;FC5;FC1;FC2;FC6;T7;C3;Cz;C4;T8;TP9;CP5;CP1;CP2;CP6;TP10;P7;P3;Pz;P4;P8;PO9;O1;Oz;O2;PO10</DefaultValue>
-			<Value>FP1;FP2;F7;F3;Fz;F4;F6;FC5;FC1;FC2;FC6;T7;C3;Cz;C4;T8;TP9;CP5;CP1;CP2;CP6;TP10;P7;P3;Pz;P4;P8;PO9;O1;Oz;O2;PO10</Value>
+			<Value>Fp1;Fp2;F7;F3;Fz;F4;F8;FC5;FC1;FC2;FC6;T7;C3;Cz;C4;T8;TP9;CP5;CP1;CP2;CP6;TP10;P7;P3;Pz;P4;P8;PO9;O1;Oz;O2;PO10</Value>
 		</Setting>
 		<Setting>
 			<Identifier>(0x202d02bc, 0xfe381c9a)</Identifier>
 			<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 			<Name>StimulationEpoch</Name>
 			<DefaultValue>3</DefaultValue>
-			<Value>3</Value>
+			<Value>1.5</Value>
 		</Setting>
 		<Setting>
 			<Identifier>(0xb639cff8, 0xfe852b98)</Identifier>
@@ -131,6 +145,106 @@
 				<Attribute>
 					<Identifier>(0xfba64161, 0x65304e21)</Identifier>
 					<Value></Value>
+				</Attribute>
+			</Attributes>
+		</Box>
+		<Box>
+			<Identifier>(0x000020e5, 0x000060be)</Identifier>
+			<Name>EDF File Writer</Name>
+			<AlgorithmClassIdentifier>(0x0d454dce, 0x470a4c02)</AlgorithmClassIdentifier>
+			<Inputs>
+				<Input>
+					<TypeIdentifier>(0x403488e7, 0x565d70b6)</TypeIdentifier>
+					<Name>Experiment information</Name>
+				</Input>
+				<Input>
+					<TypeIdentifier>(0x5ba36127, 0x195feae1)</TypeIdentifier>
+					<Name>Signal</Name>
+				</Input>
+				<Input>
+					<TypeIdentifier>(0x6f752dd0, 0x082a321e)</TypeIdentifier>
+					<Name>Stimulations</Name>
+				</Input>
+			</Inputs>
+			<Settings>
+				<Setting>
+					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
+					<Name>Filename</Name>
+					<DefaultValue>record-[$core{date}-$core{time}].edf</DefaultValue>
+					<Value>$var{Directory}/$var{OutputCond1}</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+			</Settings>
+			<Attributes>
+				<Attribute>
+					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
+					<Value>656</Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
+					<Value>176</Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
+					<Value>(0xd41e3037, 0xcc12644a)</Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0xce18836a, 0x9c0eb403)</Identifier>
+					<Value>1</Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0xcfad85b0, 0x7c6d841c)</Identifier>
+					<Value>3</Value>
+				</Attribute>
+			</Attributes>
+		</Box>
+		<Box>
+			<Identifier>(0x000020e5, 0x000060bf)</Identifier>
+			<Name>EDF File Writer</Name>
+			<AlgorithmClassIdentifier>(0x0d454dce, 0x470a4c02)</AlgorithmClassIdentifier>
+			<Inputs>
+				<Input>
+					<TypeIdentifier>(0x403488e7, 0x565d70b6)</TypeIdentifier>
+					<Name>Experiment information</Name>
+				</Input>
+				<Input>
+					<TypeIdentifier>(0x5ba36127, 0x195feae1)</TypeIdentifier>
+					<Name>Signal</Name>
+				</Input>
+				<Input>
+					<TypeIdentifier>(0x6f752dd0, 0x082a321e)</TypeIdentifier>
+					<Name>Stimulations</Name>
+				</Input>
+			</Inputs>
+			<Settings>
+				<Setting>
+					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
+					<Name>Filename</Name>
+					<DefaultValue>record-[$core{date}-$core{time}].edf</DefaultValue>
+					<Value>$var{Directory}/$var{OutputCond2}</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+			</Settings>
+			<Attributes>
+				<Attribute>
+					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
+					<Value>640</Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
+					<Value>672</Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
+					<Value>(0xd41e3037, 0xcc12644a)</Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0xce18836a, 0x9c0eb403)</Identifier>
+					<Value>1</Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0xcfad85b0, 0x7c6d841c)</Identifier>
+					<Value>3</Value>
 				</Attribute>
 			</Attributes>
 		</Box>
@@ -323,7 +437,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue>record-[$core{date}-$core{time}].csv</DefaultValue>
-					<Value>$var{Directory}/$var{Output1}</Value>
+					<Value>$var{Directory}/$var{OutputSpect1}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -394,7 +508,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue>record-[$core{date}-$core{time}].csv</DefaultValue>
-					<Value>$var{Directory}/$var{Output2}</Value>
+					<Value>$var{Directory}/$var{OutputSpect2}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -1351,6 +1465,17 @@
 			</Target>
 		</Link>
 		<Link>
+			<Identifier>(0x00000a87, 0x0000314e)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x000065af, 0x0000612b)</BoxIdentifier>
+				<BoxOutputIndex>0</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x000020e5, 0x000060be)</BoxIdentifier>
+				<BoxInputIndex>1</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
 			<Identifier>(0x00000f2d, 0x00003aa2)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x1396fde6, 0x1c649749)</BoxIdentifier>
@@ -1428,14 +1553,14 @@
 			</Target>
 		</Link>
 		<Link>
-			<Identifier>(0x00003252, 0x00001133)</Identifier>
+			<Identifier>(0x0000498d, 0x00007d83)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x11a6038b, 0x7157c282)</BoxIdentifier>
-				<BoxOutputIndex>1</BoxOutputIndex>
+				<BoxOutputIndex>2</BoxOutputIndex>
 			</Source>
 			<Target>
-				<BoxIdentifier>(0x00004756, 0x00003402)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
+				<BoxIdentifier>(0x1396fde6, 0x1c649749)</BoxIdentifier>
+				<BoxInputIndex>1</BoxInputIndex>
 			</Target>
 		</Link>
 		<Link>
@@ -1483,6 +1608,17 @@
 			</Target>
 		</Link>
 		<Link>
+			<Identifier>(0x000063ef, 0x00005866)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x11a6038b, 0x7157c282)</BoxIdentifier>
+				<BoxOutputIndex>1</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x00004756, 0x00003402)</BoxIdentifier>
+				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
 			<Identifier>(0x00006ef8, 0x00005000)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x00005705, 0x000070c7)</BoxIdentifier>
@@ -1491,6 +1627,17 @@
 			<Target>
 				<BoxIdentifier>(0x00007293, 0x00001001)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
+			<Identifier>(0x00006fcd, 0x00005801)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x000065af, 0x0000612c)</BoxIdentifier>
+				<BoxOutputIndex>0</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x000020e5, 0x000060bf)</BoxIdentifier>
+				<BoxInputIndex>1</BoxInputIndex>
 			</Target>
 		</Link>
 		<Link>
@@ -1546,17 +1693,6 @@
 			<Target>
 				<BoxIdentifier>(0x2b88852d, 0x43d7a771)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
-			<Identifier>(0x7f0f3845, 0x79748fc5)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x11a6038b, 0x7157c282)</BoxIdentifier>
-				<BoxOutputIndex>2</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x1396fde6, 0x1c649749)</BoxIdentifier>
-				<BoxInputIndex>1</BoxInputIndex>
 			</Target>
 		</Link>
 	</Links>
