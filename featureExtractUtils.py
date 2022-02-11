@@ -26,59 +26,6 @@ def channel_generator(number_of_channel, Ground, Ref):
 
     return electrodes
 
-def load_file(sample_data_folder,filename):
-    sample_Training_EDF = os.path.join(sample_data_folder, filename)
-    raw_Training_EDF = mne.io.read_raw_edf(sample_Training_EDF, preload=True,verbose=False)
-    raw_Training_EDF_CAR, ref_data = mne.set_eeg_reference(raw_Training_EDF, ref_channels='average')
-    events_from_annot_1,event_id_1 = mne.events_from_annotations(raw_Training_EDF,event_id='auto')
-
-    np.savetxt('raw_py.txt', raw_Training_EDF.get_data()[:,:25000], delimiter=',')
-    np.savetxt('raw_py_CAR.txt', raw_Training_EDF_CAR.get_data()[:,:25000], delimiter=',')
-    return raw_Training_EDF_CAR, events_from_annot_1,event_id_1
-
-def load_file_eeg(sample_data_folder,filename):
-    sample_Training_EDF = os.path.join(sample_data_folder, filename)
-    raw_Training_EEG = mne.io.read_raw_nihon(sample_Training_EDF, preload=True, verbose=False)
-    events_from_annot_1,event_id_1 = mne.events_from_annotations(raw_Training_EEG,event_id='auto')
-    return raw_Training_EEG, events_from_annot_1,event_id_1
-
-
-def select_Event(event_name,RAW_data,events_from_annot,event_id,t_min,t_max):
-    if t_min == 0:
-        epochs_training = mne.Epochs(RAW_data, events_from_annot, event_id,tmin = t_min, tmax=t_max,preload=True,event_repeated='merge', baseline=None)
-    else:
-        epochs_training = mne.Epochs(RAW_data, events_from_annot, event_id,tmin = t_min, tmax=t_max,preload=True,event_repeated='merge')
-    return epochs_training[event_name]
-
-
-def Session_generation_Signal(Number_of_runs,Electrolde_number,alpha_band,beta_band,fs, Amp_alpha,Amp_beta):
-    freq_al_1 = alpha_band
-    amp_al = 10
-    freq_beta_1 = beta_band
-    amp_beta = 30
-    time = np.arange(0, 15, 1/fs)
-    Signal_all_trials_1 = np.zeros([Number_of_runs,Electrolde_number,len(time)])
-    Signal_all_trials_2 = np.zeros([Number_of_runs,Electrolde_number,len(time)])
-    signal_al_1 = Amp_alpha*np.sin(2*np.pi*freq_al_1*time)  #+ Amp_beta*np.sin(2*np.pi*freq_beta_1*time)
-    signal_al_2 = Amp_beta*np.sin(2*np.pi*freq_beta_1*time)
-    for j in range(Number_of_runs):
-        for i in range(Electrolde_number):
-            random_1 = 5*np.random.normal(size=len(time))
-            random_2 = 5*np.random.normal(size=len(time))
-            Signal_all_trials_1[j,i]=signal_al_1+random_1
-            Signal_all_trials_2[j,i] = signal_al_2+random_2
-            fourier_transform = np.fft.rfft(signal_al_1)
-            fourier_transform_2 = np.fft.rfft(signal_al_2)
-
-            abs_fourier_transform = np.abs(fourier_transform)
-            abs_fourier_transform_2 = np.abs(fourier_transform_2)
-
-            power_spectrum = np.square(abs_fourier_transform)
-            power_spectrum_2 = np.square(abs_fourier_transform_2)
-            frequency = np.linspace(0, fs/2, len(power_spectrum))
-    return Signal_all_trials_1,Signal_all_trials_2
-
-
 def load_csv_cond(file):
     # Read data from file 'filename.csv'
     # (in the same directory that your python process is based)
@@ -88,36 +35,19 @@ def load_csv_cond(file):
     data.head()
     return data
 
-
-def Extract_Data_to_compare(Data_Mi, Data_Rest, time, Trials, N_electrodes, Bins, n_window, shift):
-
-    mat_left = Data_Mi
-    Number_of_trials = Trials
-    Number_of_electrodes = N_electrodes
-    Number_of_Bins = Bins
+def Extract_CSV_Data(data_cond, trialLength, trials, nbElectrodes, bins, n_window, shift):
     #shift = n_window - overlap
-    length = round((time-n_window)/shift)
-    time_leng = np.arange(0, time, shift)
-    mat_left = mat_left[:, 2:]
-    mat_left = mat_left[:, :Number_of_electrodes*Number_of_Bins]
-    power_left = np.zeros([Number_of_trials, Number_of_electrodes, Number_of_Bins])
+    length = round((trialLength-n_window)/shift)
+    data = data_cond[:, 2:]
+    data = data[:, :nbElectrodes*bins]
+    power = np.zeros([trials, nbElectrodes, bins])
 
-    time_left = np.zeros([Number_of_trials, Number_of_electrodes, length, Number_of_Bins])
-    time_right = np.zeros([Number_of_trials, Number_of_electrodes, length, Number_of_Bins])
+    timefreq = np.zeros([trials, nbElectrodes, length, bins])
 
-    for i in range(power_left.shape[0]):
-        for j in range(power_left.shape[1]):
-                power_left[i,j,:] = mat_left[(i*length):(i*length+length),(j*Number_of_Bins):(j*Number_of_Bins+Number_of_Bins)].mean(axis=0)
-                time_left[i,j,:,:] = mat_left[(i*length):(i*length+length),(j*Number_of_Bins):(j*Number_of_Bins+Number_of_Bins)]
+    for i in range(power.shape[0]):
+        for j in range(power.shape[1]):
+            test = data[(i*length):(i*length+length), (j*bins):(j*bins+bins)]
+            power[i, j, :] = data[(i*length):(i*length+length), (j*bins):(j*bins+bins)].mean(axis=0)
+            timefreq[i, j, :, :] = data[(i*length):(i*length+length), (j*bins):(j*bins+bins)]
 
-    mat_right = Data_Rest
-    mat_right = mat_right[:,2:]
-    mat_right = mat_right[:,:Number_of_electrodes*Number_of_Bins]
-    power_right = np.zeros([Number_of_trials,Number_of_electrodes,Number_of_Bins])
-
-    for i in range(power_left.shape[0]):
-        for j in range(power_left.shape[1]):
-                power_right[i,j,:] = mat_right[(i*length):(i*length+length),(j*Number_of_Bins):(j*Number_of_Bins+Number_of_Bins)].mean(axis=0)
-                time_right[i,j,:,:] = mat_right[(i*length):(i*length+length),(j*Number_of_Bins):(j*Number_of_Bins+Number_of_Bins)]
-
-    return power_right, power_left,time_left,time_right,time_leng
+    return power, timefreq

@@ -262,7 +262,7 @@ def _plot_topomap_test(data, pos, vmin=None, vmax=None, cmap=None, sensors=True,
     #topomap.plt_show(show)
     return im, cont, interp
 
-def time_frequency_map(time_freq,time,freqs,channel,fmin,fmax,fres,each_point,baseline,channel_array,std_baseline):
+def time_frequency_map(time_freq,time,freqs,channel,fmin,fmax,fres,each_point,baseline,channel_array,std_baseline,vmin,vmax,tlength):
     font = {'family': 'serif',
         'color':  'black',
         'weight': 'normal',
@@ -276,7 +276,7 @@ def time_frequency_map(time_freq,time,freqs,channel,fmin,fmax,fres,each_point,ba
     PSD_STD = std_baseline[channel,:]
     A = []
     for i in range(tf.shape[1]):
-        A.append(np.divide((tf[:,i]-PSD_baseline),PSD_STD))
+        A.append(np.divide((tf[:,i]-PSD_baseline),PSD_baseline)*100)
     tf = np.transpose(A)
 
     frequence = []
@@ -296,19 +296,22 @@ def time_frequency_map(time_freq,time,freqs,channel,fmin,fmax,fres,each_point,ba
     newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)),top(np.linspace(1, 0, 128))))
     double = ListedColormap(newcolors2, name='double')
     if np.amin(tf)<0:
-        plt.imshow(tf,cmap='jet',aspect='auto',origin ='lower',vmin = -np.amax(tf),vmax = np.amax(tf))
+        plt.imshow(tf,cmap='jet',aspect='auto',origin ='lower',vmin = vmin,vmax = vmax)
     else:
         plt.imshow(tf,cmap='jet',aspect='auto',origin ='lower')
     size_time = len(time)/each_point
 
-    if round(size_time) == 0:
-        size_time = 1
-
     for i in range(len(time)):
-        if (i%(round(size_time))==0):
-            time_seres.append(str((round(time[i],1))))
+        if round(size_time) == 0:
+            time_seres.append(str(time[i]))
         else:
-            time_seres.append('')
+            if (i%(round(size_time))==0):
+                if(tlength<10):
+                    time_seres.append(str((round(time[i],1))))
+                else:
+                    time_seres.append(str((round(time[i]))))
+            else:
+                time_seres.append('')
 
     sizing = round(len(freqs[index_fmin:(index_fmax+1)])/(each_point*1/fres))
     for i in freqs[index_fmin:(index_fmax+1)]:
@@ -330,7 +333,7 @@ def time_frequency_map(time_freq,time,freqs,channel,fmin,fmax,fres,each_point,ba
     #plt.show()
 
 
-def plot_psd(Power_MI, Power_Rest, freqs, channel, channel_array, each_point, fmin, fmax, fres):
+def plot_psd(Power_MI, Power_Rest, freqs, channel, channel_array, each_point, fmin, fmax, fres, class1label, class2label):
     font = {'family': 'serif',
             'color': 'black',
             'weight': 'normal',
@@ -365,11 +368,11 @@ def plot_psd(Power_MI, Power_Rest, freqs, channel, channel_array, each_point, fm
     Selected_MI_STD = (STD_MI[index_fmin:index_fmax] / Power_MI.shape[0])
     Selected_Rest_STD = (STD_Rest[index_fmin:index_fmax] / Power_MI.shape[0])
 
-    plt.plot(freqs[index_fmin:index_fmax], Selected_MI, label='Motor Imagery', color='blue')
+    plt.plot(freqs[index_fmin:index_fmax], Selected_MI, label=class2label, color='blue')
 
     plt.fill_between(freqs[index_fmin:index_fmax], Selected_MI - Selected_MI_STD, Selected_MI + Selected_MI_STD,
                      color='blue', alpha=0.3)
-    plt.plot(freqs[index_fmin:index_fmax], Selected_Rest, label='Resting state', color='red')
+    plt.plot(freqs[index_fmin:index_fmax], Selected_Rest, label=class1label, color='red')
     plt.fill_between(freqs[index_fmin:index_fmax], Selected_Rest - Selected_Rest_STD,
                      Selected_Rest + Selected_Rest_STD,
                      color='red', alpha=0.3)
@@ -532,8 +535,8 @@ def plot_Rsquare_calcul_welch(Rsquare,channel_array,freq,smoothing,fres,each_poi
     #plt.show()
 
 
-# def Reorder_Rsquare(Rsquare, Wsquare, Wpvalues, electrodes_orig, powerLeft, powerRight,timeleft,timeright):
-def Reorder_Rsquare(Rsquare, Wsquare, Wpvalues, electrodes_orig, powerLeft, powerRight):
+def Reorder_Rsquare(Rsquare, Wsquare, Wpvalues, electrodes_orig, powerLeft, powerRight, timefreqLeft, timefreqRight):
+# def Reorder_Rsquare(Rsquare, Wsquare, Wpvalues, electrodes_orig, powerLeft, powerRight):
     if len(electrodes_orig) >= 64:
         electrodes_target = ['FP1','AF7','AF3','F7','F5','F3','F1','FT9','FT7','FC5','FC3','FC1','T7','C5','C3','C1','TP9','TP7','CP5','CP3','CP1','P7','P5','P3','P1','PO9','PO7','PO3','O1','AFz','Fz','FCz','Cz','CPz','Pz','POz','Oz','FP2','AF8','AF4','F8','F6','F4','F2','FT10','FT8','FC6','FC4','FC2','T8','C6','C4','C2','TP10','TP8','CP6','CP4','CP2','P8','P6','P4','P2','PO10','PO8','PO4','O2']
     else:
@@ -554,8 +557,8 @@ def Reorder_Rsquare(Rsquare, Wsquare, Wpvalues, electrodes_orig, powerLeft, powe
     print(powerLeft.shape)
     powerLeft_final = np.zeros([powerLeft.shape[0],powerLeft.shape[1],powerLeft.shape[2]])
     powerRight_final = np.zeros([powerRight.shape[0],powerRight.shape[1],powerRight.shape[2]])
-    # timeleftfinal = np.zeros([timeleft.shape[0],timeleft.shape[1],timeleft.shape[2],timeleft.shape[3]])
-    # timerightfinal = np.zeros([timeright.shape[0],timeright.shape[1],timeright.shape[2],timeleft.shape[3]])
+    timefreqLeftfinal = np.zeros([timefreqLeft.shape[0],timefreqLeft.shape[1],timefreqLeft.shape[2],timefreqLeft.shape[3]])
+    timefreqRightfinal = np.zeros([timefreqRight.shape[0],timefreqRight.shape[1],timefreqRight.shape[2],timefreqLeft.shape[3]])
 
     electrode_test = []
     for l in range(len(index_elec)):
@@ -563,13 +566,13 @@ def Reorder_Rsquare(Rsquare, Wsquare, Wpvalues, electrodes_orig, powerLeft, powe
         electrode_test.append(index_elec[l])
         powerLeft_final[:, l, :] = powerLeft[:, index_elec[l], :]
         powerRight_final[:, l, :] = powerRight[:, index_elec[l], :]
-        # timeleftfinal[:,l,:,:] = timeleft[:,index_elec[l], :,:]
-        # timerightfinal[:, l, :,:] = timeright[:, index_elec[l], :,:]
+        timefreqLeftfinal[:, l, :, :] = timefreqLeft[:,index_elec[l], :, :]
+        timefreqRightfinal[:, l, :, :] = timefreqRight[:, index_elec[l], :, :]
         Rsquare_final[l, :] = Rsquare[index_elec[l], :]
-        Wsquare_final[l,:] = Wsquare[index_elec[l],:]
-        Wpvalues_final[l,:] = Wpvalues[index_elec[l],:]
+        Wsquare_final[l, :] = Wsquare[index_elec[l], :]
+        Wpvalues_final[l, :] = Wpvalues[index_elec[l], :]
 
-    return Rsquare_final, Wsquare_final, Wpvalues_final,electrodes_target, powerLeft_final, powerRight_final # ,timeleftfinal,timerightfinal
+    return Rsquare_final, Wsquare_final, Wpvalues_final,electrodes_target, powerLeft_final, powerRight_final, timefreqLeftfinal, timefreqRightfinal
 
 def topo_plot(Rsquare, freq, electrodes, fres, fs, Stat_method):
     fig,ax = plt.subplots()

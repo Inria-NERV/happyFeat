@@ -39,12 +39,19 @@ class Features:
     Wsigned = []
     electrodes_orig = []
     electrodes_final = []
-    power_right = []
-    power_left = []
-    freqs_left = []
-    time_left = []
-    time_right = []
-    time_length = []
+
+    power_cond1 = []
+    power_cond2 = []
+    timefreq_cond1 = []
+    timefreq_cond2 = []
+
+    freqs_array = []
+    time_array = []
+
+    average_baseline_cond1 = []
+    std_baseline_cond1 = []
+    average_baseline_cond2 = []
+    std_baseline_cond2 = []
 
 
 class Dialog(QDialog):
@@ -493,6 +500,8 @@ class Dialog(QDialog):
 
         self.dataNp1 = []
         self.dataNp2 = []
+        self.dataNp1baseline = []
+        self.dataNp2baseline = []
 
         listSampFreq = []
 
@@ -502,11 +511,20 @@ class Dialog(QDialog):
             class2label = self.parameterDict["Class2"]
             selectedBasename = selectedSpectra.removesuffix(str("("+class1label+"/"+class2label+")"))
 
-            path1 = os.path.join(self.scriptPath, "generated", "signals", "analysis", str(selectedBasename + class1label + ".csv"))
-            path2 = os.path.join(self.scriptPath, "generated", "signals", "analysis", str(selectedBasename + class2label + ".csv"))
+            path1 = os.path.join(self.scriptPath, "generated", "signals", "analysis",
+                                 str(selectedBasename + class1label + ".csv"))
+            path2 = os.path.join(self.scriptPath, "generated", "signals", "analysis",
+                                 str(selectedBasename + class2label + ".csv"))
+            path1baseline = os.path.join(self.scriptPath, "generated", "signals", "analysis",
+                                 str(selectedBasename + class1label + "-BASELINE.csv"))
+            path2baseline = os.path.join(self.scriptPath, "generated", "signals", "analysis",
+                                 str(selectedBasename + class2label + "-BASELINE.csv"))
+
 
             data1 = load_csv_cond(path1)
             data2 = load_csv_cond(path2)
+            data1baseline = load_csv_cond(path1baseline)
+            data2baseline = load_csv_cond(path2baseline)
 
             # Sampling frequency
             # Infos in the columns header of the CSVs in format "Time:32x251:500"
@@ -524,15 +542,10 @@ class Dialog(QDialog):
 
             listSampFreq.append(sampFreq1)
 
-            # if data1.empty or data2.empty:
-            #     msg = QMessageBox()
-            #     msg.setText(str("Error loading files " + selectedItem.text() + \
-            #                     "Please wait while OpenViBE finishes writing CSV files."))
-            #    msg.exec_()
-            # else:
-
             self.dataNp1.append(data1.to_numpy())
             self.dataNp2.append(data2.to_numpy())
+            self.dataNp1baseline.append(data1baseline.to_numpy())
+            self.dataNp2baseline.append(data2baseline.to_numpy())
 
         # Check if all files have the same sampling freq. If not, for now, we don't process further
         if not all(freqsamp == listSampFreq[0] for freqsamp in listSampFreq):
@@ -549,7 +562,7 @@ class Dialog(QDialog):
         # ----------
         # Compute the features used for visualization
         # ----------
-        time = float(self.parameterDict["TrialLength"])
+        trialLength = float(self.parameterDict["TrialLength"])
         trials = int(self.parameterDict["TrialNb"])
         electrodeListStr = self.parameterDict["ChannelNames"]
         electrodeList = electrodeListStr.split(";")
@@ -558,87 +571,142 @@ class Dialog(QDialog):
         winLen = float(self.parameterDict["TimeWindowLength"])
         winOverlap = float(self.parameterDict["TimeWindowShift"])
 
-
         # For multiple runs (ie. multiple selected CSV files), we just concatenate
         # the trials from all files. Then the displayed spectral features (R²map, PSD, topography)
         # will be computed as averages over all the trials.
         # Time/freq analysis will need a specific process (TODO)
-        power_right_final = None
-        power_left_final = None
+        power_cond1_final = None
+        power_cond2_final = None
+        power_cond1_baseline_final = None
+        power_cond2_baseline_final = None
+        timefreq_cond1_final = None
+        timefreq_cond2_final = None
+        timefreq_cond1_baseline_final = None
+        timefreq_cond2_baseline_final = None
         for run in range(len(self.dataNp1)):
-            power_right, power_left, time_left, time_right, time_length = Extract_Data_to_compare(self.dataNp1[run],
-                                                                                                  self.dataNp2[run],
-                                                                                                  time, trials,
-                                                                                                  nbElectrodes,
-                                                                                                  n_bins,
-                                                                                                  winLen, winOverlap)
-            if power_right_final is None:
-                power_right_final = power_right
-                power_left_final = power_left
-            else:
-                power_right_final = np.concatenate((power_right_final, power_right))
-                power_left_final = np.concatenate((power_left_final, power_left))
+            power_cond1, timefreq_cond1 = \
+                Extract_CSV_Data(self.dataNp1[run], trialLength, trials, nbElectrodes, n_bins, winLen, winOverlap)
+            power_cond2, timefreq_cond2 = \
+                Extract_CSV_Data(self.dataNp2[run], trialLength, trials, nbElectrodes, n_bins, winLen, winOverlap)
+            power_cond1_baseline, timefreq_cond1_baseline = \
+                Extract_CSV_Data(self.dataNp1baseline[run], trialLength, trials, nbElectrodes, n_bins, winLen, winOverlap)
+            power_cond2_baseline, timefreq_cond2_baseline = \
+                Extract_CSV_Data(self.dataNp2baseline[run], trialLength, trials, nbElectrodes, n_bins, winLen, winOverlap)
 
+            if power_cond1_final is None:
+                power_cond1_final = power_cond1
+                power_cond2_final = power_cond2
+                power_cond1_baseline_final = power_cond1_baseline
+                power_cond2_baseline_final = power_cond2_baseline
+                timefreq_cond1_final = timefreq_cond1
+                timefreq_cond2_final = timefreq_cond2
+                timefreq_cond1_baseline_final = timefreq_cond1_baseline
+                timefreq_cond2_baseline_final = timefreq_cond2_baseline
+            else:
+                power_cond1_final = np.concatenate((power_cond1_final, power_cond1))
+                power_cond2_final = np.concatenate((power_cond2_final, power_cond2))
+                power_cond1_baseline_final = np.concatenate((power_cond1_baseline_final, power_cond1_baseline))
+                power_cond2_baseline_final = np.concatenate((power_cond2_baseline_final, power_cond2_baseline))
+                timefreq_cond1_final = np.concatenate((timefreq_cond1_final, timefreq_cond1))
+                timefreq_cond2_final = np.concatenate((timefreq_cond2_final, timefreq_cond2))
+                timefreq_cond1_baseline_final = np.concatenate((timefreq_cond1_baseline_final, timefreq_cond1_baseline), axis=2)
+                timefreq_cond2_baseline_final = np.concatenate((timefreq_cond2_baseline_final, timefreq_cond2_baseline), axis=2)
+
+        trialLengthSec = float(self.parameterDict["TrialLength"])
+        totalTrials = len(self.dataNp1) * trials
+        windowLength = float(self.parameterDict["TimeWindowLength"])
+        windowShift = float(self.parameterDict["TimeWindowShift"])
+        segmentsPerTrial = round( (trialLength-windowLength) / windowShift )
+
+        timeVectAtomic = [0]
+        for i in range(segmentsPerTrial-1):
+            timeVectAtomic.append((i+1)*windowShift)
+
+        timeVectAtomic = np.array(timeVectAtomic)
+        time_array = np.empty(0)
+        idxTrial = 0
+        for trial in range(totalTrials):
+            time_array = np.concatenate((time_array, timeVectAtomic + (idxTrial*trialLengthSec)) )
+            idxTrial += 1
 
         # Statistical Analysis
         electrodes_orig = channel_generator(nbElectrodes, 'TP9', 'TP10')
-        freqs_left = np.arange(0, n_bins)
+        freqs_array = np.arange(0, n_bins)
 
-        Rsigned = Compute_Rsquare_Map_Welch(power_right[:, :, :(n_bins-1)], power_left[:, :, :(n_bins-1)])
-        Wsquare, Wpvalues = Compute_Wilcoxon_Map(power_right[:, :, :(n_bins-1)], power_left[:, :, :(n_bins-1)])
+        Rsigned = Compute_Rsquare_Map_Welch(power_cond2[:, :, :(n_bins-1)], power_cond1[:, :, :(n_bins-1)])
+        Wsquare, Wpvalues = Compute_Wilcoxon_Map(power_cond2[:, :, :(n_bins-1)], power_cond1[:, :, :(n_bins-1)])
 
-        Rsigned_2, Wsquare_2, Wpvalues_2, electrodes_final, power_left_2, power_right_2 \
-            = Reorder_Rsquare(Rsigned, Wsquare, Wpvalues, electrodes_orig, power_left, power_right)
-
-        # Rsigned_2, electrodes_final, power_left_2, power_right_2 = Reorder_Rsquare(Rsigned, electrodes_orig, power_left, power_right)
+        Rsigned_2, Wsquare_2, Wpvalues_2, electrodes_final, power_cond1_2, power_cond2_2, timefreq_cond1, timefreq_cond2 \
+            = Reorder_Rsquare(Rsigned, Wsquare, Wpvalues, electrodes_orig, power_cond1, power_cond2, timefreq_cond1, timefreq_cond2)
 
         self.Features.electrodes_orig = electrodes_orig
-        self.Features.power_right = power_right_2
-        self.Features.power_left = power_left_2
-        self.Features.time_left = time_left
-        self.Features.time_right = time_right
-        self.Features.time_length = time_length
-        self.Features.freqs_left = freqs_left
+        self.Features.power_cond2 = power_cond2_2
+        self.Features.power_cond1 = power_cond1_2
+        self.Features.timefreq_cond1 = timefreq_cond1
+        self.Features.timefreq_cond2 = timefreq_cond2
+        # self.Features.time_array = time_array
+        self.Features.time_array = timeVectAtomic
+        self.Features.freqs_array = freqs_array
         self.Features.electrodes_final = electrodes_final
         self.Features.Rsigned = Rsigned_2
         self.Features.Wsigned = Wsquare_2
+
+        self.Features.average_baseline_cond1 = np.mean(power_cond1_baseline_final, axis=0)
+        self.Features.std_baseline_cond1 = np.std(power_cond1_baseline_final, axis=0)
+        self.Features.average_baseline_cond2 = np.mean(power_cond2_baseline_final, axis=0)
+        self.Features.std_baseline_cond2 = np.std(power_cond2_baseline_final, axis=0)
 
         self.plotWindow()
 
     def btnR2(self):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             plot_stats(self.Features.Rsigned,
-                       self.Features.freqs_left,
+                       self.Features.freqs_array,
                        self.Features.electrodes_final,
                        self.fres, int(self.userFmin.text()), int(self.userFmax.text()))
 
     def btnW2(self):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             plot_stats(self.Features.Wsigned,
-                       self.Features.freqs_left,
+                       self.Features.freqs_array,
                        self.Features.electrodes_final,
                        self.fres, int(self.userFmin.text()), int(self.userFmax.text()))
 
     def btnTimeFreq(self):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             print("TimeFreq for sensor: " + self.electrodePsd.text())
-            qt_plot_tf(self.Features.time_right, self.Features.time_left,
-                       self.Features.time_length, self.Features.freqs_left,
-                       self.Features.electrodes_final, self.electrodePsd.text(),
-                       self.fres, int(self.userFmin.text()), int(self.userFmax.text()))
+
+            # TODO change
+            tmin = 0
+            tmax = 1.5
+
+            qt_plot_tf(self.Features.timefreq_cond1, self.Features.timefreq_cond2,
+                       self.Features.time_array, self.Features.freqs_array,
+                       self.electrodePsd.text(), self.fres,
+                       self.Features.average_baseline_cond1, self.Features.average_baseline_cond2,
+                       self.Features.std_baseline_cond1, self.Features.std_baseline_cond2,
+                       self.Features.electrodes_final,
+                       int(self.userFmin.text()), int(self.userFmax.text()), float(tmin), float(tmax),
+                       self.parameterDict["Class1"], self.parameterDict["Class2"])
+
+            # qt_plot_tf(self.Features.time_right, self.Features.time_left,
+            #            self.Features.time_array, self.Features.freqs_array,
+            #            self.Features.electrodes_final, self.electrodePsd.text(),
+            #            self.fres, int(self.userFmin.text()), int(self.userFmax.text()))
 
     def btnPsd(self):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
-            qt_plot_psd(self.Features.power_right, self.Features.power_left,
-                        self.Features.freqs_left, self.Features.electrodes_final,
+            qt_plot_psd(self.Features.power_cond2, self.Features.power_cond1,
+                        self.Features.freqs_array, self.Features.electrodes_final,
                         self.electrodePsd.text(),
-                        self.fres, int(self.userFmin.text()), int(self.userFmax.text()))
+                        self.fres, int(self.userFmin.text()), int(self.userFmax.text()),
+                        self.parameterDict["Class1"], self.parameterDict["Class2"])
 
     def btnpsdR2(self):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             qt_plot_psd_r2(self.Features.Rsigned,
-                           self.Features.power_right, self.Features.power_left,
-                           self.Features.freqs_left, self.Features.electrodes_final,
+                           self.Features.power_cond2, self.Features.power_cond1,
+                           self.Features.freqs_array, self.Features.electrodes_final,
                            self.electrodePsd.text(),
                            self.fres, int(self.userFmin.text()), int(self.userFmax.text()))
 
@@ -857,8 +925,11 @@ class Dialog(QDialog):
 
         newDict = {}
         newDict['pipelineType'] = pipelineKey
+        newDict['Class1'] = self.parameterDict["Class1"]
+        newDict['Class2'] = self.parameterDict["Class2"]
         for idx, param in enumerate(settings.scenarioSettings[pipelineKey]):
-            if nbParamsExp <= idx < (nbParamsExp + nbParamsExtract + 1):
+            if nbParamsExp <= idx < (nbParamsExp + nbParamsExtract + 1): # print only pipeline-specific
+            # if idx < (nbParamsExp + nbParamsExtract + 1): # print all
                 newDict[param] = self.parameterDict[param]
 
         print(newDict)
@@ -887,12 +958,12 @@ def checkFreqsMinMax(fmin, fmax, fs):
 
     return ok
 
-def plot_stats(Rsigned, freqs_left, electrodes, fres, fmin, fmax):
+def plot_stats(Rsigned, freqs_array, electrodes, fres, fmin, fmax):
     smoothing  = False
-    plot_Rsquare_calcul_welch(Rsigned,np.array(electrodes)[:], freqs_left, smoothing, fres, 10, fmin, fmax)
+    plot_Rsquare_calcul_welch(Rsigned,np.array(electrodes)[:], freqs_array, smoothing, fres, 10, fmin, fmax)
     plt.show()
 
-def qt_plot_psd_r2(Rsigned, power_right, power_left, freqs_left, electrodesList, electrodeToDisp, fres, fmin, fmax):
+def qt_plot_psd_r2(Rsigned, power_cond2, power_cond1, freqs_array, electrodesList, electrodeToDisp, fres, fmin, fmax):
     electrodeExists = False
     electrodeIdx = 0
     for idx, elec in enumerate(electrodesList):
@@ -906,10 +977,10 @@ def qt_plot_psd_r2(Rsigned, power_right, power_left, freqs_left, electrodesList,
         msg.setText("No sensor with this name found")
         msg.exec_()
     else:
-        plot_psd2(Rsigned, power_right, power_left, freqs_left, electrodeIdx, electrodesList, 10, fmin, fmax, fres)
+        plot_psd2(Rsigned, power_cond2, power_cond1, freqs_array, electrodeIdx, electrodesList, 10, fmin, fmax, fres)
         plt.show()
 
-def qt_plot_psd(power_right, power_left, freqs_left, electrodesList, electrodeToDisp, fres, fmin, fmax):
+def qt_plot_psd(power_cond2, power_cond1, freqs_array, electrodesList, electrodeToDisp, fres, fmin, fmax, class1label, class2label):
     electrodeExists = False
     electrodeIdx = 0
     for idx, elec in enumerate(electrodesList):
@@ -923,7 +994,8 @@ def qt_plot_psd(power_right, power_left, freqs_left, electrodesList, electrodeTo
         msg.setText("No sensor with this name found")
         msg.exec_()
     else:
-        plot_psd(power_right, power_left, freqs_left, electrodeIdx, electrodesList, 10, fmin, fmax, fres)
+        plot_psd(power_cond2, power_cond1, freqs_array, electrodeIdx, electrodesList,
+                 10, fmin, fmax, fres, class1label, class2label)
         plt.show()
 
 
@@ -932,22 +1004,41 @@ def qt_plot_topo(Rsigned, electrodes, frequency, fres, fs):
     plt.show()
 
 
-def qt_plot_tf(timefreq_right, timefreq_left, time_left, freqs_left, electrodesList, electrodeToDisp, fres, fmin, fmax):
-    electrodeExists = False
-    electrodeIdx = 0
-    for idx, elec in enumerate(electrodesList):
-        if elec == electrodeToDisp:
-            electrodeIdx = idx
-            electrodeExists = True
-            break
+def qt_plot_tf(timefreq_cond1, timefreq_cond2, time_array, freqs_array, electrode, fres, average_baseline_cond1, average_baseline_cond2, std_baseline_cond1, std_baseline_cond2, electrodes, f_min_var, f_max_var, tmin, tmax, class1label, class2label):
+    font = {'family': 'serif',
+        'color':  'black',
+        'weight': 'normal',
+        'size': 14,
+        }
+    fmin = f_min_var
+    fmax = f_max_var
+    Test_existing = False
+    Index_electrode = 0
+    for i in range(len(electrodes)):
+        if electrodes[i] == electrode:
+            Index_electrode = i
+            Test_existing = True
 
-    if not electrodeExists:
+    if Test_existing == False:
         msg = QMessageBox()
-        msg.setText("No sensor with this name found")
+        msg.setText("No Electrode with this name found")
         msg.exec_()
     else:
-        time_frequency_map_between_cond(timefreq_right, time_left, freqs_left, electrodeIdx,
-                                        fmin, fmax, fres, 10, timefreq_left, electrodesList)
+        tf = timefreq_cond1.mean(axis=0)
+        tf = np.transpose(tf[Index_electrode, :, :])
+        PSD_baseline = average_baseline_cond1[Index_electrode, :]
+
+        A = []
+        for i in range(tf.shape[1]):
+            A.append(np.divide((tf[:, i]-PSD_baseline), PSD_baseline)*100)
+        tf = np.transpose(A)
+        vmin = -np.amax(tf)
+        vmax = np.amax(tf)
+        tlength = tmax-tmin
+        time_frequency_map(timefreq_cond1, time_array, freqs_array, Index_electrode, fmin, fmax, fres, 10, average_baseline_cond1, electrodes, std_baseline_cond1, vmin, vmax, tlength)
+        plt.title('(' + class1label + ') Sensor ' + electrodes[Index_electrode], fontdict=font)
+        time_frequency_map(timefreq_cond2, time_array, freqs_array, Index_electrode, fmin, fmax, fres, 10, average_baseline_cond2, electrodes, std_baseline_cond2, vmin, vmax, tlength)
+        plt.title('(' + class2label + ') Sensor ' + electrodes[Index_electrode], fontdict=font)
         plt.show()
 
 
