@@ -452,9 +452,11 @@ class Dialog(QDialog):
             filename = signalFile.removesuffix(".ov")
             output1 = str(filename + "-" + self.parameterDict["Class1"] + ".csv")
             output2 = str(filename + "-" + self.parameterDict["Class2"] + ".csv")
+            outputBaseline1 = str(filename + "-" + self.parameterDict["Class1"] + "-BASELINE.csv")
+            outputBaseline2 = str(filename + "-" + self.parameterDict["Class2"] + "-BASELINE.csv")
             outputEdf1 = str(filename + "-" + self.parameterDict["Class1"] + ".edf")
             outputEdf2 = str(filename + "-" + self.parameterDict["Class2"] + ".edf")
-            modifyExtractionIO(scenFile, signalFile, output1, output2, outputEdf1, outputEdf2)
+            modifyExtractionIO(scenFile, signalFile, output1, output2, outputBaseline1, outputBaseline2, outputEdf1, outputEdf2)
 
             # Run command (openvibe-designer.cmd --no-gui --play-fast <scen.xml>)
             p = subprocess.Popen([command, "--no-gui", "--play-fast", scenFile],
