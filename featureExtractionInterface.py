@@ -8,6 +8,7 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 from shutil import copyfile
+from itertools import chain, combinations
 
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QApplication
@@ -259,16 +260,19 @@ class Dialog(QDialog):
 
         self.btn_addPair = QPushButton("Add feature")
         self.btn_removePair = QPushButton("Remove last feature in the list")
-        self.btn_selectFeatures = QPushButton("TRAIN CLASSIFIER using selected files and features")
+        self.btn_selectFeatures = QPushButton("TRAIN CLASSIFIER using selected runs and features")
+        self.btn_allCombinations = QPushButton("FIND BEST COMBINATION of selected runs, using selected features")
         self.btn_addPair.clicked.connect(lambda: self.btnAddPair())
         self.btn_removePair.clicked.connect(lambda: self.btnRemovePair())
         self.btn_selectFeatures.clicked.connect(lambda: self.btnSelectFeatures())
+        self.btn_allCombinations.clicked.connect(lambda: self.btnAllCombinations())
 
         self.qvBoxLayouts[1].addWidget(self.btn_addPair)
         self.qvBoxLayouts[1].addWidget(self.btn_removePair)
         self.qvBoxLayouts[1].addLayout(self.trainingLayout)
         self.qvBoxLayouts[1].addWidget(self.fileListWidgetTrain)
         self.qvBoxLayouts[1].addWidget(self.btn_selectFeatures)
+        self.qvBoxLayouts[1].addWidget(self.btn_allCombinations)
         self.dlgLayout.addLayout(self.layoutTrain)
 
         # display initial layout
@@ -433,9 +437,7 @@ class Dialog(QDialog):
         # generate CSV files, used for visualization
         # ----------
         if not self.fileListWidget.selectedItems():
-            msg = QMessageBox()
-            msg.setText("Please select a set of files for feature extraction")
-            msg.exec_()
+            myErrorBox("Please select a set of files for feature extraction")
             return
 
         self.fileListWidget.setEnabled(False)
@@ -493,9 +495,7 @@ class Dialog(QDialog):
         # Load CSV files of selected extracted spectra for visualization
         # ----------
         if not self.availableSpectraList.selectedItems():
-            msg = QMessageBox()
-            msg.setText("Please select a set of files for analysis")
-            msg.exec_()
+            myErrorBox("Please select a set of files for analysis")
             return
 
         self.dataNp1 = []
@@ -533,11 +533,9 @@ class Dialog(QDialog):
             sampFreq1 = int(data1.columns.values[0].split(":")[-1])
             sampFreq2 = int(data2.columns.values[0].split(":")[-1])
             if sampFreq1 != sampFreq2:
-                msg = QMessageBox()
                 errMsg = str("Error when loading " + path1 + "\n" + " and " + path2)
                 errMsg = str(errMsg + "sampling frequency mismatch (" + str(sampFreq1) + " vs " + str(sampFreq2) + ")")
-                msg.setText(errMsg)
-                msg.exec_()
+                myErrorBox(errMsg)
                 return
 
             listSampFreq.append(sampFreq1)
@@ -549,11 +547,9 @@ class Dialog(QDialog):
 
         # Check if all files have the same sampling freq. If not, for now, we don't process further
         if not all(freqsamp == listSampFreq[0] for freqsamp in listSampFreq):
-            msg = QMessageBox()
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Sampling frequency mismatch (" + str(listSampFreq) + ")")
-            msg.setText(errMsg)
-            msg.exec_()
+            myErrorBox(errMsg)
             return
         else:
             self.samplingFreq = listSampFreq[0]
@@ -717,9 +713,7 @@ class Dialog(QDialog):
             qt_plot_topo(self.Features.Rsigned, self.Features.electrodes_final,
                          int(self.freqTopo.text()), self.fres, self.samplingFreq)
         else:
-            msg = QMessageBox()
-            msg.setText("Invalid frequency for topography")
-            msg.exec_()
+            myErrorBox("Invalid frequency for topography")
 
     def btnAddPair(self):
         self.selectedFeats.append(QLineEdit())
@@ -744,6 +738,37 @@ class Dialog(QDialog):
 
         return
 
+    def getAndCheckSelectedFeats(self):
+        selectedFeats = []
+        # Checks :
+        # - No empty field
+        # - frequencies in acceptable ranges
+        # - channels in list
+        channelList = self.parameterDict["ChannelNames"].split(";") + self.Features.electrodes_final
+        n_bins = int((int(self.parameterDict["PsdSize"]) / 2) + 1)
+        for idx, feat in enumerate(self.selectedFeats):
+            if feat.text() == "":
+                myErrorBox("Pair " + str(idx + 1) + " is empty...")
+                return
+
+            [chan, freqstr] = feat.text().split(";")
+            if chan not in channelList:
+                myErrorBox("Channel in pair " + str(idx + 1) + " (" + str(chan) + ") is not in the list...")
+                return
+
+            freqs = freqstr.split(":")
+            for freq in freqs:
+                if not freq.isdigit():
+                    myErrorBox("Frequency in pair " + str(idx + 1) + " (" + str(freq) + ") has an invalid format, must be an integer...")
+                    return
+                if int(freq) >= n_bins:
+                    myErrorBox("Frequency in pair " + str(idx + 1) + " (" + str(freq) + ") is not in the acceptable range...")
+                    return
+            selectedFeats.append(feat.text().split(";"))
+            print(feat)
+
+        return selectedFeats
+
     def btnSelectFeatures(self):
         # ----------
         # Callback from button :
@@ -751,49 +776,11 @@ class Dialog(QDialog):
         # launch openvibe with sc2-train.xml (in the background) to train the classifier,
         # provide the classification score/accuracy as a textbox
         # ----------
-
         if not self.fileListWidgetTrain.selectedItems():
-            msg = QMessageBox()
-            msg.setText("Please select a set of files for training")
-            msg.exec_()
+            myErrorBox("Please select a set of files for training")
             return
 
-        selectedFeats = []
-
-        # Checks :
-        # - No empty field
-        # - frequencies in acceptable ranges
-        # - channels in list
-        channelList = self.parameterDict["ChannelNames"].split(";") +self.Features.electrodes_final
-        n_bins = int((int(self.parameterDict["PsdSize"]) / 2) + 1)
-        for idx, feat in enumerate(self.selectedFeats):
-            if feat.text() == "":
-                msg = QMessageBox()
-                msg.setText("Pair "+str(idx+1)+" is empty...")
-                msg.exec_()
-                return
-
-            [chan, freqstr] = feat.text().split(";")
-            if chan not in channelList:
-                msg = QMessageBox()
-                msg.setText("Channel in pair " + str(idx + 1) + " (" + str(chan) + ") is not in the list...")
-                msg.exec_()
-                return
-
-            freqs = freqstr.split(":")
-            for freq in freqs:
-                if not freq.isdigit():
-                    msg = QMessageBox()
-                    msg.setText("Frequency in pair " + str(idx + 1) + " (" + str(freq) + ") has an invalid format, must be an integer...")
-                    msg.exec_()
-                    return
-                if int(freq) >= n_bins:
-                    msg = QMessageBox()
-                    msg.setText("Frequency in pair " + str(idx + 1) + " (" + str(freq) + ") is not in the acceptable range...")
-                    msg.exec_()
-                    return
-            selectedFeats.append(feat.text().split(";"))
-            print(feat)
+        selectedFeats = self.getAndCheckSelectedFeats()
 
         # FIRST RE-COPY sc2 & sc3 FROM TEMPLATE, SO THE USER CAN DO THIS MULTIPLE TIMES...
         pipelineType = self.parameterDict["pipelineType"]
@@ -820,9 +807,7 @@ class Dialog(QDialog):
                 trainingSize = int(self.trainingPartitions.text())
                 err = False
         if err:
-            msg = QMessageBox()
-            msg.setText("Nb of k-fold should be a positive number")
-            msg.exec_()
+            myErrorBox("Nb of k-fold should be a positive number")
             return
 
         scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[2])
@@ -847,25 +832,159 @@ class Dialog(QDialog):
 
         print("Composite file for training: " + compositeCsv)
         compositeCsvBasename = os.path.basename(compositeCsv)
-        modifyTrainInput(compositeCsvBasename, scenFile)
+        newWeightsName = "classifier-weights.xml"
+        modifyTrainIO(compositeCsvBasename, newWeightsName, scenFile)
 
         # RUN THE CLASSIFIER TRAINING SCENARIO
         classifierScoreStr = self.runClassifierScenario()
 
+        # Copy weights file to generated/classifier-weights.xml
+        newWeights = os.path.join(self.scriptPath, "generated", "signals", "training", "classifier-weights.xml")
+        origFilename = os.path.join(self.scriptPath, "generated", "classifier-weights.xml")
+        copyfile(newWeights, origFilename)
+
         # PREPARE GOODBYE MESSAGE...
         textFeats = str("Using spectral features:\n")
         for i in range(len(selectedFeats)):
-            textFeats = str(textFeats + "  Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+            textFeats += str("  Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
 
         textGoodbye = str("Results written in file:\t generated/classifier-weights.xml\n")
-        textGoodbye = str(textGoodbye + "If those results are satisfying, you can now open generated/sc3-online.xml in the Designer")
+        textGoodbye += str("If those results are satisfying, you can now open generated/sc3-online.xml in the Designer")
 
         textDisplay = textFeats
-        textDisplay = str(textDisplay + "\n" + classifierScoreStr)
+        textDisplay += str("\n" + classifierScoreStr)
+        textDisplay += str("\n" + textGoodbye)
+
+        msg = QMessageBox()
+        msg.setText(textDisplay)
+        msg.setStyleSheet("QLabel{min-width: 600px;}")
+        msg.setWindowTitle("Classifier Training Score")
+        msg.exec_()
+
+        return
+
+    def btnAllCombinations(self):
+        # ----------
+        # Callback from button :
+        # Select features in fields, check if they're correctly formatted,
+        # launch openvibe with sc2-train.xml (in the background) to train the classifier,
+        # provide the classification score/accuracy as a textbox
+        # ----------
+        if not self.fileListWidgetTrain.selectedItems():
+            myErrorBox("Please select a set of runs for training")
+            return
+        elif len(self.fileListWidgetTrain.selectedItems()) > 5:
+            myErrorBox("Please select 5 runs maximum")
+            return
+
+        selectedFeats = self.getAndCheckSelectedFeats()
+
+        # FIRST RE-COPY sc2 & sc3 FROM TEMPLATE, SO THE USER CAN DO THIS MULTIPLE TIMES...
+        pipelineType = self.parameterDict["pipelineType"]
+        templateFolder = settings.optionsTemplatesDir[pipelineType]
+        generatedFolder = "generated"
+
+        for i in [2, 3]:
+            scenName = settings.templateScenFilenames[i]
+            srcFile = os.path.join(self.scriptPath, templateFolder, scenName)
+            destFile = os.path.join(self.scriptPath, generatedFolder, scenName)
+            print("---Copying file " + srcFile + " to " + destFile)
+            copyfile(srcFile, destFile)
+            modifyScenarioGeneralSettings(destFile, self.parameterDict)
+            if i == 2:
+                modifyTrainScenario(selectedFeats, destFile)
+            elif i == 3:
+                modifyAcqScenario(destFile, self.parameterDict, True)
+                modifyOnlineScenario(selectedFeats, destFile)
+
+        # Get training param from GUI and modify training scenario
+        err = True
+        if self.trainingPartitions.text().isdigit():
+            if int(self.trainingPartitions.text()) > 0:
+                trainingSize = int(self.trainingPartitions.text())
+                err = False
+        if err:
+            myErrorBox("Nb of k-fold should be a positive number")
+            return
+
+        scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[2])
+        modifyTrainPartitions(trainingSize, scenFile)
+
+        # Create composite file from selected items
+        compositeSigList = []
+        for selectedItem in self.fileListWidgetTrain.selectedItems():
+            print("Selected file for training: " + selectedItem.text())
+            suffix = str("-(" + self.parameterDict["Class1"] + "/" + self.parameterDict["Class2"] + ")")
+            filenameWithoutSuffix = selectedItem.text().removesuffix(suffix)
+            filenameWithoutSuffix = os.path.basename(filenameWithoutSuffix)
+            path = os.path.join(self.scriptPath, "generated", "signals", "training", str(filenameWithoutSuffix))
+            compositeSigList.append(path)
+
+        combinations = list(myPowerset(compositeSigList))
+        sigIdxList = range(len(compositeSigList))
+        combIdx = list(myPowerset(sigIdxList))
+        scores = [0 for x in range(len(combIdx))]
+
+        class1Stim = "OVTK_GDF_Left"
+        class2Stim = "OVTK_GDF_Right"
+        tmin = 0
+        tmax = float(self.parameterDict["StimulationEpoch"]) - float(self.parameterDict["StimulationDelay"])
+
+        for idxcomb, comb in enumerate(combinations):
+            print("Creating composite file, using stimulations " + self.parameterDict["Class1"] + "/" + self.parameterDict["Class2"])
+
+            sigList = []
+            for file in comb:
+                sigList.append(file)
+            compositeCsv = mergeRuns(sigList, self.parameterDict["Class1"], self.parameterDict["Class2"], class1Stim, class2Stim, tmin, tmax)
+            print("Composite file for training: " + compositeCsv)
+            compositeCsvBasename = os.path.basename(compositeCsv)
+            newWeightsName = str("classifier-weights-" + str(idxcomb) + ".xml")
+            modifyTrainIO(compositeCsvBasename, newWeightsName, scenFile)
+
+            # RUN THE CLASSIFIER TRAINING SCENARIO
+            classifierScoreStr = self.runClassifierScenario()
+            scores[idxcomb] = float(classifierScoreStr.split("is ")[1].split("%")[0])
+
+        # Find max score
+        maxIdx = scores.index(max(scores))
+        # Copy weights file to generated/classifier-weights.xml
+        maxFilename = os.path.join(self.scriptPath, "generated", "signals", "training", "classifier-weights-")
+        maxFilename += str(str(maxIdx) + ".xml")
+        origFilename = os.path.join(self.scriptPath, "generated", "classifier-weights.xml")
+        copyfile(maxFilename, origFilename)
+
+        # ==========================
+        # PREPARE GOODBYE MESSAGE...
+        textFeats = str("Using spectral features:\n")
+        for i in range(len(selectedFeats)):
+            textFeats += str("\tChannel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+        textFeats += str("\n... and experiment runs:\n")
+        for i in range(len(compositeSigList)):
+            textFeats += str("\t[" + str(i) + "]: " + os.path.basename(compositeSigList[i]) + "\n")
+
+        textScore = str("Training Cross-Validation Test Accuracies per combination:\n")
+        for i in range(len(combIdx)):
+            combIdxStr = []
+            for j in combIdx[i]:
+                combIdxStr.append(str(j))
+            textScore += str("\t[" + ",".join(combIdxStr) + "]: " + str(scores[i]) + "%\n")
+        maxIdxStr = []
+        for j in combIdx[maxIdx]:
+            maxIdxStr.append(str(j))
+        textScore += str("\nMax is combination [" + ','.join(maxIdxStr) + "] with " + str(max(scores)) + "%\n")
+
+        textGoodbye = str("The weights for this combination have been written to:\n")
+        textGoodbye += str("\tgenerated/classifier-weights.xml\n")
+        textGoodbye += str("If those results are satisfying, you can now open this scenario in the Designer:\n")
+        textGoodbye += str("\tgenerated/sc3-online.xml")
+
+        textDisplay = textFeats
+        textDisplay = str(textDisplay + "\n" + textScore)
         textDisplay = str(textDisplay + "\n" + textGoodbye)
         msg = QMessageBox()
         msg.setText(textDisplay)
-        msg.setStyleSheet("QLabel{min-width: 1200px;}")
+        msg.setStyleSheet("QLabel{min-width: 600px;}")
         msg.setWindowTitle("Classifier Training Score")
         msg.exec_()
 
@@ -965,9 +1084,7 @@ def checkFreqsMinMax(fmin, fmax, fs):
     if not ok:
         errorStr = str("fMin and fMax should be numbers between 0 and " + str(fs / 2 + 1))
         errorStr = str(errorStr + "\n and fMin < fMax")
-        msg = QMessageBox()
-        msg.setText(errorStr)
-        msg.exec_()
+        myErrorBox(errorStr)
 
     return ok
 
@@ -986,9 +1103,7 @@ def qt_plot_psd_r2(Rsigned, power_cond2, power_cond1, freqs_array, electrodesLis
             break
 
     if not electrodeExists:
-        msg = QMessageBox()
-        msg.setText("No sensor with this name found")
-        msg.exec_()
+        myErrorBox("No sensor with this name found")
     else:
         plot_psd2(Rsigned, power_cond2, power_cond1, freqs_array, electrodeIdx, electrodesList, 10, fmin, fmax, fres)
         plt.show()
@@ -1003,9 +1118,7 @@ def qt_plot_psd(power_cond2, power_cond1, freqs_array, electrodesList, electrode
             break
 
     if not electrodeExists:
-        msg = QMessageBox()
-        msg.setText("No sensor with this name found")
-        msg.exec_()
+        myErrorBox("No sensor with this name found")
     else:
         plot_psd(power_cond2, power_cond1, freqs_array, electrodeIdx, electrodesList,
                  10, fmin, fmax, fres, class1label, class2label)
@@ -1033,9 +1146,7 @@ def qt_plot_tf(timefreq_cond1, timefreq_cond2, time_array, freqs_array, electrod
             Test_existing = True
 
     if Test_existing == False:
-        msg = QMessageBox()
-        msg.setText("No Electrode with this name found")
-        msg.exec_()
+        myErrorBox("No Electrode with this name found")
     else:
         tf = timefreq_cond1.mean(axis=0)
         tf = np.transpose(tf[Index_electrode, :, :])
@@ -1054,6 +1165,15 @@ def qt_plot_tf(timefreq_cond1, timefreq_cond2, time_array, freqs_array, electrod
         plt.title('(' + class2label + ') Sensor ' + electrodes[Index_electrode], fontdict=font)
         plt.show()
 
+def myPowerset(iterable):
+    s = list(iterable)
+    return chain.from_iterable(combinations(s, r) for r in range(1,len(s)+1))
+
+def myErrorBox(text):
+    msg = QMessageBox()
+    msg.setText(text)
+    msg.exec_()
+    return
 
 if __name__ == '__main__':
 

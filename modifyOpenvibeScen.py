@@ -212,7 +212,7 @@ def modifyTrainPartitions(trainParts, scenXml):
     tree.write(scenXml)
     return
 
-def modifyTrainInput(newFilename, scenXml):
+def modifyTrainIO(newFilename, newWeightsName, scenXml):
     print("---Modifying " + scenXml + " input")
     tree = ET.parse(scenXml)
     root = tree.getroot()
@@ -224,6 +224,9 @@ def modifyTrainInput(newFilename, scenXml):
             if setting.find('Name').text == "EEGData":
                 xmlVal = setting.find('Value')
                 xmlVal.text = newFilename
+            elif setting.find('Name').text == "OutputWeights":
+                xmlVal = setting.find('Value')
+                xmlVal.text = newWeightsName
 
     # WRITE NEW XML
     tree.write(scenXml)
