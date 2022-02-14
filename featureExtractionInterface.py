@@ -86,7 +86,7 @@ class Dialog(QDialog):
         # Left-most: layoutExtract (for running sc2-extract)
         # Center: Visualization
         # Right-most: Feature Selection & classifier training
-        self.setWindowTitle('goodViBEs / happyFeatS - Feature Selection interface')
+        self.setWindowTitle('goodViBEs - Feature Selection interface')
         self.dlgLayout = QHBoxLayout()
 
         # -----------------------------------------------------------------------
@@ -842,8 +842,6 @@ class Dialog(QDialog):
         class1Stim = "OVTK_GDF_Left"
         class2Stim = "OVTK_GDF_Right"
         tmin = 0
-        epoch = self.parameterDict["StimulationEpoch"]
-        delay = self.parameterDict["StimulationDelay"]
         tmax = float(self.parameterDict["StimulationEpoch"]) - float(self.parameterDict["StimulationDelay"])
         compositeCsv = mergeRuns(compositeSigList, self.parameterDict["Class1"], self.parameterDict["Class2"], class1Stim, class2Stim, tmin, tmax)
 
@@ -855,15 +853,16 @@ class Dialog(QDialog):
         classifierScoreStr = self.runClassifierScenario()
 
         # PREPARE GOODBYE MESSAGE...
-        textGoodbye = "The training scenario using\n\n"
+        textFeats = str("Using spectral features:\n")
         for i in range(len(selectedFeats)):
-            textGoodbye = str(textGoodbye + "  Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
-        textGoodbye = str(textGoodbye + "\n... has been generated under:\n\n")
-        textGoodbye = str(textGoodbye + os.path.join(self.scriptPath, generatedFolder, settings.templateScenFilenames[2]))
-        textGoodbye = str(textGoodbye + "\n\n" + os.path.join(self.scriptPath, generatedFolder, settings.templateScenFilenames[3]))
+            textFeats = str(textFeats + "  Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
 
-        textDisplay = classifierScoreStr
-        textDisplay = str(textDisplay + "\n\n" + textGoodbye)
+        textGoodbye = str("Results written in file:\t generated/classifier-weights.xml\n")
+        textGoodbye = str(textGoodbye + "If those results are satisfying, you can now open generated/sc3-online.xml in the Designer")
+
+        textDisplay = textFeats
+        textDisplay = str(textDisplay + "\n" + classifierScoreStr)
+        textDisplay = str(textDisplay + "\n" + textGoodbye)
         msg = QMessageBox()
         msg.setText(textDisplay)
         msg.setStyleSheet("QLabel{min-width: 1200px;}")
@@ -878,6 +877,23 @@ class Dialog(QDialog):
         # and features
         # ----------
         scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[2])
+
+        # TODO WARNING : MAYBE CHANGE THAT IN THE FUTURE...
+        # CHECK IF openvibe.conf has randomization of k-fold enabled
+        # if not, change it
+        confFile = os.path.join(os.path.dirname(self.ovScript), "share", "openvibe", "kernel", "openvibe.conf")
+        if platform.system() == 'Windows':
+            confFile = confFile.replace("/", "\\")
+        modifyConf = False
+        with open(confFile, 'r') as conf:
+            confdata = conf.read()
+            if "Plugin_Classification_RandomizeKFoldTestData = false" in confdata:
+                modifyConf = True
+                confdata = confdata.replace("Plugin_Classification_RandomizeKFoldTestData = false", "Plugin_Classification_RandomizeKFoldTestData = true")
+        if modifyConf:
+            with open(confFile, 'w') as conf:
+                conf.write(confdata)
+
 
         # BUILD THE COMMAND (use designer.cmd from GUI)
         command = self.ovScript
@@ -899,18 +915,15 @@ class Dialog(QDialog):
             if output:
                 print(str(output))
                 if "Application terminated" in str(output):
+                    classifierScoreStr = str(classifierScoreStr+"\n")
                     break
                 if "Cross-validation test" in str(output):
+                #if "Training set accuracy" in str(output):
                     activateScoreMsgBox = True
                 if activateScoreMsgBox:
                     stringToWrite = str(output).replace("\\r\\n\'", "")
                     stringToWrite = stringToWrite.split("trainer> ")
                     classifierScoreStr = str(classifierScoreStr + stringToWrite[1] + "\n")
-
-        if activateScoreMsgBox:
-            classifierScoreStr = str(classifierScoreStr + "\n")
-            classifierScoreStr = str(classifierScoreStr + "Results written in file :\n   classifier-weights.xml\n\n")
-            classifierScoreStr = str(classifierScoreStr + "If those results are satisfying, you can now open\n   sc3-online.xml")
 
         return classifierScoreStr
 

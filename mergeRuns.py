@@ -1,32 +1,12 @@
 import os
-import sys
-import shutils
 import mne
 import numpy as np
 import csv
-import time
-
 
 stimulationCodes = {
-    "OVTK_GDF_Start_Of_Trial": "768",
     "OVTK_GDF_Left": "769",
     "OVTK_GDF_Right": "770",
-    "OVTK_GDF_Feedback_Continuous": "781",
-    "OVTK_GDF_Cross_On_Screen": "786",
-    "OVTK_GDF_End_Of_Trial": "800",
-    "OVTK_GDF_Incorrect": "898",
-    "OVTK_GDF_End_Of_Session": "1010",
-    "OVTK_StimulationId_ExperimentStart": "32769",
-    "OVTK_StimulationId_ExperimentStop": "32770",
-    "OVTK_StimulationId_BaselineStart": "32775",
-    "OVTK_StimulationId_BaselineStop": "32776",
-    # "OVTK_StimulationId_VisualStimulationStart": "32779",
-    "OVTK_StimulationId_VisualStimulationStar": "32779",
-    "OVTK_StimulationId_Label_00": "33024",
-    "OVTK_StimulationId_Label_01": "33025",
     "OVTK_StimulationId_Train": "33281",
-    "OVTK_StimulationId_Beep": "33282",
-    "OVTK_StimulationId_NonTarget": "33286",
 }
 
 electrodes = ["Fp1", "Fp2", "F7", "F3", "Fz", "F4", "F8", "FC5", "FC1", "FC2", "FC6", "T7",
@@ -77,8 +57,6 @@ def writeCompositeCsv(filename, mneRawDataList1, mneRawDataList2, class1Stim, cl
     class2StimCode = stimulationCodes[class2Stim]
     trainStimCode = stimulationCodes["OVTK_StimulationId_Train"]
 
-    nbOfRuns = len(mneRawDataList1)
-
     with open(filename, 'w', newline='') as csvfile:
         # write header
         # TODO change sampling freq
@@ -95,10 +73,9 @@ def writeCompositeCsv(filename, mneRawDataList1, mneRawDataList2, class1Stim, cl
 
         timeOffset = 0
         epoch = -1
-        epochSample = 0
-        epochLength = 32
+        epochLength = int((tmax-tmin)*fsamp)
         globalSampleCount = 0
-        samplesPerStimulationEpoch = tmax*fsamp
+        samplesPerStimulationEpoch = int((tmax-tmin)*fsamp)
 
         for fileId, mneRawData in enumerate(mneRawDataList1+mneRawDataList2):
             currentClassStimCode = class1StimCode
@@ -113,6 +90,10 @@ def writeCompositeCsv(filename, mneRawDataList1, mneRawDataList2, class1Stim, cl
             currentSignalSample = 0
             nbElec = np.shape(rawData)[0]
             for timeid, time in enumerate(times):
+
+                if currentSignalSample % samplesPerStimulationEpoch == 0:
+                    timeOffset += tmax * 2
+
                 # Time field
                 dataToWrite = [str(time + timeOffset)]
 
@@ -149,10 +130,42 @@ def writeCompositeCsv(filename, mneRawDataList1, mneRawDataList2, class1Stim, cl
                 currentSignalSample += 1
                 globalSampleCount += 1
 
-            timeOffset += times[-1] + times[1]
-            print("= Last Timestamp: ", str(timeOffset), " (", str(timeOffset / 60), "minutes)")
+            print("= Merging run: ", os.path.basename(mneRawData.filenames[0]), " ", str(timeOffset), " (", str(timeOffset / 60), "minutes)")
+            timeOffset += times[-1] + tmax * 2
 
+
+        # TODO : why do we need that ?
+        # -- TEST : Add another (empty) frame with class2 stimulation
+        # For *some reason* in OpenViBE the classifier trainer doesn't
+        # take into account the feature vectors of the last stim, when using
+        # a composite signal...
+        epoch += 1
+        dataToWrite = [str(timeOffset)]
+        dataToWrite.append(str(epoch))
+        for elec in range(nbElec):
+            dataToWrite.append("0.0")
+        dataToWrite.append(class2StimCode)
+        dataToWrite.append(str(timeOffset))
+        dataToWrite.append(str("0"))
+        writer.writerow(dataToWrite)
+        globalSampleCount += 1
+        # add more data frames to fit in an Epoch...
+        remSamples = epochLength - 1
+        for x in list(range(1, remSamples + 1, 1)):
+            dataToWrite = [str(timeOffset + x / fsamp)]
+            dataToWrite.append(str(epoch))
+            for elec in range(nbElec):
+                dataToWrite.append("0.0")
+            dataToWrite.append("")
+            dataToWrite.append("")
+            dataToWrite.append("")
+            writer.writerow(dataToWrite)
+        # -- END OF CONFUSING PART
+
+        # THIS IS OK !
         # Add an empty data frame, bearing only a "Train" Stimulation
+        timeOffset += tmax * 10
+        epoch += 1
         dataToWrite = [str(timeOffset)]
         dataToWrite.append(str(epoch))
         for elec in range(nbElec):
@@ -164,32 +177,30 @@ def writeCompositeCsv(filename, mneRawDataList1, mneRawDataList2, class1Stim, cl
         globalSampleCount += 1
 
         # add more data frames to fit in an Epoch...
-        remSamples = epochLength - (globalSampleCount % epochLength)
-        if remSamples != 0:
-            for x in list(range(1, remSamples+1, 1)):
-                dataToWrite = [str(timeOffset + x/fsamp)]
-                dataToWrite.append(str(epoch))
-                for elec in range(nbElec):
-                    dataToWrite.append("0.0")
-                dataToWrite.append("")
-                dataToWrite.append("")
-                dataToWrite.append("")
-                writer.writerow(dataToWrite)
+        remSamples = epochLength - 1
+        for x in list(range(1, remSamples+1, 1)):
+            dataToWrite = [str(timeOffset + x/fsamp)]
+            dataToWrite.append(str(epoch))
+            for elec in range(nbElec):
+                dataToWrite.append("0.0")
+            dataToWrite.append("")
+            dataToWrite.append("")
+            dataToWrite.append("")
+            writer.writerow(dataToWrite)
 
     return
-
 
 if __name__ == '__main__':
 
     # Populate list of signals to merge
-    testSig = ["C:\\Users\\arthur.desbois\\Documents\\dev\\openvibeScripting\\openvibe-automation\\generated\\motor-imagery"]
-    testSig.append("C:\\Users\\arthur.desbois\\Documents\\dev\\openvibeScripting\\openvibe-automation\\generated\\motor-imagery2")
-    testSig.append("C:\\Users\\arthur.desbois\\Documents\\dev\\openvibeScripting\\openvibe-automation\\generated\\motor-imagery3")
+    testSig = ["C:\\Users\\arthur.desbois\\Documents\\dev\\openvibeScripting\\openvibe-automation\\generated\\signals\\training\\motor-imagery"]
+    #testSig.append("C:\\Users\\arthur.desbois\\Documents\\dev\\openvibeScripting\\openvibe-automation\\generated\\signals\\training\\motor-imagery")
+    #testSig.append("C:\\Users\\arthur.desbois\\Documents\\dev\\openvibeScripting\\openvibe-automation\\generated\\signals\\training\\motor-imagery")
 
     testSigList = testSig
 
-    class1 = "Left"
-    class2 = "Right"
+    class1 = "LEFT"
+    class2 = "RIGHT"
     class1Stim = "OVTK_GDF_Left"
     class2Stim = "OVTK_GDF_Right"
     tmin = 0
