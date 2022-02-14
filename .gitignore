@@ -1,5 +1,15 @@
 *.bak
 *.csv
+*.edf
 *.ov
+classifier-weights*
+
+generated/*.xml
+generated/*.lua
+generated/*.json
+
 venv/
 __pycache__/
+screenshots/
+_old/
+.idea/
