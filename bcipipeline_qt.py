@@ -1,8 +1,5 @@
 import sys
 import os
-import pandas as pd
-import time
-import numpy as np
 from shutil import copyfile
 import json
 
@@ -33,10 +30,11 @@ class Dialog(QDialog):
         self.jsonfilename = "params.json"
         self.generatedFolder = "generated"
         self.templateFolder = None
+        self.ovScript = None
 
         # SCENARIO PARAMETERS...
         self.parameterDict = {}
-        self.parameterTextList = [] # for parsing later...
+        self.parameterTextList = []  # for parsing later...
         self.electrodesList = ['Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'FC5', 'FC1', 'FC2', 'FC6', 'T7', 'C3', 'Cz', 'C4', 'T8', 'TP9', 'CP5', 'CP1', 'CP2', 'CP6', 'TP10', 'P7', 'P3', 'Pz', 'P4', 'P8', 'PO9', 'O1', 'Oz', 'O2', 'PO10']
 
         # INTERFACE INIT...
@@ -232,7 +230,7 @@ class Dialog(QDialog):
             electrodes = self.electrodesFileTextBox.text()
 
         # ALL PIPELINES : OpenViBE Path...
-        if self.ovScript == None:
+        if self.ovScript is None:
             msg = QMessageBox()
             msg.setText("Please enter a valid path for the openViBE designer script")
             msg.exec_()
@@ -245,7 +243,7 @@ class Dialog(QDialog):
         # WRITE JSON PARAMETERS FILE
         jsonfullpath = os.path.join(os.getcwd(), self.generatedFolder, self.jsonfilename)
         with open(jsonfullpath, "w") as outfile:
-            json.dump(self.parameterDict, outfile, indent = 4)
+            json.dump(self.parameterDict, outfile, indent=4)
 
         # GENERATE (list of files in settings.templateScenFilenames)
         #   SC1 (ACQ/MONITOR)
@@ -280,4 +278,3 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     dlg = Dialog()
     sys.exit(app.exec_())
-

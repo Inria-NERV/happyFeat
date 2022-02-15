@@ -1,10 +1,9 @@
 import sys
 import os
+import time
 import subprocess
 import platform
 import json
-import pandas as pd
-import time
 import numpy as np
 import matplotlib.pyplot as plt
 from shutil import copyfile
@@ -65,6 +64,8 @@ class Dialog(QDialog):
         # GET PARAMS FROM JSON FILE...
         self.dataNp1 = []
         self.dataNp2 = []
+        self.dataNp1baseline = []
+        self.dataNp2baseline = []
         self.Features = Features()
 
         # Sampling Freq: to be loaded later, in Spectrum CSV files
@@ -346,7 +347,7 @@ class Dialog(QDialog):
         # iterate over filelist and add new files to listwidget
         # for that, create temp list of items in listwidget
         items = []
-        for x in range (listwidget.count()):
+        for x in range(listwidget.count()):
             items.append(listwidget.item(x).text())
         for filename in filelist:
             if filename not in items:
@@ -374,7 +375,7 @@ class Dialog(QDialog):
                     availableCsvs.append(basename)
 
         # iterate over existing items in widget and delete those who don't exist anymore
-        for x in range(self.availableSpectraList.count() - 1, 0, -1):
+        for x in range(self.availableSpectraList.count() - 1, -1, -1):
             tempitem = self.availableSpectraList.item(x).text()
             suffix = str("("+class1label+"/"+class2label+")")
             if tempitem.removesuffix(suffix) not in availableCsvs:
@@ -413,7 +414,7 @@ class Dialog(QDialog):
                     availableTrainSigs.append(basename)
 
         # iterate over existing items in widget and delete those who don't exist anymore
-        for x in range(self.fileListWidgetTrain.count() - 1, 0, -1):
+        for x in range(self.fileListWidgetTrain.count() - 1, -1, -1):
             tempitem = self.fileListWidgetTrain.item(x).text()
             suffix = str("("+class1label+"/"+class2label+")")
             if tempitem.removesuffix(suffix) not in availableTrainSigs:
@@ -456,6 +457,7 @@ class Dialog(QDialog):
             # and rename outputs accordingly
             signalFile = selectedItem.text()
 
+            # TODO : this doesn't work, doesn't change the display...?
             self.btn_runExtractionScenario.setText(str("Processing file : " + signalFile) + "...")
 
             filename = signalFile.removesuffix(".ov")
@@ -481,13 +483,11 @@ class Dialog(QDialog):
                     if "Application terminated" in str(output):
                         break
 
-
         self.btn_runExtractionScenario.setText(str("Generate Spectrum Files"))
         self.fileListWidget.setEnabled(True)
         self.btn_runExtractionScenario.setEnabled(True)
 
         self.show()
-
         return
 
     def load_extract(self):
@@ -516,10 +516,9 @@ class Dialog(QDialog):
             path2 = os.path.join(self.scriptPath, "generated", "signals", "analysis",
                                  str(selectedBasename + class2label + ".csv"))
             path1baseline = os.path.join(self.scriptPath, "generated", "signals", "analysis",
-                                 str(selectedBasename + class1label + "-BASELINE.csv"))
+                                         str(selectedBasename + class1label + "-BASELINE.csv"))
             path2baseline = os.path.join(self.scriptPath, "generated", "signals", "analysis",
-                                 str(selectedBasename + class2label + "-BASELINE.csv"))
-
+                                         str(selectedBasename + class2label + "-BASELINE.csv"))
 
             data1 = load_csv_cond(path1)
             data2 = load_csv_cond(path2)
@@ -570,7 +569,6 @@ class Dialog(QDialog):
         # For multiple runs (ie. multiple selected CSV files), we just concatenate
         # the trials from all files. Then the displayed spectral features (R²map, PSD, topography)
         # will be computed as averages over all the trials.
-        # Time/freq analysis will need a specific process (TODO)
         power_cond1_final = None
         power_cond2_final = None
         power_cond1_baseline_final = None
@@ -612,7 +610,7 @@ class Dialog(QDialog):
         totalTrials = len(self.dataNp1) * trials
         windowLength = float(self.parameterDict["TimeWindowLength"])
         windowShift = float(self.parameterDict["TimeWindowShift"])
-        segmentsPerTrial = round( (trialLength-windowLength) / windowShift )
+        segmentsPerTrial = round((trialLength-windowLength) / windowShift)
 
         timeVectAtomic = [0]
         for i in range(segmentsPerTrial-1):
@@ -622,24 +620,24 @@ class Dialog(QDialog):
         time_array = np.empty(0)
         idxTrial = 0
         for trial in range(totalTrials):
-            time_array = np.concatenate((time_array, timeVectAtomic + (idxTrial*trialLengthSec)) )
+            time_array = np.concatenate((time_array, timeVectAtomic + (idxTrial*trialLengthSec)))
             idxTrial += 1
 
         # Statistical Analysis
         electrodes_orig = channel_generator(nbElectrodes, 'TP9', 'TP10')
         freqs_array = np.arange(0, n_bins)
 
-        Rsigned = Compute_Rsquare_Map_Welch(power_cond2[:, :, :(n_bins-1)], power_cond1[:, :, :(n_bins-1)])
-        Wsquare, Wpvalues = Compute_Wilcoxon_Map(power_cond2[:, :, :(n_bins-1)], power_cond1[:, :, :(n_bins-1)])
+        Rsigned = Compute_Rsquare_Map_Welch(power_cond2_final[:, :, :(n_bins-1)], power_cond1_final[:, :, :(n_bins-1)])
+        Wsquare, Wpvalues = Compute_Wilcoxon_Map(power_cond2_final[:, :, :(n_bins-1)], power_cond1_final[:, :, :(n_bins-1)])
 
-        Rsigned_2, Wsquare_2, Wpvalues_2, electrodes_final, power_cond1_2, power_cond2_2, timefreq_cond1, timefreq_cond2 \
-            = Reorder_Rsquare(Rsigned, Wsquare, Wpvalues, electrodes_orig, power_cond1, power_cond2, timefreq_cond1, timefreq_cond2)
+        Rsigned_2, Wsquare_2, Wpvalues_2, electrodes_final, power_cond1_2, power_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
+            = Reorder_Rsquare(Rsigned, Wsquare, Wpvalues, electrodes_orig, power_cond1_final, power_cond2_final, timefreq_cond1_final, timefreq_cond2_final)
 
         self.Features.electrodes_orig = electrodes_orig
         self.Features.power_cond2 = power_cond2_2
         self.Features.power_cond1 = power_cond1_2
-        self.Features.timefreq_cond1 = timefreq_cond1
-        self.Features.timefreq_cond2 = timefreq_cond2
+        self.Features.timefreq_cond1 = timefreq_cond1_2
+        self.Features.timefreq_cond2 = timefreq_cond2_2
         # self.Features.time_array = time_array
         self.Features.time_array = timeVectAtomic
         self.Features.freqs_array = freqs_array
@@ -697,14 +695,6 @@ class Dialog(QDialog):
                         self.electrodePsd.text(),
                         self.fres, int(self.userFmin.text()), int(self.userFmax.text()),
                         self.parameterDict["Class1"], self.parameterDict["Class2"])
-
-    def btnpsdR2(self):
-        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
-            qt_plot_psd_r2(self.Features.Rsigned,
-                           self.Features.power_cond2, self.Features.power_cond1,
-                           self.Features.freqs_array, self.Features.electrodes_final,
-                           self.electrodePsd.text(),
-                           self.fres, int(self.userFmin.text()), int(self.userFmax.text()))
 
     def btnTopo(self):
         if self.freqTopo.text().isdigit() \
@@ -802,6 +792,7 @@ class Dialog(QDialog):
 
         # Get training param from GUI and modify training scenario
         err = True
+        trainingSize = 0
         if self.trainingPartitions.text().isdigit():
             if int(self.trainingPartitions.text()) > 0:
                 trainingSize = int(self.trainingPartitions.text())
@@ -899,6 +890,7 @@ class Dialog(QDialog):
 
         # Get training param from GUI and modify training scenario
         err = True
+        trainingSize = 0
         if self.trainingPartitions.text().isdigit():
             if int(self.trainingPartitions.text()) > 0:
                 trainingSize = int(self.trainingPartitions.text())
@@ -920,7 +912,7 @@ class Dialog(QDialog):
             path = os.path.join(self.scriptPath, "generated", "signals", "training", str(filenameWithoutSuffix))
             compositeSigList.append(path)
 
-        combinations = list(myPowerset(compositeSigList))
+        combinationsList = list(myPowerset(compositeSigList))
         sigIdxList = range(len(compositeSigList))
         combIdx = list(myPowerset(sigIdxList))
         scores = [0 for x in range(len(combIdx))]
@@ -930,7 +922,7 @@ class Dialog(QDialog):
         tmin = 0
         tmax = float(self.parameterDict["StimulationEpoch"]) - float(self.parameterDict["StimulationDelay"])
 
-        for idxcomb, comb in enumerate(combinations):
+        for idxcomb, comb in enumerate(combinationsList):
             print("Creating composite file, using stimulations " + self.parameterDict["Class1"] + "/" + self.parameterDict["Class2"])
 
             sigList = []
@@ -1013,7 +1005,6 @@ class Dialog(QDialog):
             with open(confFile, 'w') as conf:
                 conf.write(confdata)
 
-
         # BUILD THE COMMAND (use designer.cmd from GUI)
         command = self.ovScript
         if platform.system() == 'Windows':
@@ -1037,7 +1028,6 @@ class Dialog(QDialog):
                     classifierScoreStr = str(classifierScoreStr+"\n")
                     break
                 if "Cross-validation test" in str(output):
-                #if "Training set accuracy" in str(output):
                     activateScoreMsgBox = True
                 if activateScoreMsgBox:
                     stringToWrite = str(output).replace("\\r\\n\'", "")
@@ -1055,12 +1045,11 @@ class Dialog(QDialog):
         nbParamsExp = settings.scenarioSettingsPartsLength[pipelineKey][0]
         nbParamsExtract = settings.scenarioSettingsPartsLength[pipelineKey][1]
 
-        newDict = {}
-        newDict['pipelineType'] = pipelineKey
-        newDict['Class1'] = self.parameterDict["Class1"]
-        newDict['Class2'] = self.parameterDict["Class2"]
+        newDict = {'pipelineType': pipelineKey,
+                   'Class1': self.parameterDict["Class1"],
+                   'Class2': self.parameterDict["Class2"]}
         for idx, param in enumerate(settings.scenarioSettings[pipelineKey]):
-            if nbParamsExp <= idx < (nbParamsExp + nbParamsExtract + 1): # print only pipeline-specific
+            if nbParamsExp <= idx < (nbParamsExp + nbParamsExtract + 1):  # print only pipeline-specific
             # if idx < (nbParamsExp + nbParamsExtract + 1): # print all
                 newDict[param] = self.parameterDict[param]
 
@@ -1089,24 +1078,9 @@ def checkFreqsMinMax(fmin, fmax, fs):
     return ok
 
 def plot_stats(Rsigned, freqs_array, electrodes, fres, fmin, fmax):
-    smoothing  = False
-    plot_Rsquare_calcul_welch(Rsigned,np.array(electrodes)[:], freqs_array, smoothing, fres, 10, fmin, fmax)
+    smoothing = False
+    plot_Rsquare_calcul_welch(Rsigned, np.array(electrodes)[:], freqs_array, smoothing, fres, 10, fmin, fmax)
     plt.show()
-
-def qt_plot_psd_r2(Rsigned, power_cond2, power_cond1, freqs_array, electrodesList, electrodeToDisp, fres, fmin, fmax):
-    electrodeExists = False
-    electrodeIdx = 0
-    for idx, elec in enumerate(electrodesList):
-        if elec == electrodeToDisp:
-            electrodeIdx = idx
-            electrodeExists = True
-            break
-
-    if not electrodeExists:
-        myErrorBox("No sensor with this name found")
-    else:
-        plot_psd2(Rsigned, power_cond2, power_cond1, freqs_array, electrodeIdx, electrodesList, 10, fmin, fmax, fres)
-        plt.show()
 
 def qt_plot_psd(power_cond2, power_cond1, freqs_array, electrodesList, electrodeToDisp, fres, fmin, fmax, class1label, class2label):
     electrodeExists = False
@@ -1132,10 +1106,10 @@ def qt_plot_topo(Rsigned, electrodes, frequency, fres, fs):
 
 def qt_plot_tf(timefreq_cond1, timefreq_cond2, time_array, freqs_array, electrode, fres, average_baseline_cond1, average_baseline_cond2, std_baseline_cond1, std_baseline_cond2, electrodes, f_min_var, f_max_var, tmin, tmax, class1label, class2label):
     font = {'family': 'serif',
-        'color':  'black',
-        'weight': 'normal',
-        'size': 14,
-        }
+            'color':  'black',
+            'weight': 'normal',
+            'size': 14,
+            }
     fmin = f_min_var
     fmax = f_max_var
     Test_existing = False
@@ -1145,7 +1119,7 @@ def qt_plot_tf(timefreq_cond1, timefreq_cond2, time_array, freqs_array, electrod
             Index_electrode = i
             Test_existing = True
 
-    if Test_existing == False:
+    if not Test_existing:
         myErrorBox("No Electrode with this name found")
     else:
         tf = timefreq_cond1.mean(axis=0)
@@ -1167,7 +1141,7 @@ def qt_plot_tf(timefreq_cond1, timefreq_cond2, time_array, freqs_array, electrod
 
 def myPowerset(iterable):
     s = list(iterable)
-    return chain.from_iterable(combinations(s, r) for r in range(1,len(s)+1))
+    return chain.from_iterable(combinations(s, r) for r in range(1, len(s)+1))
 
 def myErrorBox(text):
     msg = QMessageBox()
@@ -1175,9 +1149,9 @@ def myErrorBox(text):
     msg.exec_()
     return
 
+
 if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     dlg = Dialog()
     sys.exit(app.exec_())
-

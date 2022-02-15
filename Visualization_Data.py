@@ -9,8 +9,9 @@ import mne
 from mne.io.meas_info import Info
 from mne.viz import topomap
 
+
 def add_colorbar(ax, im, cmap, side="right", pad=.05, title=None,
-                  format=None, size="5%"):
+                 format=None, size="5%"):
     """Add a colorbar to an axis."""
     import matplotlib.pyplot as plt
     from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -18,17 +19,16 @@ def add_colorbar(ax, im, cmap, side="right", pad=.05, title=None,
     cax = divider.append_axes(side, size=size, pad=pad)
     cbar = plt.colorbar(im, cax=cax, format=format)
 
-
     return cbar, cax
 
 
 def plot_topomap_data_viz(data, pos, vmin=None, vmax=None, cmap=None, sensors=True,
-                 res=64, axes=None, names=None, show_names=False, mask=None,
-                 mask_params=None, outlines='head',
-                 contours=6, image_interp='bilinear', show=True,
-                 onselect=None, extrapolate=_EXTRAPOLATE_DEFAULT,
-                 sphere=None, border=_BORDER_DEFAULT,
-                 ch_type='eeg',freq='10',Stat_method='R_square signed'):
+                          res=64, axes=None, names=None, show_names=False, mask=None,
+                          mask_params=None, outlines='head',
+                          contours=6, image_interp='bilinear', show=True,
+                          onselect=None, extrapolate=_EXTRAPOLATE_DEFAULT,
+                          sphere=None, border=_BORDER_DEFAULT,
+                          ch_type='eeg', freq='10', Stat_method='R_square signed'):
     """Plot a topographic map as image.
 
     Parameters
@@ -104,15 +104,20 @@ def plot_topomap_data_viz(data, pos, vmin=None, vmax=None, cmap=None, sensors=Tr
     """
     sphere = topomap._check_sphere(sphere)
     return _plot_topomap_test(data, pos, vmin, vmax, cmap, sensors, res, axes,
-                         names, show_names, mask, mask_params, outlines,
-                         contours, image_interp, show,
-                         onselect, extrapolate, sphere=sphere, border=border,
-                         ch_type=ch_type,freq=freq,Stat_method=Stat_method)[:2]
-def _plot_topomap_test(data, pos, vmin=None, vmax=None, cmap=None, sensors=True,res=64, axes=None, names=None, show_names=False, mask=None,mask_params=None, outlines='head',contours=6, image_interp='bilinear', show=True,onselect=None, extrapolate=_EXTRAPOLATE_DEFAULT, sphere=None,border=_BORDER_DEFAULT, ch_type='eeg',freq = '10',Stat_method = 'R square signed'):
+                              names, show_names, mask, mask_params, outlines,
+                              contours, image_interp, show,
+                              onselect, extrapolate, sphere=sphere, border=border,
+                              ch_type=ch_type, freq=freq, Stat_method=Stat_method)[:2]
+
+
+def _plot_topomap_test(data, pos, vmin=None, vmax=None, cmap=None, sensors=True, res=64, axes=None, names=None,
+                       show_names=False, mask=None, mask_params=None, outlines='head', contours=6,
+                       image_interp='bilinear', show=True, onselect=None, extrapolate=_EXTRAPOLATE_DEFAULT, sphere=None,
+                       border=_BORDER_DEFAULT, ch_type='eeg', freq='10', Stat_method='R square signed'):
     data = np.asarray(data)
-    top = cm.get_cmap('YlOrRd_r', 128) # r means reversed version
+    top = cm.get_cmap('YlOrRd_r', 128)  # r means reversed version
     bottom = cm.get_cmap('YlGnBu_r', 128)
-    newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)),top(np.linspace(1, 0, 128))))
+    newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)), top(np.linspace(1, 0, 128))))
     double = ListedColormap(newcolors2, name='double')
     if isinstance(pos, Info):  # infer pos from Info object
         picks = topomap._pick_data_channels(pos, exclude=())  # pick only data channels
@@ -175,7 +180,6 @@ def _plot_topomap_test(data, pos, vmin=None, vmax=None, cmap=None, sensors=True,
     norm = min(data) >= 0
     vmin, vmax = topomap._setup_vmin_vmax(data, vmin, vmax, norm)
 
-
     outlines = topomap._make_head_outlines(sphere, pos, outlines, (0., 0.))
     assert isinstance(outlines, dict)
 
@@ -196,10 +200,10 @@ def _plot_topomap_test(data, pos, vmin=None, vmax=None, cmap=None, sensors=True,
     # plot interpolated map
     im = ax.imshow(Zi, cmap=cmap, vmin=vmin, vmax=vmax, origin='lower',
                    aspect='equal', extent=extent)
-    cbar,cax = add_colorbar(ax, im, cmap, side="right", pad=.1, title=None,
-                      format=None, size="5%")
-    cbar.set_label('Signed R^2', rotation=270,labelpad = 15)
-    ax.set_title(freq +'(Hz)',fontsize = 'large')
+    cbar, cax = add_colorbar(ax, im, cmap, side="right", pad=.1, title=None,
+                             format=None, size="5%")
+    cbar.set_label('Signed R^2', rotation=270, labelpad=15)
+    ax.set_title(freq + '(Hz)', fontsize='large')
     # gh-1432 had a workaround for no contours here, but we'll remove it
     # because mpl has probably fixed it
     linewidth = mask_params['markeredgewidth']
@@ -250,7 +254,7 @@ def _plot_topomap_test(data, pos, vmin=None, vmax=None, cmap=None, sensors=True,
                 continue
             ch_id = _show_names(ch_id)
             ax.text(p[0], p[1], ch_id, horizontalalignment='center',
-                    verticalalignment='center', size='small',fontweight= 'bold')
+                    verticalalignment='center', size='small', fontweight='bold')
 
     plt.subplots_adjust(top=.95)
 
@@ -259,24 +263,25 @@ def _plot_topomap_test(data, pos, vmin=None, vmax=None, cmap=None, sensors=True,
         x0, y0, width, height = lim.x0, lim.y0, lim.width, lim.height
         ax.RS = RectangleSelector(ax, onselect=onselect)
         ax.set(xlim=[x0, x0 + width], ylim=[y0, y0 + height])
-    #topomap.plt_show(show)
+    # topomap.plt_show(show)
     return im, cont, interp
 
-def time_frequency_map(time_freq,time,freqs,channel,fmin,fmax,fres,each_point,baseline,channel_array,std_baseline,vmin,vmax,tlength):
-    font = {'family': 'serif',
-        'color':  'black',
-        'weight': 'normal',
-        'size': 14,
-        }
 
-    fig,ax = plt.subplots()
+def time_frequency_map(time_freq, time, freqs, channel, fmin, fmax, fres, each_point, baseline, channel_array,
+                       std_baseline, vmin, vmax, tlength):
+    font = {'family': 'serif',
+            'color': 'black',
+            'weight': 'normal',
+            'size': 14}
+
+    fig, ax = plt.subplots()
     tf = time_freq.mean(axis=0)
-    tf = np.transpose(tf[channel,:,:])
-    PSD_baseline = baseline[channel,:]
-    PSD_STD = std_baseline[channel,:]
+    tf = np.transpose(tf[channel, :, :])
+    PSD_baseline = baseline[channel, :]
+    PSD_STD = std_baseline[channel, :]
     A = []
     for i in range(tf.shape[1]):
-        A.append(np.divide((tf[:,i]-PSD_baseline),PSD_baseline)*100)
+        A.append(np.divide((tf[:, i] - PSD_baseline), PSD_baseline) * 100)
     tf = np.transpose(A)
 
     frequence = []
@@ -284,56 +289,57 @@ def time_frequency_map(time_freq,time,freqs,channel,fmin,fmax,fres,each_point,ba
     time_seres = []
     print(time)
     for i in range(len(freqs)):
-        if freqs[i]==fmin:
+        if freqs[i] == fmin:
             index_fmin = i
     for i in range(len(freqs)):
-        if freqs[i]==fmax:
+        if freqs[i] == fmax:
             index_fmax = i
 
-    tf = tf[index_fmin:index_fmax+1,:]
-    top = cm.get_cmap('YlOrRd_r', 128) # r means reversed version
+    tf = tf[index_fmin:index_fmax + 1, :]
+    top = cm.get_cmap('YlOrRd_r', 128)  # r means reversed version
     bottom = cm.get_cmap('YlGnBu_r', 128)
-    newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)),top(np.linspace(1, 0, 128))))
+    newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)), top(np.linspace(1, 0, 128))))
     double = ListedColormap(newcolors2, name='double')
-    if np.amin(tf)<0:
-        plt.imshow(tf,cmap='jet',aspect='auto',origin ='lower',vmin = vmin,vmax = vmax)
+    if np.amin(tf) < 0:
+        plt.imshow(tf, cmap='jet', aspect='auto', origin='lower', vmin=vmin, vmax=vmax)
     else:
-        plt.imshow(tf,cmap='jet',aspect='auto',origin ='lower')
-    size_time = len(time)/each_point
+        plt.imshow(tf, cmap='jet', aspect='auto', origin='lower')
+    size_time = len(time) / each_point
 
     for i in range(len(time)):
         if round(size_time) == 0:
             time_seres.append(str(time[i]))
         else:
-            if (i%(round(size_time))==0):
-                if(tlength<10):
-                    time_seres.append(str((round(time[i],1))))
+            if i % (round(size_time)) == 0:
+                if tlength < 10:
+                    time_seres.append(str((round(time[i], 1))))
                 else:
                     time_seres.append(str((round(time[i]))))
             else:
                 time_seres.append('')
 
-    sizing = round(len(freqs[index_fmin:(index_fmax+1)])/(each_point*1/fres))
-    for i in freqs[index_fmin:(index_fmax+1)]:
-        if (i%(round(sizing*1/fres))==0):
+    sizing = round(len(freqs[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
+    for i in freqs[index_fmin:(index_fmax + 1)]:
+        if i % (round(sizing * 1 / fres)) == 0:
             frequence.append(str(round(i)))
         else:
             frequence.append('')
     cm.get_cmap('jet')
-    #plt.jet()
+    # plt.jet()
     ax.tick_params(axis='both', which='both', length=0)
     cbar = plt.colorbar()
-    cbar.set_label('ERD/ERS', rotation=270,labelpad = 10)
-    plt.yticks(range(len(freqs[index_fmin:index_fmax+1])),frequence,fontsize = 7)
+    cbar.set_label('ERD/ERS', rotation=270, labelpad=10)
+    plt.yticks(range(len(freqs[index_fmin:index_fmax + 1])), frequence, fontsize=7)
 
-    plt.xticks(range(len(time)),time_seres,fontsize = 7)
+    plt.xticks(range(len(time)), time_seres, fontsize=7)
     plt.xlabel(' Time (s)', fontdict=font)
     plt.ylabel('Frequency (Hz)', fontdict=font)
-    plt.title('Sensor ' + channel_array[channel],fontdict = font)
-    #plt.show()
+    plt.title('Sensor ' + channel_array[channel], fontdict=font)
+    # plt.show()
 
 
-def plot_psd(Power_MI, Power_Rest, freqs, channel, channel_array, each_point, fmin, fmax, fres, class1label, class2label):
+def plot_psd(Power_MI, Power_Rest, freqs, channel, channel_array, each_point, fmin, fmax, fres, class1label,
+             class2label):
     font = {'family': 'serif',
             'color': 'black',
             'weight': 'normal',
@@ -352,11 +358,11 @@ def plot_psd(Power_MI, Power_Rest, freqs, channel, channel_array, each_point, fm
     STD_Rest = 10 * np.log10(Power_Rest[:, channel, :])
     STD_Rest = STD_Rest.std(0)
     for i in range(len(freqs)):
-        if freqs[i]==fmin:
+        if freqs[i] == fmin:
             index_fmin = i
 
     for i in range(len(freqs)):
-        if freqs[i]==fmax:
+        if freqs[i] == fmax:
             index_fmax = i
     # plt.plot(Aver_MI,freqs,Aver_Rest,freqs)
     # index_fmin = np.where(np.abs(freqs-fmin)<0.00001)
@@ -378,7 +384,7 @@ def plot_psd(Power_MI, Power_Rest, freqs, channel, channel_array, each_point, fm
                      color='red', alpha=0.3)
     sizing = round(len(freqs[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
     for i in freqs[index_fmin:(index_fmax + 1)]:
-        if (i % (round(sizing * 1 / fres)) == 0):
+        if i % (round(sizing * 1 / fres)) == 0:
             frequence.append(str(round(i)))
         else:
             frequence.append('')
@@ -396,128 +402,60 @@ def plot_psd(Power_MI, Power_Rest, freqs, channel, channel_array, each_point, fm
     plt.legend()
     # plt.show()
 
-def plot_psd2(Rsigned, Power_MI, Power_Rest, freqs, channel, channel_array, each_point, fmin, fmax, fres):
+def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, each_point, fmin, fmax):
+    fig, ax = plt.subplots()
     font = {'family': 'serif',
             'color': 'black',
             'weight': 'normal',
-            'size': 14,
-            }
-
-    fig, ax = plt.subplots()
-    frequence = []
-    Aver_MI = 10 * np.log10(Power_MI[:, channel, :])
-    Aver_MI = Aver_MI.mean(0)
-    STD_MI = 10 * np.log10(Power_MI[:, channel, :])
-    STD_MI = STD_MI.std(0)
-
-    Aver_Rest = 10 * np.log10(Power_Rest[:, channel, :])
-    Aver_Rest = Aver_Rest.mean(0)
-    STD_Rest = 10 * np.log10(Power_Rest[:, channel, :])
-    STD_Rest = STD_Rest.std(0)
-
-    for idx, f in enumerate(freqs):
-        if f == fmin:
-            index_fmin = idx
-            break
-
-    for idx, f in enumerate(freqs):
-        if f == fmax:
-            index_fmax = idx
-            break
-
-    # plt.plot(Aver_MI,freqs,Aver_Rest,freqs)
-    # index_fmin = np.where(np.abs(freqs-fmin)<0.00001)
-    # index_fmax = np.where(np.abs(freqs-fmax)<0.00001)
-    # print(index_fmin)
-    Selected_MI = (Aver_MI[index_fmin:index_fmax])
-    Selected_Rest = (Aver_Rest[index_fmin:index_fmax])
-
-    Selected_MI_STD = (STD_MI[index_fmin:index_fmax]/Power_MI.shape[0])
-    Selected_Rest_STD = (STD_Rest[index_fmin:index_fmax]/Power_MI.shape[0])
-
-    plt.plot(freqs[index_fmin:index_fmax], 100*Rsigned[channel, index_fmin:index_fmax], label='r2', color='black')
-    plt.plot(freqs[index_fmin:index_fmax], Selected_MI, label='Motor Imagery', color='blue')
-
-    plt.fill_between(freqs[index_fmin:index_fmax], Selected_MI - Selected_MI_STD, Selected_MI + Selected_MI_STD,
-                     color='blue', alpha=0.3)
-    plt.plot(freqs[index_fmin:index_fmax], Selected_Rest, label='Resting state', color='red')
-    plt.fill_between(freqs[index_fmin:index_fmax], Selected_Rest - Selected_Rest_STD,
-                     Selected_Rest + Selected_Rest_STD,
-                     color='red', alpha=0.3)
-    sizing = round(len(freqs[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
-    for i in freqs[index_fmin:(index_fmax + 1)]:
-        if (i % (round(sizing * 1 / fres)) == 0):
-            frequence.append(str(round(i)))
-        else:
-            frequence.append('')
-    ax.tick_params(axis='both', which='both', length=0)
-
-    plt.title('Sensor: ' + channel_array[channel], fontsize='large')
-    plt.xticks(range(len(freqs[index_fmin:(index_fmax + 1)])), frequence, fontsize=12)
-    plt.xlabel(' Frequency (Hz)', fontdict=font)
-    plt.ylabel('Power spectrum (db)', fontdict=font)
-    plt.margins(x=0)
-    ax.set_xticks(np.arange(fmin, fmax, sizing))
-    ax.grid(axis='x')
-    plt.axis('square')
-
-    plt.legend()
-    # plt.show()
-
-def plot_Rsquare_calcul_welch(Rsquare,channel_array,freq,smoothing,fres,each_point,fmin,fmax):
-    fig,ax = plt.subplots()
-    font = {'family': 'serif',
-        'color':  'black',
-        'weight': 'normal',
-        'size': 14,
-        }
+            'size': 14}
     frequence = []
 
     for i in range(len(freq)):
-        if freq[i]==fmin:
+        if freq[i] == fmin:
             index_fmin = i
 
     for i in range(len(freq)):
-        if freq[i]==fmax:
+        if freq[i] == fmax:
             index_fmax = i
-    Rsquare_reshape = Rsquare[0:64,index_fmin:index_fmax+1]
+    Rsquare_reshape = Rsquare[0:64, index_fmin:index_fmax + 1]
 
-    top = cm.get_cmap('YlOrRd_r', 128) # r means reversed version
+    top = cm.get_cmap('YlOrRd_r', 128)  # r means reversed version
     bottom = cm.get_cmap('YlGnBu_r', 128)
-    newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)),top(np.linspace(1, 0, 128))))
+    newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)), top(np.linspace(1, 0, 128))))
     double = ListedColormap(newcolors2, name='double')
 
     if np.amin(Rsquare_reshape) < 0:
-        plt.imshow(Rsquare_reshape,cmap='jet',aspect='auto',vmin = -np.amax(abs(Rsquare_reshape)),vmax = np.max(abs(Rsquare_reshape)))
+        plt.imshow(Rsquare_reshape, cmap='jet', aspect='auto', vmin=-np.amax(abs(Rsquare_reshape)),
+                   vmax=np.max(abs(Rsquare_reshape)))
     else:
-        plt.imshow(Rsquare_reshape,cmap='jet',aspect='auto')
+        plt.imshow(Rsquare_reshape, cmap='jet', aspect='auto')
     cm.get_cmap('jet')
-    #plt.jet()
+    # plt.jet()
     cbar = plt.colorbar()
-    cbar.set_label('Signed R^2', rotation=270,labelpad = 10)
-    plt.yticks(range(len(channel_array)),channel_array)
-    freq_real = range(0,round(freq[len(freq)-1]),2)
-    sizing = round(len(freq[index_fmin:(index_fmax+1)])/(each_point*1/fres))
-    for i in freq[index_fmin:(index_fmax+1)]:
-        if (i%(round(sizing*1/fres))==0):
+    cbar.set_label('Signed R^2', rotation=270, labelpad=10)
+    plt.yticks(range(len(channel_array)), channel_array)
+    freq_real = range(0, round(freq[len(freq) - 1]), 2)
+    sizing = round(len(freq[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
+    for i in freq[index_fmin:(index_fmax + 1)]:
+        if i % (round(sizing * 1 / fres)) == 0:
             frequence.append(str(round(i)))
         else:
             frequence.append('')
 
-    if smoothing == True:
-        plt.xlim(0,80)
-    if smoothing == False:
+    if smoothing:
+        plt.xlim(0, 80)
+    else:
         # plt.xticks(range(0,len(freq)-1,round(2/fres)),freq_real)
-        #plt.xlim(0,round(70/fres))
-
+        # plt.xlim(0,round(70/fres))
         ax.tick_params(axis='both', which='both', length=0)
-        plt.xticks(range(len(freq[index_fmin:index_fmax+1])),frequence,fontsize = 10)
+        plt.xticks(range(len(freq[index_fmin:index_fmax + 1])), frequence, fontsize=10)
         # plt.xlim(0,round(72/fres))
+
     plt.xlabel('Frequency (Hz)', fontdict=font)
     plt.ylabel('Sensors', fontdict=font)
 
     # Major ticks
-    ax.set_xticks(np.arange(0, len(freq[index_fmin:index_fmax+1]), 1))
+    ax.set_xticks(np.arange(0, len(freq[index_fmin:index_fmax + 1]), 1))
     ax.set_yticks(np.arange(0, len(channel_array), 1))
 
     # Labels for major ticks
@@ -525,40 +463,45 @@ def plot_Rsquare_calcul_welch(Rsquare,channel_array,freq,smoothing,fres,each_poi
     ax.set_yticklabels(channel_array)
 
     # Minor ticks
-    
     ax.set_yticks(np.arange(-.5, len(channel_array), 1), minor=True)
-    ax.set_xticks(np.arange(-.5, len(freq[index_fmin:index_fmax+1]), 1), minor=True)
+    ax.set_xticks(np.arange(-.5, len(freq[index_fmin:index_fmax + 1]), 1), minor=True)
     # Gridlines based on minor ticks
     ax.grid(which='minor', color='black', linestyle='-', linewidth=1)
-    #(ax.grid(axis ='minor',color = 'black',linewidth=1)
-    #Hplt.yticks(range(len(channel_array)),channel_array)
-    #plt.show()
-
+    # (ax.grid(axis ='minor',color = 'black',linewidth=1)
+    # Hplt.yticks(range(len(channel_array)),channel_array)
+    # plt.show()
 
 def Reorder_Rsquare(Rsquare, Wsquare, Wpvalues, electrodes_orig, powerLeft, powerRight, timefreqLeft, timefreqRight):
-# def Reorder_Rsquare(Rsquare, Wsquare, Wpvalues, electrodes_orig, powerLeft, powerRight):
+    # def Reorder_Rsquare(Rsquare, Wsquare, Wpvalues, electrodes_orig, powerLeft, powerRight):
     if len(electrodes_orig) >= 64:
-        electrodes_target = ['FP1','AF7','AF3','F7','F5','F3','F1','FT9','FT7','FC5','FC3','FC1','T7','C5','C3','C1','TP9','TP7','CP5','CP3','CP1','P7','P5','P3','P1','PO9','PO7','PO3','O1','AFz','Fz','FCz','Cz','CPz','Pz','POz','Oz','FP2','AF8','AF4','F8','F6','F4','F2','FT10','FT8','FC6','FC4','FC2','T8','C6','C4','C2','TP10','TP8','CP6','CP4','CP2','P8','P6','P4','P2','PO10','PO8','PO4','O2']
+        electrodes_target = ['FP1', 'AF7', 'AF3', 'F7', 'F5', 'F3', 'F1', 'FT9', 'FT7', 'FC5', 'FC3', 'FC1', 'T7', 'C5',
+                             'C3', 'C1', 'TP9', 'TP7', 'CP5', 'CP3', 'CP1', 'P7', 'P5', 'P3', 'P1', 'PO9', 'PO7', 'PO3',
+                             'O1', 'AFz', 'Fz', 'FCz', 'Cz', 'CPz', 'Pz', 'POz', 'Oz', 'FP2', 'AF8', 'AF4', 'F8', 'F6',
+                             'F4', 'F2', 'FT10', 'FT8', 'FC6', 'FC4', 'FC2', 'T8', 'C6', 'C4', 'C2', 'TP10', 'TP8',
+                             'CP6', 'CP4', 'CP2', 'P8', 'P6', 'P4', 'P2', 'PO10', 'PO8', 'PO4', 'O2']
     else:
-        electrodes_target = ['Fp1','F7','F3','FC5','FC1','T7','C3','CP5','CP1','P7','P3','PO9','O1','AFz','Fz','FCz','Cz','Pz','Oz','Fp2','F8','F4','FC6','FC2','T8','C4','CP6','CP2','P8','P4','PO10','O2']
+        electrodes_target = ['Fp1', 'F7', 'F3', 'FC5', 'FC1', 'T7', 'C3', 'CP5', 'CP1', 'P7', 'P3', 'PO9', 'O1', 'AFz',
+                             'Fz', 'FCz', 'Cz', 'Pz', 'Oz', 'Fp2', 'F8', 'F4', 'FC6', 'FC2', 'T8', 'C4', 'CP6', 'CP2',
+                             'P8', 'P4', 'PO10', 'O2']
     index_elec = []
 
     for k in range(len(electrodes_target)):
         for i in range(len(electrodes_orig)):
-            if (electrodes_orig[i] == electrodes_target[k]):
+            if electrodes_orig[i] == electrodes_target[k]:
                 index_elec.append(i)
                 break
 
-
     print(index_elec)
-    Rsquare_final = np.zeros([Rsquare.shape[0],Rsquare.shape[1]])
-    Wsquare_final = np.zeros([Wsquare.shape[0],Wsquare.shape[1]])
-    Wpvalues_final =np.zeros([Wpvalues.shape[0],Wpvalues.shape[1]])
+    Rsquare_final = np.zeros([Rsquare.shape[0], Rsquare.shape[1]])
+    Wsquare_final = np.zeros([Wsquare.shape[0], Wsquare.shape[1]])
+    Wpvalues_final = np.zeros([Wpvalues.shape[0], Wpvalues.shape[1]])
     print(powerLeft.shape)
-    powerLeft_final = np.zeros([powerLeft.shape[0],powerLeft.shape[1],powerLeft.shape[2]])
-    powerRight_final = np.zeros([powerRight.shape[0],powerRight.shape[1],powerRight.shape[2]])
-    timefreqLeftfinal = np.zeros([timefreqLeft.shape[0],timefreqLeft.shape[1],timefreqLeft.shape[2],timefreqLeft.shape[3]])
-    timefreqRightfinal = np.zeros([timefreqRight.shape[0],timefreqRight.shape[1],timefreqRight.shape[2],timefreqLeft.shape[3]])
+    powerLeft_final = np.zeros([powerLeft.shape[0], powerLeft.shape[1], powerLeft.shape[2]])
+    powerRight_final = np.zeros([powerRight.shape[0], powerRight.shape[1], powerRight.shape[2]])
+    timefreqLeftfinal = np.zeros(
+        [timefreqLeft.shape[0], timefreqLeft.shape[1], timefreqLeft.shape[2], timefreqLeft.shape[3]])
+    timefreqRightfinal = np.zeros(
+        [timefreqRight.shape[0], timefreqRight.shape[1], timefreqRight.shape[2], timefreqLeft.shape[3]])
 
     electrode_test = []
     for l in range(len(index_elec)):
@@ -566,18 +509,19 @@ def Reorder_Rsquare(Rsquare, Wsquare, Wpvalues, electrodes_orig, powerLeft, powe
         electrode_test.append(index_elec[l])
         powerLeft_final[:, l, :] = powerLeft[:, index_elec[l], :]
         powerRight_final[:, l, :] = powerRight[:, index_elec[l], :]
-        timefreqLeftfinal[:, l, :, :] = timefreqLeft[:,index_elec[l], :, :]
+        timefreqLeftfinal[:, l, :, :] = timefreqLeft[:, index_elec[l], :, :]
         timefreqRightfinal[:, l, :, :] = timefreqRight[:, index_elec[l], :, :]
         Rsquare_final[l, :] = Rsquare[index_elec[l], :]
         Wsquare_final[l, :] = Wsquare[index_elec[l], :]
         Wpvalues_final[l, :] = Wpvalues[index_elec[l], :]
 
-    return Rsquare_final, Wsquare_final, Wpvalues_final,electrodes_target, powerLeft_final, powerRight_final, timefreqLeftfinal, timefreqRightfinal
+    return Rsquare_final, Wsquare_final, Wpvalues_final, electrodes_target, powerLeft_final, powerRight_final, timefreqLeftfinal, timefreqRightfinal
+
 
 def topo_plot(Rsquare, freq, electrodes, fres, fs, Stat_method):
-    fig,ax = plt.subplots()
+    fig, ax = plt.subplots()
     size_dim = mne.channels.make_standard_montage('standard_1020')
-    if len(electrodes) >32:
+    if len(electrodes) > 32:
         biosemi_montage = mne.channels.make_standard_montage('standard_1020')
     else:
         biosemi_montage_inter = mne.channels.make_standard_montage('standard_1020')
@@ -585,12 +529,12 @@ def topo_plot(Rsquare, freq, electrodes, fres, fs, Stat_method):
         biosemi_montage = biosemi_montage_inter.copy()
         # Keep only the desired channels
         biosemi_montage.ch_names = [biosemi_montage_inter.ch_names[x] for x in ind]
-        kept_channel_info = [biosemi_montage_inter.dig[x+3] for x in ind]
+        kept_channel_info = [biosemi_montage_inter.dig[x + 3] for x in ind]
         # Keep the first three rows as they are the fiducial points information
-        biosemi_montage.dig = biosemi_montage_inter.dig[0:3]+kept_channel_info
-        #biosemi_montage = mne.channels.make_standard_montage('standard_1020')
+        biosemi_montage.dig = biosemi_montage_inter.dig[0:3] + kept_channel_info
+        # biosemi_montage = mne.channels.make_standard_montage('standard_1020')
     n_channels = len(biosemi_montage.ch_names)
-    fake_info = mne.create_info(ch_names=biosemi_montage.ch_names, sfreq=fs/2,
+    fake_info = mne.create_info(ch_names=biosemi_montage.ch_names, sfreq=fs / 2,
                                 ch_types='eeg')
 
     rng = np.random.RandomState(0)
@@ -601,7 +545,6 @@ def topo_plot(Rsquare, freq, electrodes, fres, fs, Stat_method):
     # first we obtain the 3d positions of selected channels
     chs = ['Iz', 'Cz', 'T9', 'T10']
     pos = np.stack([size_dim.get_positions()['ch_pos'][ch] for ch in chs])
-
 
     # now we calculate the radius from T7 and T8 x position
     # (we could use Oz and Fpz y positions as well)
@@ -622,71 +565,73 @@ def topo_plot(Rsquare, freq, electrodes, fres, fs, Stat_method):
     print(z)
     for i in range(n_channels):
         for j in range(len(electrodes)):
-            if(biosemi_montage.ch_names[i]==electrodes[j]):
-                sizer[i] = Rsquare[:,freq][j]
+            if biosemi_montage.ch_names[i] == electrodes[j]:
+                sizer[i] = Rsquare[:, freq][j]
     freq = str(freq)
-    top = cm.get_cmap('YlOrRd_r', 128) # r means reversed version
+    top = cm.get_cmap('YlOrRd_r', 128)  # r means reversed version
     bottom = cm.get_cmap('YlGnBu_r', 128)
-    newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)),top(np.linspace(1, 0, 128))))
+    newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)), top(np.linspace(1, 0, 128))))
     double = ListedColormap(newcolors2, name='double')
-    plot_topomap_data_viz(sizer, fake_evoked.info,sensors = False,names = biosemi_montage.ch_names,show_names = True,res = 256,mask_params = dict(marker='', markerfacecolor='w', markeredgecolor='k',linewidth=0, markersize=0),contours = 0,image_interp='gaussian',show=True, extrapolate='head',cmap='jet',freq = freq,Stat_method=Stat_method)
+    plot_topomap_data_viz(sizer, fake_evoked.info, sensors=False, names=biosemi_montage.ch_names, show_names=True,
+                          res=256, mask_params=dict(marker='', markerfacecolor='w', markeredgecolor='k', linewidth=0,
+                                                    markersize=0), contours=0, image_interp='gaussian', show=True,
+                          extrapolate='head', cmap='jet', freq=freq, Stat_method=Stat_method)
 
 
-
-
-def plot_Wsquare_calcul_welch(Rsquare,channel_array,freq,smoothing,fres,each_point,fmin,fmax):
-    fig,ax = plt.subplots()
+def plot_Wsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, each_point, fmin, fmax):
+    fig, ax = plt.subplots()
     font = {'family': 'serif',
-        'color':  'black',
-        'weight': 'normal',
-        'size': 14,
-        }
+            'color': 'black',
+            'weight': 'normal',
+            'size': 14,
+            }
     frequence = []
 
     for i in range(len(freq)):
-        if freq[i]==fmin:
+        if freq[i] == fmin:
             index_fmin = i
 
     for i in range(len(freq)):
-        if freq[i]==fmax:
+        if freq[i] == fmax:
             index_fmax = i
-    Rsquare_reshape = Rsquare[0:64,index_fmin:index_fmax+1]
+    Rsquare_reshape = Rsquare[0:64, index_fmin:index_fmax + 1]
 
-    top = cm.get_cmap('YlOrRd_r', 128) # r means reversed version
+    top = cm.get_cmap('YlOrRd_r', 128)  # r means reversed version
     bottom = cm.get_cmap('YlGnBu_r', 128)
-    newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)),top(np.linspace(1, 0, 128))))
+    newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)), top(np.linspace(1, 0, 128))))
     double = ListedColormap(newcolors2, name='double')
 
     if np.amin(Rsquare_reshape) < 0:
-        plt.imshow(Rsquare_reshape,cmap='jet',aspect='auto',vmin = -np.amax(abs(Rsquare_reshape)),vmax = np.max(abs(Rsquare_reshape)))
+        plt.imshow(Rsquare_reshape, cmap='jet', aspect='auto', vmin=-np.amax(abs(Rsquare_reshape)),
+                   vmax=np.max(abs(Rsquare_reshape)))
     else:
-        plt.imshow(Rsquare_reshape,cmap='jet',aspect='auto')
+        plt.imshow(Rsquare_reshape, cmap='jet', aspect='auto')
     cm.get_cmap('jet')
-    #plt.jet()
+    # plt.jet()
     cbar = plt.colorbar()
-    cbar.set_label('Wilcoxon Signed Values', rotation=270,labelpad = 10)
-    plt.yticks(range(len(channel_array)),channel_array)
-    freq_real = range(0,round(freq[len(freq)-1]),2)
-    sizing = round(len(freq[index_fmin:(index_fmax+1)])/(each_point*1/fres))
-    for i in freq[index_fmin:(index_fmax+1)]:
-        if (i%(round(sizing*1/fres))==0):
+    cbar.set_label('Wilcoxon Signed Values', rotation=270, labelpad=10)
+    plt.yticks(range(len(channel_array)), channel_array)
+    freq_real = range(0, round(freq[len(freq) - 1]), 2)
+    sizing = round(len(freq[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
+    for i in freq[index_fmin:(index_fmax + 1)]:
+        if (i % (round(sizing * 1 / fres)) == 0):
             frequence.append(str(round(i)))
         else:
             frequence.append('')
 
-    if smoothing == True:
-        plt.xlim(0,80)
-    if smoothing == False:
+    if smoothing:
+        plt.xlim(0, 80)
+    else:
         # plt.xticks(range(0,len(freq)-1,round(2/fres)),freq_real)
-        #plt.xlim(0,round(70/fres))
+        # plt.xlim(0,round(70/fres))
         ax.tick_params(axis='both', which='both', length=0)
-        plt.xticks(range(len(freq[index_fmin:index_fmax+1])),frequence,fontsize = 10)
+        plt.xticks(range(len(freq[index_fmin:index_fmax + 1])), frequence, fontsize=10)
         # plt.xlim(0,round(72/fres))
     plt.xlabel('Frequency (Hz)', fontdict=font)
     plt.ylabel('Sensors', fontdict=font)
 
     # Major ticks
-    ax.set_xticks(np.arange(0, len(freq[index_fmin:index_fmax+1]), 1))
+    ax.set_xticks(np.arange(0, len(freq[index_fmin:index_fmax + 1]), 1))
     ax.set_yticks(np.arange(0, len(channel_array), 1))
 
     # Labels for major ticks
@@ -696,66 +641,67 @@ def plot_Wsquare_calcul_welch(Rsquare,channel_array,freq,smoothing,fres,each_poi
     # Minor ticks
 
     ax.set_yticks(np.arange(-.5, len(channel_array), 1), minor=True)
-    ax.set_xticks(np.arange(-.5, len(freq[index_fmin:index_fmax+1]), 1), minor=True)
+    ax.set_xticks(np.arange(-.5, len(freq[index_fmin:index_fmax + 1]), 1), minor=True)
     # Gridlines based on minor ticks
     ax.grid(which='minor', color='black', linestyle='-', linewidth=1)
 
 
-
-def time_frequency_map_between_cond(time_freq,time,freqs,channel,fmin,fmax,fres,each_point,baseline,channel_array):
+def time_frequency_map_between_cond(time_freq, time, freqs, channel, fmin, fmax, fres, each_point, baseline,
+                                    channel_array):
     font = {'family': 'serif',
-        'color':  'black',
-        'weight': 'normal',
-        'size': 14,
-        }
+            'color': 'black',
+            'weight': 'normal',
+            'size': 14,
+            }
 
-    fig,ax = plt.subplots()
-    rsquare_signed = Compute_Signed_Rsquare(time_freq[:,channel,:,:],baseline[:,channel,:,:])
+    fig, ax = plt.subplots()
+    rsquare_signed = Compute_Signed_Rsquare(time_freq[:, channel, :, :], baseline[:, channel, :, :])
     rsquare_signed = np.transpose(rsquare_signed)
     frequence = []
 
     time_seres = []
     print(time)
     for i in range(len(freqs)):
-        if freqs[i]==fmin:
+        if freqs[i] == fmin:
             index_fmin = i
     for i in range(len(freqs)):
-        if freqs[i]==fmax:
+        if freqs[i] == fmax:
             index_fmax = i
 
-    rsquare_signed = rsquare_signed[index_fmin:index_fmax+1,:]
-    top = cm.get_cmap('YlOrRd_r', 128) # r means reversed version
+    rsquare_signed = rsquare_signed[index_fmin:index_fmax + 1, :]
+    top = cm.get_cmap('YlOrRd_r', 128)  # r means reversed version
     bottom = cm.get_cmap('YlGnBu_r', 128)
-    newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)),top(np.linspace(1, 0, 128))))
+    newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)), top(np.linspace(1, 0, 128))))
     double = ListedColormap(newcolors2, name='double')
-    if np.amin(rsquare_signed)<0:
-        plt.imshow(rsquare_signed,cmap='jet',aspect='auto',origin ='lower',vmin = -np.amax(rsquare_signed),vmax = np.amax(rsquare_signed))
+    if np.amin(rsquare_signed) < 0:
+        plt.imshow(rsquare_signed, cmap='jet', aspect='auto', origin='lower', vmin=-np.amax(rsquare_signed),
+                   vmax=np.amax(rsquare_signed))
     else:
-        plt.imshow(rsquare_signed,cmap='jet',aspect='auto',origin ='lower')
+        plt.imshow(rsquare_signed, cmap='jet', aspect='auto', origin='lower')
     size_time = len(time) / each_point
     if round(size_time) == 0:
         size_time = 1
 
     for i in range(len(time)):
-        if (i%(round(size_time))==0):
-            time_seres.append(str((round(time[i],1))))
+        if i % (round(size_time)) == 0:
+            time_seres.append(str((round(time[i], 1))))
         else:
             time_seres.append('')
 
-    sizing = round(len(freqs[index_fmin:(index_fmax+1)])/(each_point*1/fres))
-    for i in freqs[index_fmin:(index_fmax+1)]:
-        if (i%(round(sizing*1/fres))==0):
+    sizing = round(len(freqs[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
+    for i in freqs[index_fmin:(index_fmax + 1)]:
+        if i % (round(sizing * 1 / fres)) == 0:
             frequence.append(str(round(i)))
         else:
             frequence.append('')
     cm.get_cmap('jet')
-    #plt.jet()
+    # plt.jet()
     ax.tick_params(axis='both', which='both', length=0)
     cbar = plt.colorbar()
-    cbar.set_label('Signed R^2', rotation=270,labelpad = 10)
-    plt.yticks(range(len(freqs[index_fmin:index_fmax+1])),frequence,fontsize = 7)
+    cbar.set_label('Signed R^2', rotation=270, labelpad=10)
+    plt.yticks(range(len(freqs[index_fmin:index_fmax + 1])), frequence, fontsize=7)
 
-    plt.xticks(range(len(time)),time_seres,fontsize = 7)
+    plt.xticks(range(len(time)), time_seres, fontsize=7)
     plt.xlabel(' Time (s)', fontdict=font)
     plt.ylabel('Frequency (Hz)', fontdict=font)
-    plt.title('Sensor ' + channel_array[channel],fontdict = font)
+    plt.title('Sensor ' + channel_array[channel], fontdict=font)
