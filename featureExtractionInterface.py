@@ -30,7 +30,7 @@ from PyQt5.QtCore import QTimer
 from Visualization_Data import *
 from featureExtractUtils import *
 from modifyOpenvibeScen import *
-from mergeRuns import mergeRuns
+from mergeRunsCsv import mergeRunsCsv
 
 import bcipipeline_settings as settings
 
@@ -116,7 +116,7 @@ class Dialog(QDialog):
         self.fileListWidget.setSelectionMode(QListWidget.MultiSelection)
 
         # Generate button
-        self.btn_runExtractionScenario = QPushButton("Generate Spectrum Files")
+        self.btn_runExtractionScenario = QPushButton("Extract Features and Trials")
         self.btn_runExtractionScenario.clicked.connect(lambda: self.runExtractionScenario())
 
         # Label + un-editable list of parameters for reminder
@@ -361,23 +361,22 @@ class Dialog(QDialog):
         # ----------
 
         workingFolder = os.path.join(signalFolder, "analysis")
-        # self.availableSpectraList.clear()
         class1label = self.parameterDict["Class1"]
         class2label = self.parameterDict["Class2"]
 
         # first get a list of all csv files in workingfolder that match the condition
         availableCsvs = []
         for filename in os.listdir(workingFolder):
-            if filename.endswith(str(class1label + ".csv")):
-                basename = filename.removesuffix(str(class1label + ".csv"))
-                otherClass = str(basename + class2label + ".csv")
+            if filename.endswith(str("-" + class1label + ".csv")):
+                basename = filename.removesuffix(str("-" + class1label + ".csv"))
+                otherClass = str(basename + "-" + class2label + ".csv")
                 if otherClass in os.listdir(workingFolder):
                     availableCsvs.append(basename)
 
         # iterate over existing items in widget and delete those who don't exist anymore
         for x in range(self.availableSpectraList.count() - 1, -1, -1):
             tempitem = self.availableSpectraList.item(x).text()
-            suffix = str("("+class1label+"/"+class2label+")")
+            suffix = str("-SPECTRUM")
             if tempitem.removesuffix(suffix) not in availableCsvs:
                 self.availableSpectraList.takeItem(x)
 
@@ -387,7 +386,7 @@ class Dialog(QDialog):
         for x in range(self.availableSpectraList.count()):
             items.append(self.availableSpectraList.item(x).text())
         for basename in availableCsvs:
-            basenameSuffix = str(basename+"("+class1label+"/"+class2label+")")
+            basenameSuffix = str(basename+"-SPECTRUM")
             if basenameSuffix not in items:
                 self.availableSpectraList.addItem(basenameSuffix)
 
@@ -400,24 +399,17 @@ class Dialog(QDialog):
         # ----------
 
         workingFolder = os.path.join(signalFolder, "training")
-        # self.availableSpectraList.clear()
-        class1label = self.parameterDict["Class1"]
-        class2label = self.parameterDict["Class2"]
 
         # first get a list of all csv files in workingfolder that match the condition
         availableTrainSigs = []
         for filename in os.listdir(workingFolder):
-            if filename.endswith(str(class1label + ".edf")):
-                basename = filename.removesuffix(str(class1label + ".edf"))
-                otherClass = str(basename + class2label + ".edf")
-                if otherClass in os.listdir(workingFolder):
-                    availableTrainSigs.append(basename)
+            if filename.endswith(str("-TRIALS.csv")):
+                availableTrainSigs.append(filename)
 
         # iterate over existing items in widget and delete those who don't exist anymore
         for x in range(self.fileListWidgetTrain.count() - 1, -1, -1):
             tempitem = self.fileListWidgetTrain.item(x).text()
-            suffix = str("("+class1label+"/"+class2label+")")
-            if tempitem.removesuffix(suffix) not in availableTrainSigs:
+            if tempitem not in availableTrainSigs:
                 self.fileListWidgetTrain.takeItem(x)
 
         # iterate over filelist and add new files to listwidget
@@ -425,10 +417,9 @@ class Dialog(QDialog):
         items = []
         for x in range(self.fileListWidgetTrain.count()):
             items.append(self.fileListWidgetTrain.item(x).text())
-        for basename in availableTrainSigs:
-            basenameSuffix = str(basename+"("+class1label+"/"+class2label+")")
-            if basenameSuffix not in items:
-                self.fileListWidgetTrain.addItem(basenameSuffix)
+        for filename in availableTrainSigs:
+            if filename not in items:
+                self.fileListWidgetTrain.addItem(filename)
 
         return
 
@@ -461,13 +452,12 @@ class Dialog(QDialog):
             self.btn_runExtractionScenario.setText(str("Processing file : " + signalFile) + "...")
 
             filename = signalFile.removesuffix(".ov")
-            output1 = str(filename + "-" + self.parameterDict["Class1"] + ".csv")
-            output2 = str(filename + "-" + self.parameterDict["Class2"] + ".csv")
+            outputSpect1 = str(filename + "-" + self.parameterDict["Class1"] + ".csv")
+            outputSpect2 = str(filename + "-" + self.parameterDict["Class2"] + ".csv")
             outputBaseline1 = str(filename + "-" + self.parameterDict["Class1"] + "-BASELINE.csv")
             outputBaseline2 = str(filename + "-" + self.parameterDict["Class2"] + "-BASELINE.csv")
-            outputEdf1 = str(filename + "-" + self.parameterDict["Class1"] + ".edf")
-            outputEdf2 = str(filename + "-" + self.parameterDict["Class2"] + ".edf")
-            modifyExtractionIO(scenFile, signalFile, output1, output2, outputBaseline1, outputBaseline2, outputEdf1, outputEdf2)
+            outputTrials = str(filename + "-TRIALS.csv")
+            modifyExtractionIO(scenFile, signalFile, outputSpect1, outputSpect2, outputBaseline1, outputBaseline2, outputTrials)
 
             # Run command (openvibe-designer.cmd --no-gui --play-fast <scen.xml>)
             p = subprocess.Popen([command, "--no-gui", "--play-fast", scenFile],
@@ -483,7 +473,7 @@ class Dialog(QDialog):
                     if "Application terminated" in str(output):
                         break
 
-        self.btn_runExtractionScenario.setText(str("Generate Spectrum Files"))
+        self.btn_runExtractionScenario.setText(str("Extract Features and Trials"))
         self.fileListWidget.setEnabled(True)
         self.btn_runExtractionScenario.setEnabled(True)
 
@@ -493,6 +483,7 @@ class Dialog(QDialog):
     def load_extract(self):
         # ----------
         # Load CSV files of selected extracted spectra for visualization
+        # We need one CSV file per class, for simplicity...
         # ----------
         if not self.availableSpectraList.selectedItems():
             myErrorBox("Please select a set of files for analysis")
@@ -509,16 +500,16 @@ class Dialog(QDialog):
             selectedSpectra = selectedItem.text()
             class1label = self.parameterDict["Class1"]
             class2label = self.parameterDict["Class2"]
-            selectedBasename = selectedSpectra.removesuffix(str("("+class1label+"/"+class2label+")"))
+            selectedBasename = selectedSpectra.removesuffix(str("-SPECTRUM"))
 
             path1 = os.path.join(self.scriptPath, "generated", "signals", "analysis",
-                                 str(selectedBasename + class1label + ".csv"))
+                                 str(selectedBasename + "-" + class1label + ".csv"))
             path2 = os.path.join(self.scriptPath, "generated", "signals", "analysis",
-                                 str(selectedBasename + class2label + ".csv"))
+                                 str(selectedBasename + "-" + class2label + ".csv"))
             path1baseline = os.path.join(self.scriptPath, "generated", "signals", "analysis",
-                                         str(selectedBasename + class1label + "-BASELINE.csv"))
+                                         str(selectedBasename + "-" + class1label + "-BASELINE.csv"))
             path2baseline = os.path.join(self.scriptPath, "generated", "signals", "analysis",
-                                         str(selectedBasename + class2label + "-BASELINE.csv"))
+                                         str(selectedBasename + "-" + class2label + "-BASELINE.csv"))
 
             data1 = load_csv_cond(path1)
             data2 = load_csv_cond(path2)
@@ -808,18 +799,14 @@ class Dialog(QDialog):
         compositeSigList = []
         for selectedItem in self.fileListWidgetTrain.selectedItems():
             print("Selected file for training: " + selectedItem.text())
-            suffix = str("-(" + self.parameterDict["Class1"] + "/" + self.parameterDict["Class2"] + ")")
-            filenameWithoutSuffix = selectedItem.text().removesuffix(suffix)
-            filenameWithoutSuffix = os.path.basename(filenameWithoutSuffix)
-            path = os.path.join(self.scriptPath, "generated", "signals", "training", str(filenameWithoutSuffix))
+            path = os.path.join(self.scriptPath, "generated", "signals", "training", selectedItem.text())
             compositeSigList.append(path)
 
-        print("Creating composite file, using stimulations " + self.parameterDict["Class1"] + "/" + self.parameterDict["Class2"])
         class1Stim = "OVTK_GDF_Left"
         class2Stim = "OVTK_GDF_Right"
         tmin = 0
         tmax = float(self.parameterDict["StimulationEpoch"]) - float(self.parameterDict["StimulationDelay"])
-        compositeCsv = mergeRuns(compositeSigList, self.parameterDict["Class1"], self.parameterDict["Class2"], class1Stim, class2Stim, tmin, tmax)
+        compositeCsv = mergeRunsCsv(compositeSigList, self.parameterDict["Class1"], self.parameterDict["Class2"], class1Stim, class2Stim, tmin, tmax)
 
         print("Composite file for training: " + compositeCsv)
         compositeCsvBasename = os.path.basename(compositeCsv)
@@ -902,14 +889,11 @@ class Dialog(QDialog):
         scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[2])
         modifyTrainPartitions(trainingSize, scenFile)
 
-        # Create composite file from selected items
+        # Create list of files from selected items
         compositeSigList = []
         for selectedItem in self.fileListWidgetTrain.selectedItems():
             print("Selected file for training: " + selectedItem.text())
-            suffix = str("-(" + self.parameterDict["Class1"] + "/" + self.parameterDict["Class2"] + ")")
-            filenameWithoutSuffix = selectedItem.text().removesuffix(suffix)
-            filenameWithoutSuffix = os.path.basename(filenameWithoutSuffix)
-            path = os.path.join(self.scriptPath, "generated", "signals", "training", str(filenameWithoutSuffix))
+            path = os.path.join(self.scriptPath, "generated", "signals", "training", selectedItem.text())
             compositeSigList.append(path)
 
         combinationsList = list(myPowerset(compositeSigList))
@@ -923,12 +907,10 @@ class Dialog(QDialog):
         tmax = float(self.parameterDict["StimulationEpoch"]) - float(self.parameterDict["StimulationDelay"])
 
         for idxcomb, comb in enumerate(combinationsList):
-            print("Creating composite file, using stimulations " + self.parameterDict["Class1"] + "/" + self.parameterDict["Class2"])
-
             sigList = []
             for file in comb:
                 sigList.append(file)
-            compositeCsv = mergeRuns(sigList, self.parameterDict["Class1"], self.parameterDict["Class2"], class1Stim, class2Stim, tmin, tmax)
+            compositeCsv = mergeRunsCsv(sigList, self.parameterDict["Class1"], self.parameterDict["Class2"], class1Stim, class2Stim, tmin, tmax)
             print("Composite file for training: " + compositeCsv)
             compositeCsvBasename = os.path.basename(compositeCsv)
             newWeightsName = str("classifier-weights-" + str(idxcomb) + ".xml")
@@ -990,20 +972,22 @@ class Dialog(QDialog):
         scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[2])
 
         # TODO WARNING : MAYBE CHANGE THAT IN THE FUTURE...
-        # CHECK IF openvibe.conf has randomization of k-fold enabled
-        # if not, change it
-        confFile = os.path.join(os.path.dirname(self.ovScript), "share", "openvibe", "kernel", "openvibe.conf")
-        if platform.system() == 'Windows':
-            confFile = confFile.replace("/", "\\")
-        modifyConf = False
-        with open(confFile, 'r') as conf:
-            confdata = conf.read()
-            if "Plugin_Classification_RandomizeKFoldTestData = false" in confdata:
-                modifyConf = True
-                confdata = confdata.replace("Plugin_Classification_RandomizeKFoldTestData = false", "Plugin_Classification_RandomizeKFoldTestData = true")
-        if modifyConf:
-            with open(confFile, 'w') as conf:
-                conf.write(confdata)
+        enableConfChange = False
+        if enableConfChange:
+            # CHECK IF openvibe.conf has randomization of k-fold enabled
+            # if not, change it
+            confFile = os.path.join(os.path.dirname(self.ovScript), "share", "openvibe", "kernel", "openvibe.conf")
+            if platform.system() == 'Windows':
+                confFile = confFile.replace("/", "\\")
+            modifyConf = False
+            with open(confFile, 'r') as conf:
+                confdata = conf.read()
+                if "Plugin_Classification_RandomizeKFoldTestData = false" in confdata:
+                    modifyConf = True
+                    confdata = confdata.replace("Plugin_Classification_RandomizeKFoldTestData = false", "Plugin_Classification_RandomizeKFoldTestData = true")
+            if modifyConf:
+                with open(confFile, 'w') as conf:
+                    conf.write(confdata)
 
         # BUILD THE COMMAND (use designer.cmd from GUI)
         command = self.ovScript
