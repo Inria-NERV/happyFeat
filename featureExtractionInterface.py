@@ -73,8 +73,8 @@ class Dialog(QDialog):
 
         self.scriptPath = os.path.dirname(os.path.realpath(sys.argv[0]))
         print(self.scriptPath)
-        jsonfullpath = os.path.join(self.scriptPath, "generated", "params.json")
-        with open(jsonfullpath) as jsonfile:
+        self.jsonfullpath = os.path.join(self.scriptPath, "generated", "params.json")
+        with open(self.jsonfullpath) as jsonfile:
             self.parameterDict = json.load(jsonfile)
 
         self.ovScript = self.parameterDict["ovDesignerPath"]
@@ -84,7 +84,7 @@ class Dialog(QDialog):
 
         # -----------------------------------------------------------------------
         # CREATE INTERFACE...
-        # dlgLayout : Entire Window, separated in horizontal pannels
+        # dlgLayout : Entire Window, separated in horizontal panels
         # Left-most: layoutExtract (for running sc2-extract)
         # Center: Visualization
         # Right-most: Feature Selection & classifier training
@@ -115,28 +115,55 @@ class Dialog(QDialog):
         self.fileListWidget = QListWidget()
         self.fileListWidget.setSelectionMode(QListWidget.MultiSelection)
 
+        # Label + *editable* list of parameters
+        labelExtractParams = str("--- Extraction parameters ---")
+        self.labelExtractParams = QLabel(labelExtractParams)
+        self.labelExtractParams.setAlignment(QtCore.Qt.AlignCenter)
+
+        self.extractParamsListWidget = QListWidget()
+        self.extractParamsListWidget.setEnabled(False)
+        self.extractParamsDict = self.getExtractionParameters()
+        extractParametersLayout = QHBoxLayout()
+        self.layoutExtractLabels = QVBoxLayout()
+        self.layoutExtractLineEdits = QVBoxLayout()
+        extractParametersLayout.addLayout(self.layoutExtractLabels)
+        extractParametersLayout.addLayout(self.layoutExtractLineEdits)
+        for idx, (key, val) in enumerate(self.extractParamsDict.items()):
+            labelTemp = QLabel()
+            labelTemp.setText(str(key))
+            self.layoutExtractLabels.addWidget(labelTemp)
+            lineEditExtractTemp = QLineEdit()
+            lineEditExtractTemp.setText(str(val))
+            self.layoutExtractLineEdits.addWidget(lineEditExtractTemp)
+
+        # Label + un-editable list of parameters for reminder
+        labelReminder = str("--- Experiment parameters (set in Generator GUI) ---")
+        self.labelReminder = QLabel(labelReminder)
+        self.labelReminder.setAlignment(QtCore.Qt.AlignCenter)
+
+        self.expParamListWidget = QListWidget()
+        self.expParamListWidget.setEnabled(False)
+        self.experimentParamsDict = self.getExperimentalParameters()
+        minHeight = 0
+        for idx, (key, val) in enumerate(self.experimentParamsDict.items()):
+            self.expParamListWidget.addItem(str(key) + ": \t" + str(val))
+            minHeight += 30
+
+        self.expParamListWidget.setMinimumHeight(minHeight)
+
         # Generate button
         self.btn_runExtractionScenario = QPushButton("Extract Features and Trials")
         self.btn_runExtractionScenario.clicked.connect(lambda: self.runExtractionScenario())
 
-        # Label + un-editable list of parameters for reminder
-        labelReminder = str("--- Used parameters (set in Generator GUI) ---")
-        self.labelReminder = QLabel(labelReminder)
-        self.labelReminder.setAlignment(QtCore.Qt.AlignCenter)
-
-        self.paramListWidget = QListWidget()
-        self.paramListWidget.setEnabled(False)
-        self.extractParamDict = self.getProtocolExtractionParams()
-        for idx, (key, val) in enumerate(self.extractParamDict.items()):
-            self.paramListWidget.addItem(str(key) + ": \t" + str(val))
-
         # Arrange all widgets in the layout
         self.layoutExtract.addWidget(self.labelSignal)
         self.layoutExtract.addWidget(self.fileListWidget)
-        self.layoutExtract.addWidget(self.btn_runExtractionScenario)
+        self.layoutExtract.addWidget(self.labelExtractParams)
+        self.layoutExtract.addLayout(extractParametersLayout)
         self.layoutExtract.addWidget(self.labelReminder)
-        self.layoutExtract.addWidget(self.paramListWidget)
+        self.layoutExtract.addWidget(self.expParamListWidget)
         self.layoutExtract.addWidget(self.designerWidget)
+        self.layoutExtract.addWidget(self.btn_runExtractionScenario)
 
         # Add separator...
         separator = QFrame()
@@ -155,7 +182,7 @@ class Dialog(QDialog):
         self.label.setAlignment(QtCore.Qt.AlignCenter)
         self.layoutViz.addWidget(self.label)
 
-        self.formLayoutExtract = QFormLayout()
+        self.formLayoutVizu = QFormLayout()
 
         # LIST OF AVAILABLE SPECTRA WITH CURRENT CLASS
         self.availableSpectraList = QListWidget()
@@ -168,22 +195,22 @@ class Dialog(QDialog):
         # Param : fmin for frequency based viz
         self.userFmin = QLineEdit()
         self.userFmin.setText('1')
-        self.formLayoutExtract.addRow('frequency min', self.userFmin)
+        self.formLayoutVizu.addRow('frequency min', self.userFmin)
         # Param : fmax for frequency based viz
         self.userFmax = QLineEdit()
         self.userFmax.setText('40')
-        self.formLayoutExtract.addRow('frequency max', self.userFmax)
+        self.formLayoutVizu.addRow('frequency max', self.userFmax)
 
         # Param : Electrode to use for PSD display
         self.electrodePsd = QLineEdit()
         self.electrodePsd.setText('FC1')
-        self.formLayoutExtract.addRow('Sensor for PSD visualization', self.electrodePsd)
+        self.formLayoutVizu.addRow('Sensor for PSD visualization', self.electrodePsd)
         # Param : Frequency to use for Topography
         self.freqTopo = QLineEdit()
         self.freqTopo.setText('15')
-        self.formLayoutExtract.addRow('Frequency for Topography (Hz)', self.freqTopo)
+        self.formLayoutVizu.addRow('Frequency for Topography (Hz)', self.freqTopo)
 
-        self.layoutViz.addLayout(self.formLayoutExtract)
+        self.layoutViz.addLayout(self.formLayoutVizu)
 
         self.layoutVizButtons = QVBoxLayout()
 
@@ -423,19 +450,56 @@ class Dialog(QDialog):
 
         return
 
+    def updateExtractParameters(self):
+        # Get new extraction parameters
+        # return True if params where changed from last known config
+        changed = False
+        for idx in range(self.layoutExtractLabels.count()):
+            paramLabel = self.layoutExtractLabels.itemAt(idx).widget().text()
+            paramValue = self.layoutExtractLineEdits.itemAt(idx).widget().text()
+            if paramLabel in self.parameterDict:
+                if self.parameterDict[paramLabel] != paramValue:
+                    changed = True
+                    self.parameterDict[paramLabel] = paramValue
+
+        if changed:
+            # update json file
+            with open(self.jsonfullpath, "w") as outfile:
+                json.dump(self.parameterDict, outfile, indent=4)
+
+        return changed
+
+    def deleteWorkFiles(self):
+        path1 = os.path.join(self.scriptPath, "generated", "signals", "analysis")
+        path2 = os.path.join(self.scriptPath, "generated", "signals", "training")
+        for file in os.listdir(path1):
+            if file.endswith('.csv'):
+                os.remove(os.path.join(path1, file))
+        for file in os.listdir(path2):
+            if file.endswith('.csv') or file.endswith('.xml'):
+                os.remove(os.path.join(path2, file))
+        return
+
     def runExtractionScenario(self):
         # ----------
         # Use extraction scenario (sc2-extract-select.xml) to
         # generate CSV files, used for visualization
         # ----------
+
+        scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[1])
+
         if not self.fileListWidget.selectedItems():
             myErrorBox("Please select a set of files for feature extraction")
             return
 
-        self.fileListWidget.setEnabled(False)
-        self.btn_runExtractionScenario.setEnabled(False)
+        if self.updateExtractParameters():
+            self.deleteWorkFiles()
 
-        scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[1])
+        modifyScenarioGeneralSettings(scenFile, self.parameterDict)
+
+        # TODO : this doesn't work, doesn't change the display...?
+        # self.fileListWidget.setEnabled(False)
+        # self.btn_runExtractionScenario.setEnabled(False)
 
         # BUILD THE COMMAND (use designer.cmd from GUI)
         command = self.ovScript
@@ -449,7 +513,7 @@ class Dialog(QDialog):
             signalFile = selectedItem.text()
 
             # TODO : this doesn't work, doesn't change the display...?
-            self.btn_runExtractionScenario.setText(str("Processing file : " + signalFile) + "...")
+            # self.btn_runExtractionScenario.setText(str("Processing file : " + signalFile) + "...")
 
             filename = signalFile.removesuffix(".ov")
             outputSpect1 = str(filename + "-" + self.parameterDict["Class1"] + ".csv")
@@ -473,9 +537,10 @@ class Dialog(QDialog):
                     if "Application terminated" in str(output):
                         break
 
-        self.btn_runExtractionScenario.setText(str("Extract Features and Trials"))
-        self.fileListWidget.setEnabled(True)
-        self.btn_runExtractionScenario.setEnabled(True)
+        # TODO : this doesn't work, doesn't change the display...?
+        # self.btn_runExtractionScenario.setText(str("Extract Features and Trials"))
+        # self.fileListWidget.setEnabled(True)
+        # self.btn_runExtractionScenario.setEnabled(True)
 
         self.show()
         return
@@ -661,9 +726,12 @@ class Dialog(QDialog):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             print("TimeFreq for sensor: " + self.electrodePsd.text())
 
-            # TODO change
-            tmin = 0
-            tmax = 1.5
+            tmin = float(self.parameterDict['StimulationDelay'])
+            tmax = float(self.parameterDict['StimulationEpoch'])
+            fmin = int(self.userFmin.text())
+            fmax = int(self.userFmax.text())
+            class1 = self.parameterDict["Class1"]
+            class2 = self.parameterDict["Class2"]
 
             qt_plot_tf(self.Features.timefreq_cond1, self.Features.timefreq_cond2,
                        self.Features.time_array, self.Features.freqs_array,
@@ -671,21 +739,18 @@ class Dialog(QDialog):
                        self.Features.average_baseline_cond1, self.Features.average_baseline_cond2,
                        self.Features.std_baseline_cond1, self.Features.std_baseline_cond2,
                        self.Features.electrodes_final,
-                       int(self.userFmin.text()), int(self.userFmax.text()), float(tmin), float(tmax),
-                       self.parameterDict["Class1"], self.parameterDict["Class2"])
-
-            # qt_plot_tf(self.Features.time_right, self.Features.time_left,
-            #            self.Features.time_array, self.Features.freqs_array,
-            #            self.Features.electrodes_final, self.electrodePsd.text(),
-            #            self.fres, int(self.userFmin.text()), int(self.userFmax.text()))
+                       fmin, fmax, tmin, tmax, class1, class2)
 
     def btnPsd(self):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
+            fmin = int(self.userFmin.text())
+            fmax = int(self.userFmax.text())
+            class1 = self.parameterDict["Class1"]
+            class2 = self.parameterDict["Class2"]
             qt_plot_psd(self.Features.power_cond2, self.Features.power_cond1,
                         self.Features.freqs_array, self.Features.electrodes_final,
                         self.electrodePsd.text(),
-                        self.fres, int(self.userFmin.text()), int(self.userFmax.text()),
-                        self.parameterDict["Class1"], self.parameterDict["Class2"])
+                        self.fres, fmin, fmax, class1, class2)
 
     def btnTopo(self):
         if self.freqTopo.text().isdigit() \
@@ -1020,7 +1085,19 @@ class Dialog(QDialog):
 
         return classifierScoreStr
 
-    def getProtocolExtractionParams(self):
+    def getExperimentalParameters(self):
+        # ----------
+        # Get experimental parameters from the JSON parameters
+        # ----------
+        newDict = {'Pipeline': self.parameterDict['pipelineType'],
+                   'Class 1': self.parameterDict["Class1"],
+                   'Class 2': self.parameterDict["Class2"],
+                   'Trial Length': self.parameterDict["TrialLength"],
+                   'Pre Stimulus Time': self.parameterDict["TrialWait"]}
+
+        return newDict
+
+    def getExtractionParameters(self):
         # ----------
         # Get "extraction" parameters from the JSON parameters
         # A bit artisanal, but we'll see if we keep that...
@@ -1029,9 +1106,7 @@ class Dialog(QDialog):
         nbParamsExp = settings.scenarioSettingsPartsLength[pipelineKey][0]
         nbParamsExtract = settings.scenarioSettingsPartsLength[pipelineKey][1]
 
-        newDict = {'pipelineType': pipelineKey,
-                   'Class1': self.parameterDict["Class1"],
-                   'Class2': self.parameterDict["Class2"]}
+        newDict = {}
         for idx, param in enumerate(settings.scenarioSettings[pipelineKey]):
             if nbParamsExp <= idx < (nbParamsExp + nbParamsExtract + 1):  # print only pipeline-specific
             # if idx < (nbParamsExp + nbParamsExtract + 1): # print all
