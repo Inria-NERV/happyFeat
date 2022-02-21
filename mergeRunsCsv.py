@@ -106,14 +106,24 @@ def writeCompositeCsv(filename, rawData, class1Stim, class2Stim, tmin, tmax, fsa
                 if newEpoch:
                     # get stimulation fields
                     eventList = row[-3].split(":")
-                    currentEventStimCode = eventList[-1]
-                    # Add current Stimulation...
-                    # Event id
-                    dataToWrite[-3] = currentEventStimCode
-                    # Event date
-                    dataToWrite[-2] = dataToWrite[0]
-                    # Event duration
-                    dataToWrite[-1] = str("0")
+                    currentEventStimCode = None
+                    if class1StimCode in eventList:
+                        currentEventStimCode = class1StimCode
+                    elif class2StimCode in eventList:
+                        currentEventStimCode = class2StimCode
+
+                    if currentEventStimCode:
+                        # Add current Stimulation...
+                        # Event id
+                        dataToWrite[-3] = currentEventStimCode
+                        # Event date
+                        dataToWrite[-2] = dataToWrite[0]
+                        # Event duration
+                        dataToWrite[-1] = str("0")
+                    else:  # not possible??
+                        dataToWrite[-3] = ""
+                        dataToWrite[-2] = ""
+                        dataToWrite[-1] = ""
                     newEpoch = False
                 else:
                     dataToWrite[-3] = ""
