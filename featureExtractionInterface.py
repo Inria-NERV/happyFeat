@@ -613,7 +613,7 @@ class Dialog(QDialog):
         # ----------
         # Compute the features used for visualization
         # ----------
-        trialLength = float(self.parameterDict["TrialLength"])
+        trialLength = float(self.parameterDict["StimulationEpoch"])
         trials = int(self.parameterDict["TrialNb"])
         electrodeListStr = self.parameterDict["ChannelNames"]
         electrodeList = electrodeListStr.split(";")
@@ -781,6 +781,9 @@ class Dialog(QDialog):
         if "openvibe-designer.cmd" in newPath:
             self.designerTextBox.setText(newPath)
             self.ovScript = newPath
+
+        # TODO : update json file
+        # ...
 
         return
 

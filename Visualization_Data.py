@@ -395,9 +395,9 @@ def plot_psd(Power_MI, Power_Rest, freqs, channel, channel_array, each_point, fm
     plt.xlabel(' Frequency (Hz)', fontdict=font)
     plt.ylabel('Power spectrum (db)', fontdict=font)
     plt.margins(x=0)
-    ax.set_xticks(np.arange(fmin, fmax, sizing))
+    # ax.set_xticks(np.arange(fmin, fmax, sizing))
     ax.grid(axis='x')
-    plt.axis('square')
+    # plt.axis('square')
 
     plt.legend()
     # plt.show()
