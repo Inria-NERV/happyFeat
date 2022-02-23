@@ -53,13 +53,6 @@
 			<Value>1.5</Value>
 		</Setting>
 		<Setting>
-			<Identifier>(0xc515c8a5, 0x1b70b781)</Identifier>
-			<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
-			<Name>StimulationDelay</Name>
-			<DefaultValue>0</DefaultValue>
-			<Value>0</Value>
-		</Setting>
-		<Setting>
 			<Identifier>(0xce2f8dbf, 0x4ecbc00e)</Identifier>
 			<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 			<Name>TimeWindowLength</Name>
@@ -560,7 +553,7 @@
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Epoch offset (in sec)</Name>
 					<DefaultValue>0.5</DefaultValue>
-					<Value>$var{StimulationDelay}</Value>
+					<Value>0</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -634,7 +627,7 @@
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Epoch offset (in sec)</Name>
 					<DefaultValue>0.5</DefaultValue>
-					<Value>$var{StimulationDelay}</Value>
+					<Value>0</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>

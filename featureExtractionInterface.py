@@ -873,7 +873,7 @@ class Dialog(QDialog):
         class1Stim = "OVTK_GDF_Left"
         class2Stim = "OVTK_GDF_Right"
         tmin = 0
-        tmax = float(self.parameterDict["StimulationEpoch"]) - float(self.parameterDict["StimulationDelay"])
+        tmax = float(self.parameterDict["StimulationEpoch"])
         compositeCsv = mergeRunsCsv(compositeSigList, self.parameterDict["Class1"], self.parameterDict["Class2"], class1Stim, class2Stim, tmin, tmax)
 
         print("Composite file for training: " + compositeCsv)

@@ -141,6 +141,7 @@ def writeCompositeCsv(filename, rawData, class1Stim, class2Stim, tmin, tmax, fsa
         # For *some reason* in OpenViBE the classifier trainer doesn't
         # take into account the feature vectors of the last stim, when using
         # a composite signal...
+        timeOffset = round(timeOffset + 0.5, 8)
         dataToWrite = [str(timeOffset), str(epochOffset)]
         for elec in range(nbElec):
             dataToWrite.append("0.0")
@@ -153,19 +154,20 @@ def writeCompositeCsv(filename, rawData, class1Stim, class2Stim, tmin, tmax, fsa
         currentTime = timeIncrement
         for x in list(range(1, remSamples + 1, 1)):
             dataToWrite = [str(currentTime + timeOffset), str(epochOffset)]
-            currentTime = round(currentTime + timeIncrement, 8)
             for elec in range(nbElec):
                 dataToWrite.append("0.0")
             dataToWrite.append("")
             dataToWrite.append("")
             dataToWrite.append("")
             writer.writerow(dataToWrite)
+            currentTime = round(currentTime + timeIncrement, 8)
 
         epochOffset += 1
         timeOffset += currentTime
         # -- END OF CONFUSING PART
 
         # Add an empty data frame, bearing only a "Train" Stimulation
+        timeOffset = round(timeOffset + 0.5, 8)
         dataToWrite = ["" for x in range(np.shape(row)[0])]
         dataToWrite[0] = str(timeOffset)
         dataToWrite[1] = str(epochOffset)

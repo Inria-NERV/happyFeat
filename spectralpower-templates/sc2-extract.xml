@@ -1014,7 +1014,7 @@
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Epoch offset (in sec)</Name>
 					<DefaultValue>0.5</DefaultValue>
-					<Value>$var{StimulationDelay}</Value>
+					<Value>-$var{StimulationEpoch}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -1162,7 +1162,7 @@
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Epoch offset (in sec)</Name>
 					<DefaultValue>0.5</DefaultValue>
-					<Value>$var{StimulationDelay}</Value>
+					<Value>-$var{StimulationEpoch}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
