@@ -42,14 +42,16 @@ def load_csv_cond(file):
     return data
 
 
-def Extract_CSV_Data(data_cond, trialLength, trials, nbElectrodes, bins, n_window, shift):
+def Extract_CSV_Data(data_cond, trialLength, nbElectrodes, bins, n_window, shift):
     # shift = n_window - overlap
-    length = round((trialLength - n_window) / shift)
+    length = int(np.floor(trialLength / shift))
     data = data_cond[:, 2:]
     data = data[:, :nbElectrodes * bins]
-    power = np.zeros([trials, nbElectrodes, bins])
 
-    timefreq = np.zeros([trials, nbElectrodes, length, bins])
+    nbTrials = int(np.shape(data)[0] / length)
+
+    power = np.zeros([nbTrials, nbElectrodes, bins])
+    timefreq = np.zeros([nbTrials, nbElectrodes, length, bins])
 
     for i in range(power.shape[0]):
         for j in range(power.shape[1]):

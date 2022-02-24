@@ -620,7 +620,7 @@ class Dialog(QDialog):
         nbElectrodes = len(electrodeList)
         n_bins = int((int(self.parameterDict["PsdSize"]) / 2) + 1)
         winLen = float(self.parameterDict["TimeWindowLength"])
-        winOverlap = float(self.parameterDict["TimeWindowShift"])
+        winShift = float(self.parameterDict["TimeWindowShift"])
 
         # For multiple runs (ie. multiple selected CSV files), we just concatenate
         # the trials from all files. Then the displayed spectral features (R²map, PSD, topography)
@@ -635,13 +635,13 @@ class Dialog(QDialog):
         timefreq_cond2_baseline_final = None
         for run in range(len(self.dataNp1)):
             power_cond1, timefreq_cond1 = \
-                Extract_CSV_Data(self.dataNp1[run], trialLength, trials, nbElectrodes, n_bins, winLen, winOverlap)
+                Extract_CSV_Data(self.dataNp1[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
             power_cond2, timefreq_cond2 = \
-                Extract_CSV_Data(self.dataNp2[run], trialLength, trials, nbElectrodes, n_bins, winLen, winOverlap)
+                Extract_CSV_Data(self.dataNp2[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
             power_cond1_baseline, timefreq_cond1_baseline = \
-                Extract_CSV_Data(self.dataNp1baseline[run], trialLength, trials, nbElectrodes, n_bins, winLen, winOverlap)
+                Extract_CSV_Data(self.dataNp1baseline[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
             power_cond2_baseline, timefreq_cond2_baseline = \
-                Extract_CSV_Data(self.dataNp2baseline[run], trialLength, trials, nbElectrodes, n_bins, winLen, winOverlap)
+                Extract_CSV_Data(self.dataNp2baseline[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
 
             if power_cond1_final is None:
                 power_cond1_final = power_cond1
