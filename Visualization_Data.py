@@ -472,7 +472,6 @@ def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, eac
     # plt.show()
 
 def Reorder_Rsquare(Rsquare, Wsquare, Wpvalues, electrodes_orig, powerLeft, powerRight, timefreqLeft, timefreqRight):
-    # def Reorder_Rsquare(Rsquare, Wsquare, Wpvalues, electrodes_orig, powerLeft, powerRight):
     if len(electrodes_orig) >= 64:
         electrodes_target = ['FP1','AF7','AF3','F7','F5','F3','F1','FT9','FT7','FC5','FC3','FC1','T7','C5','C3','C1','TP7','CP5','CP3','CP1','P7','P5','P3','P1','PO9','PO7','PO3','O1','AFz','Fz','FCz','Cz','CPz','Pz','POz','Oz','FP2','AF8','AF4','F8','F6','F4','F2','FT10','FT8','FC6','FC4','FC2','T8','C6','C4','C2','TP8','CP6','CP4','CP2','P8','P6','P4','P2','PO10','PO8','PO4','O2']
 
@@ -484,11 +483,12 @@ def Reorder_Rsquare(Rsquare, Wsquare, Wpvalues, electrodes_orig, powerLeft, powe
 
     for k in range(len(electrodes_target)):
         for i in range(len(electrodes_orig)):
-            if electrodes_orig[i] == electrodes_target[k]:
+            if electrodes_orig[i].casefold() == electrodes_target[k].casefold():
                 index_elec.append(i)
                 break
 
     print(index_elec)
+
     Rsquare_final = np.zeros([Rsquare.shape[0], Rsquare.shape[1]])
     Wsquare_final = np.zeros([Wsquare.shape[0], Wsquare.shape[1]])
     Wpvalues_final = np.zeros([Wpvalues.shape[0], Wpvalues.shape[1]])

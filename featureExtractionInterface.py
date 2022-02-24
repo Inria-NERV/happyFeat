@@ -194,7 +194,7 @@ class Dialog(QDialog):
 
         # Param : fmin for frequency based viz
         self.userFmin = QLineEdit()
-        self.userFmin.setText('1')
+        self.userFmin.setText('0')
         self.formLayoutVizu.addRow('frequency min', self.userFmin)
         # Param : fmax for frequency based viz
         self.userFmax = QLineEdit()
@@ -203,11 +203,11 @@ class Dialog(QDialog):
 
         # Param : Electrode to use for PSD display
         self.electrodePsd = QLineEdit()
-        self.electrodePsd.setText('FC1')
+        self.electrodePsd.setText('C3')
         self.formLayoutVizu.addRow('Sensor for PSD visualization', self.electrodePsd)
         # Param : Frequency to use for Topography
         self.freqTopo = QLineEdit()
-        self.freqTopo.setText('15')
+        self.freqTopo.setText('12')
         self.formLayoutVizu.addRow('Frequency for Topography (Hz)', self.freqTopo)
 
         self.layoutViz.addLayout(self.formLayoutVizu)
@@ -622,6 +622,11 @@ class Dialog(QDialog):
         winLen = float(self.parameterDict["TimeWindowLength"])
         winShift = float(self.parameterDict["TimeWindowShift"])
 
+        # electrodes_orig = channel_generator(nbElectrodes, 'TP9', 'TP10')
+        electrodes_orig = elecGroundRef(electrodeList, 'TP9', 'TP10')
+        if not electrodes_orig:
+            myErrorBox("Problem with the list of electrodes...")
+
         # For multiple runs (ie. multiple selected CSV files), we just concatenate
         # the trials from all files. Then the displayed spectral features (R²map, PSD, topography)
         # will be computed as averages over all the trials.
@@ -680,7 +685,6 @@ class Dialog(QDialog):
             idxTrial += 1
 
         # Statistical Analysis
-        electrodes_orig = channel_generator(nbElectrodes, 'TP9', 'TP10')
         freqs_array = np.arange(0, n_bins)
 
         Rsigned = Compute_Rsquare_Map_Welch(power_cond2_final[:, :, :(n_bins-1)], power_cond1_final[:, :, :(n_bins-1)])

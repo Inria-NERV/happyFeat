@@ -15,7 +15,7 @@ def channel_generator(number_of_channel, Ground, Ref):
         electrodes[index_gnd] = 'AFz'
         electrodes[index_ref] = 'FCz'
 
-    if number_of_channel == 64:
+    if number_of_channel >= 64:
         electrodes = ['FP1', 'FP2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'FC5', 'FC1', 'FC2', 'FC6', 'T7', 'C3', 'Cz', 'C4',
                       'T8', 'TP9', 'CP5', 'CP1', 'CP2', 'CP6', 'TP10', 'P7', 'P3', 'Pz', 'P4', 'P8', 'PO9', 'O1', 'Oz',
                       'O2', 'PO10', 'AF7', 'AF3', 'AF4', 'AF8', 'F5', 'F1', 'F2', 'F6', 'FT9', 'FT7', 'FC3', 'FC4',
@@ -31,6 +31,25 @@ def channel_generator(number_of_channel, Ground, Ref):
 
     return electrodes
 
+def elecGroundRef(electrodeList, ground, ref):
+    # Replace "ground" and "ref" electrodes (eg TP9/TP10) with new grounds and ref (eg AFz and FCz)
+    # If newground or newref alreayd present, all good!
+    # if old ground or old ref not present, then return empty list
+
+    newElecList = electrodeList.copy()
+    newGround = 'AFz'
+    newRef = 'FCz'
+    if ground in newElecList:
+        idx = newElecList.index(ground)
+        newElecList[idx] = newGround
+    if ref in newElecList:
+        idx = newElecList.index(ref)
+        newElecList[idx] = newRef
+
+    if newGround not in newElecList or newRef not in newElecList:
+        return None
+
+    return newElecList
 
 def load_csv_cond(file):
     # Read data from file 'filename.csv'
