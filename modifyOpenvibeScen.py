@@ -81,7 +81,7 @@ def modifyAcqScenario(scenXml, parameterDict, boolOnline):
                             continue
                         elif setting.find('Name').text == "Display Cue Duration (in sec)":
                             xmlVal = setting.find('Value')
-                            xmlVal.text = parameterDict["TrialWait"]
+                            xmlVal.text = parameterDict["TrialLength"]
                             continue
                         elif setting.find('Name').text == "End of Trial Minimum Duration (in sec)":
                             xmlVal = setting.find('Value')
