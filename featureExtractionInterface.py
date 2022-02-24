@@ -879,6 +879,8 @@ class Dialog(QDialog):
         tmin = 0
         tmax = float(self.parameterDict["StimulationEpoch"])
         compositeCsv = mergeRunsCsv(compositeSigList, self.parameterDict["Class1"], self.parameterDict["Class2"], class1Stim, class2Stim, tmin, tmax)
+        if not compositeCsv:
+            myErrorBox("Error merging runs!! Most probably different list of electrodes")
 
         print("Composite file for training: " + compositeCsv)
         compositeCsvBasename = os.path.basename(compositeCsv)
@@ -983,6 +985,9 @@ class Dialog(QDialog):
             for file in comb:
                 sigList.append(file)
             compositeCsv = mergeRunsCsv(sigList, self.parameterDict["Class1"], self.parameterDict["Class2"], class1Stim, class2Stim, tmin, tmax)
+            if not compositeCsv:
+                myErrorBox("Error merging runs!! Most probably different list of electrodes")
+
             print("Composite file for training: " + compositeCsv)
             compositeCsvBasename = os.path.basename(compositeCsv)
             newWeightsName = str("classifier-weights-" + str(idxcomb) + ".xml")

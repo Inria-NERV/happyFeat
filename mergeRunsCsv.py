@@ -12,16 +12,12 @@ stimulationCodes = {
     "OVTK_StimulationId_Train": "33281",
 }
 
-electrodes = ["Fp1", "Fp2", "F7", "F3", "Fz", "F4", "F8", "FC5", "FC1", "FC2", "FC6", "T7",
-              "C3", "Cz", "C4", "T8", "TP9", "CP5", "CP1", "CP2", "CP6", "TP10", "P7", "P3", "Pz", "P4",
-              "P8", "PO9", "O1", "Oz", "O2", "PO10"]
-
-
 def mergeRunsCsv(testSigList, class1, class2, class1Stim, class2Stim, tmin, tmax):
     start = time.time()
 
     # Load raw data and check sampling freqs
     rawData = []
+    channels = None
     fsamp = None
     for sig in testSigList:
         data = pd.read_csv(sig)
@@ -33,10 +29,14 @@ def mergeRunsCsv(testSigList, class1, class2, class1Stim, class2Stim, tmin, tmax
             fsamp = newfsamp
         elif newfsamp != fsamp:
             return -1
+        if not channels:
+            channels = col[2:-3]  # discard first 2 cols (time & epoch), and 3 last (event info)
+        elif col[2:-3] != channels:
+            return None
 
     outCsv = testSigList[0].replace("TRIALS", "TRAINCOMPOSITE")
 
-    writeCompositeCsv(outCsv, rawData, class1Stim, class2Stim, tmin, tmax, fsamp)
+    writeCompositeCsv(outCsv, rawData, class1Stim, class2Stim, channels, tmin, tmax, fsamp)
 
     end = time.time()
     print("==== ELAPSED: " + str(end - start))
@@ -44,7 +44,7 @@ def mergeRunsCsv(testSigList, class1, class2, class1Stim, class2Stim, tmin, tmax
     return outCsv
 
 
-def writeCompositeCsv(filename, rawData, class1Stim, class2Stim, tmin, tmax, fsamp):
+def writeCompositeCsv(filename, rawData, class1Stim, class2Stim, channels, tmin, tmax, fsamp):
     class1StimCode = stimulationCodes[class1Stim]
     class2StimCode = stimulationCodes[class2Stim]
     trainStimCode = stimulationCodes["OVTK_StimulationId_Train"]
@@ -53,8 +53,7 @@ def writeCompositeCsv(filename, rawData, class1Stim, class2Stim, tmin, tmax, fsa
         # write header
         fieldnames = [str('Time:' + str(int(fsamp)) + 'Hz'), 'Epoch']
 
-        # TODO : write electrodes from original file...
-        for elec in electrodes:
+        for elec in channels:
             fieldnames.append(elec)
         fieldnames.append("Event Id")
         fieldnames.append("Event Date")
