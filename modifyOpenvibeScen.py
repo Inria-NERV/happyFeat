@@ -94,7 +94,7 @@ def modifyAcqScenario(scenXml, parameterDict, boolOnline):
                         elif setting.find('Name').text == "Feedback Duration (in sec)":
                             if boolOnline:
                                 xmlVal = setting.find('Value')
-                                xmlVal.text = parameterDict["EndTrialMax"]
+                                xmlVal.text = parameterDict["FeedbackLength"]
                                 continue
                             else:
                                 xmlVal = setting.find('Value')
