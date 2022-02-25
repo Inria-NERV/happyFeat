@@ -214,9 +214,9 @@ class Dialog(QDialog):
 
         self.layoutVizButtons = QVBoxLayout()
 
-        self.btn_load_extract = QPushButton("Load spectrum file - extract features")
+        self.btn_load_extract = QPushButton("Load spectrum file(s) for analysis")
         self.btn_r2map = QPushButton("Plot Frequency-channel R² map")
-        self.btn_timefreq = QPushButton("Plot Time/Freq Analysis")
+        self.btn_timefreq = QPushButton("Plot Time-Frequency ERD/ERS analysis")
         self.btn_psd = QPushButton("Plot PSD comparison between classes")
         self.btn_topo = QPushButton("Plot Brain Topography")
         # self.btn_w2map = QPushButton("Plot Wilcoxon Map")
@@ -288,8 +288,8 @@ class Dialog(QDialog):
 
         self.btn_addPair = QPushButton("Add feature")
         self.btn_removePair = QPushButton("Remove last feature in the list")
-        self.btn_selectFeatures = QPushButton("TRAIN CLASSIFIER using selected runs and features")
-        self.btn_allCombinations = QPushButton("FIND BEST COMBINATION of selected runs, using selected features")
+        self.btn_selectFeatures = QPushButton("TRAIN CLASSIFIER")
+        self.btn_allCombinations = QPushButton("FIND BEST COMBINATION")
         self.btn_addPair.clicked.connect(lambda: self.btnAddPair())
         self.btn_removePair.clicked.connect(lambda: self.btnRemovePair())
         self.btn_selectFeatures.clicked.connect(lambda: self.btnSelectFeatures())
