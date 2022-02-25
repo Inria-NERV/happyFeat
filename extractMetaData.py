@@ -1,11 +1,7 @@
 import os
-import sys
 import subprocess
 from shutil import copyfile
-import numpy as np
-import pandas as pd
 import csv
-import time
 
 from modifyOpenvibeScen import *
 

@@ -60,8 +60,7 @@ class Dialog(QDialog):
 
         super().__init__(parent)
 
-        # -----------------------------------------------------------------------
-        # GET PARAMS FROM JSON FILE...
+        # -----------------------------------
         self.dataNp1 = []
         self.dataNp2 = []
         self.dataNp1baseline = []
@@ -71,12 +70,12 @@ class Dialog(QDialog):
         # Sampling Freq: to be loaded later, in Spectrum CSV files
         self.samplingFreq = None
 
+        # GET PARAMS FROM JSON FILE
         self.scriptPath = os.path.dirname(os.path.realpath(sys.argv[0]))
         print(self.scriptPath)
         self.jsonfullpath = os.path.join(self.scriptPath, "generated", "params.json")
         with open(self.jsonfullpath) as jsonfile:
             self.parameterDict = json.load(jsonfile)
-
         self.ovScript = self.parameterDict["ovDesignerPath"]
 
         # TODO : get from interface/files !!
@@ -133,6 +132,12 @@ class Dialog(QDialog):
             labelTemp.setText(settings.paramIdText[paramId])
             self.layoutExtractLabels.addWidget(labelTemp)
             lineEditExtractTemp = QLineEdit()
+            # # SPECIAL CASES... DEFAULT VALUES, SINCE WE DON'T KNOW FSAMP
+            # if paramId in settings.specialParamsDefaultDisplay:
+            #     tempVal = settings.specialParamsDefaultDisplay[paramId]
+            #     lineEditExtractTemp.setText(str(tempVal))
+            # else:
+            #     lineEditExtractTemp.setText(str(paramVal))
             lineEditExtractTemp.setText(str(paramVal))
             self.layoutExtractLineEdits.addWidget(lineEditExtractTemp)
 
@@ -151,7 +156,7 @@ class Dialog(QDialog):
 
         self.expParamListWidget.setMinimumHeight(minHeight)
 
-        # Generate button
+        # Extraction button
         self.btn_runExtractionScenario = QPushButton("Extract Features and Trials")
         self.btn_runExtractionScenario.clicked.connect(lambda: self.runExtractionScenario())
 
@@ -188,9 +193,6 @@ class Dialog(QDialog):
         self.availableSpectraList = QListWidget()
         self.availableSpectraList.setSelectionMode(QListWidget.MultiSelection)
         self.layoutViz.addWidget(self.availableSpectraList)
-
-        self.path1 = ""
-        self.path2 = ""
 
         # Param : fmin for frequency based viz
         self.userFmin = QLineEdit()

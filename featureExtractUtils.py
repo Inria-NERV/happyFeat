@@ -1,7 +1,6 @@
 from Statistical_analysis import *
 import pandas as pd
 
-
 def channel_generator(number_of_channel, Ground, Ref):
     if number_of_channel == 32:
         electrodes = ['Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'FC5', 'FC1', 'FC2', 'FC6', 'T7', 'C3', 'Cz', 'C4',
@@ -60,7 +59,6 @@ def load_csv_cond(file):
     data.head()
     return data
 
-
 def Extract_CSV_Data(data_cond, trialLength, nbElectrodes, bins, n_window, shift):
     # shift = n_window - overlap
     length = int(np.floor(trialLength / shift))
@@ -78,3 +76,15 @@ def Extract_CSV_Data(data_cond, trialLength, nbElectrodes, bins, n_window, shift
             timefreq[i, j, :, :] = data[(i * length):(i * length + length), (j * bins):(j * bins + bins)]
 
     return power, timefreq
+
+def psdSizeToFreqRes(psdSize, fSamp):
+    return float(fSamp) / float(psdSize)
+
+def freqResToPsdSize(fRes, fSamp):
+    return int(fSamp / fRes)
+
+def samplesToTime(samples, fSamp):
+    return float(samples)/float(fSamp)
+
+def timeToSamples(time, fSamp):
+    return int(time*fSamp)

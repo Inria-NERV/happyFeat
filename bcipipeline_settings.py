@@ -29,55 +29,6 @@ templateScenFilenames = ["sc1-monitor-acq.xml",
                          "sc3-online.xml",
                          "mi-stimulations.lua"]
 
-# global scenarioSettings
-# scenarioSettings = {optionKeys[0]: None,
-#
-#                     # POWER SPECTRUM
-#                     optionKeys[1]:
-#                         {"TrialNb": [20, "Nb Trials per class"],
-#                          "Class1": ["LEFT", "Class / Stimulation 1"],
-#                          "Class2": ["RIGHT", "Class / Stimulation 2"],
-#                          "Baseline": [10, "\"Get Set\" time (s)"],
-#                          "TrialWait": [1.5, "Pre-Stimulus time (s)"],
-#                          "TrialLength": [1.5, "Trial duration (s)"],
-#                          "EndTrialMin": [2.5, "Inter-trial interval min (s)"],
-#                          "EndTrialMax": [3.5, "Inter-trial interval max (s)"],
-#                          "FeedbackLength": [3, "Feedback time (s) (online scenario)"],
-#
-#                          "StimulationEpoch": [1.5, "Epoch of Interest (EOI) (s)"],
-#                          "StimulationDelay": [0, "EOI offset (s)"],
-#                          "TimeWindowLength": [0.4, "Sliding Window (Burg) (s)"],
-#                          "TimeWindowShift": [0.028, "Overlap (Burg) (s)"],
-#                          "AutoRegressiveOrder": [19, "AR Burg Order"],
-#                          "PsdSize": [500, "FFT Size"]},
-#
-#                     # CONNECTIVITY
-#                     optionKeys[2]:
-#                         {"TrialNb": [20, "Nb Trials per class"],
-#                          "Class1": ["LEFT", "Class / Stimulation 1"],
-#                          "Class2": ["RIGHT", "Class / Stimulation 2"],
-#                          "Baseline": [10, "\"Get Set\" time (s)"],
-#                          "TrialWait": [1.5, "Pre-Stimulus time (s)"],
-#                          "TrialLength": [1.5, "Trial duration (s)"],
-#                          "EndTrialMin": [2.5, "Inter-trial interval min (s)"],
-#                          "EndTrialMax": [3.5, "Inter-trial interval max (s)"],
-#                          "FeedbackLength": [3, "Feedback time (s) (online scenario)"],
-#
-#                          "StimulationEpoch": [1.5, "Epoch of Interest (EOI) (s)"],
-#                          "StimulationDelay": [0, "EOI offset (s)"],
-#                          "ConnectivityMetric": ["MSC", "Connectivity Metric (MSC or IMCOH)"],
-#                          "WelchLength": [4, "Length of a Connectivity estimation (s)"],
-#                          "WelchOverlap": [50, "Connectivity estimation overlapping (%)"],
-#                          "WindowMethod": ["Hann", "Welch sliding window (Hann or Hamming)"],
-#                          "WelchWinLength": [0.25, "Welch sliding window length (s)"],
-#                          "WelchWinOverlap": [50, "Welch sliding window overlap (%)"],
-#                          "FftSize": [256, "Connectivity: FFT Size"]}}
-#
-# global scenarioSettingsPartsLength
-# scenarioSettingsPartsLength = {optionKeys[0]: [0, 0],
-#                                optionKeys[1]: [9, 6],
-#                                optionKeys[2]: [9, 9]}
-
 global pipelineAcqSettings
 pipelineAcqSettings = {optionKeys[0]: None,
 
@@ -150,8 +101,10 @@ paramIdText = {"TrialNb": "Nb Trials per class",
                "StimulationDelay": "EOI offset (s)",
                "TimeWindowLength": "Sliding Window (Burg) (s)",
                "TimeWindowShift": "Overlap (Burg) (s)",
-               "AutoRegressiveOrder": "AR Burg Order",
+               "AutoRegressiveOrder": "AR Burg Order (samples)",
+               # "AutoRegressiveOrder": "Auto-regressive estim. length (s)",
                "PsdSize": "FFT Size",
+               # "PsdSize": "Frequency resolution (ratio)",
                "ConnectivityMetric": "Connectivity Metric (MSC or IMCOH)",
                "WelchLength": "Length of a Connectivity estimation (s)",
                "WelchOverlap": "Connectivity estimation overlapping (%)",
@@ -160,3 +113,8 @@ paramIdText = {"TrialNb": "Nb Trials per class",
                "WelchWinOverlap": "Welch sliding window overlap (%)",
                "ConnectFftSize": "Connectivity: FFT Size"
                }
+
+global specialParamsDefaultDisplay
+specialParamsDefaultDisplay = {"AutoRegressiveOrder": 0.038,  # in (s) assuming order = 19 and fsamp = 500
+                               "PsdSize": 1,  # ratio fsamp/psdsize, assuming fsamp=500 and psdSize=500
+                               }

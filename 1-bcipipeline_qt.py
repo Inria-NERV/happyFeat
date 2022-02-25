@@ -1,8 +1,6 @@
 import sys
 import os
-import time
 import subprocess
-import platform
 from shutil import copyfile
 import json
 from threading import Thread
