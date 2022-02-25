@@ -30,7 +30,14 @@ Scripts & Qt-based GUI allowing to use BCI pipelines, via OpenViBE standardized 
 
 # Starter guide
 
-Clone the project to a local directory. Everything is then managed from this directory.
+## Installation
+
+Clone the project to a local directory. 
+
+To install the requirements, open a console/command prompt, change to your cloned folder and type:
+        pip install -r requirements.txt
+
+Everything from there on is managed directly from the cloned directory.
 
 ## Generating the scenarios
 
