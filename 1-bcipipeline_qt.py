@@ -70,8 +70,10 @@ class Dialog(QDialog):
         layout_h.addWidget(self.btn_browse)
 
         # Generate button
-        self.btn_generate = QPushButton("Generate scenarios, launch OpenViBE and Analysis/Train GUI")
-        self.btn_generate.clicked.connect(lambda: self.generate())
+        self.btn_generateLaunch = QPushButton("Generate scenarios, launch OpenViBE and Analysis/Train GUI")
+        self.btn_generateLaunch.clicked.connect(lambda: self.generate(True))
+        self.btn_generate = QPushButton("Generate scenarios, let me handle things!")
+        self.btn_generate.clicked.connect(lambda: self.generate(False))
 
         self.dlgLayout.addWidget(self.label)
         self.dlgLayout.addWidget(self.combo)
@@ -183,6 +185,7 @@ class Dialog(QDialog):
             vBoxLayouts[0].addWidget(self.designerWidget)
 
             self.dlgLayout.addLayout(hboxLayout)
+            self.dlgLayout.addWidget(self.btn_generateLaunch)
             self.dlgLayout.addWidget(self.btn_generate)
             self.show()
 
@@ -210,7 +213,7 @@ class Dialog(QDialog):
     def initialWindow(self):
         self.show()
 
-    def generate(self):
+    def generate(self, launch):
         ####
         # FIRST STEP : CREATE PARAMETER DICTIONARY
         ###
@@ -269,11 +272,13 @@ class Dialog(QDialog):
         modifyAcqScenario(os.path.join(os.getcwd(), self.generatedFolder, settings.templateScenFilenames[3]),
                           self.parameterDict, True)
 
-        # text = "Thanks for using the generation script!\nYour files are in " + os.getcwd() + "/generated/"
-        # text += "\n\nClose this window to launch OpenViBE with the acquisition scenario."
-        # myMsgBox(text)
-
-        self.accept()
+        if launch:
+            self.accept()
+        else:
+            text = "Thanks for using the generation script!\nYour scenarios are in \n\t" + os.getcwd() + "\\generated\\"
+            text += "\n\nYou can also run the Analysis/Training app:\n\t" + os.getcwd() + "2-featureExtractionInterface.py"
+            myMsgBox(text)
+            self.reject()
 
     def closeEvent(self, event):
         self.reject()
