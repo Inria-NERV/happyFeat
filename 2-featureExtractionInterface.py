@@ -128,12 +128,12 @@ class Dialog(QDialog):
         self.layoutExtractLineEdits = QVBoxLayout()
         extractParametersLayout.addLayout(self.layoutExtractLabels)
         extractParametersLayout.addLayout(self.layoutExtractLineEdits)
-        for idx, (key, val) in enumerate(self.extractParamsDict.items()):
+        for idx, (paramId, paramVal) in enumerate(self.extractParamsDict.items()):
             labelTemp = QLabel()
-            labelTemp.setText(str(key))
+            labelTemp.setText(settings.paramIdText[paramId])
             self.layoutExtractLabels.addWidget(labelTemp)
             lineEditExtractTemp = QLineEdit()
-            lineEditExtractTemp.setText(str(val))
+            lineEditExtractTemp.setText(str(paramVal))
             self.layoutExtractLineEdits.addWidget(lineEditExtractTemp)
 
         # Label + un-editable list of parameters for reminder
@@ -145,8 +145,8 @@ class Dialog(QDialog):
         self.expParamListWidget.setEnabled(False)
         self.experimentParamsDict = self.getExperimentalParameters()
         minHeight = 0
-        for idx, (key, val) in enumerate(self.experimentParamsDict.items()):
-            self.expParamListWidget.addItem(str(key) + ": \t" + str(val))
+        for idx, (paramId, paramVal) in enumerate(self.experimentParamsDict.items()):
+            self.expParamListWidget.addItem(settings.paramIdText[paramId] + ": \t" + str(paramVal))
             minHeight += 30
 
         self.expParamListWidget.setMinimumHeight(minHeight)
@@ -454,13 +454,20 @@ class Dialog(QDialog):
         # Get new extraction parameters
         # return True if params where changed from last known config
         changed = False
+
+        # Retrieve param id from label...
         for idx in range(self.layoutExtractLabels.count()):
             paramLabel = self.layoutExtractLabels.itemAt(idx).widget().text()
             paramValue = self.layoutExtractLineEdits.itemAt(idx).widget().text()
-            if paramLabel in self.parameterDict:
-                if self.parameterDict[paramLabel] != paramValue:
+            paramId = list(settings.paramIdText.keys())[list(settings.paramIdText.values()).index(paramLabel)]
+            if paramId in self.parameterDict:
+                if self.parameterDict[paramId] != paramValue:
                     changed = True
-                    self.parameterDict[paramLabel] = paramValue
+                    self.parameterDict[paramId] = paramValue
+            else:
+                # first time the extraction parameters are written
+                changed = True
+                self.parameterDict[paramId] = paramValue
 
         if changed:
             # update json file
@@ -489,17 +496,13 @@ class Dialog(QDialog):
         scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[1])
 
         if not self.fileListWidget.selectedItems():
-            myErrorBox("Please select a set of files for feature extraction")
+            myMsgBox("Please select a set of files for feature extraction")
             return
 
         if self.updateExtractParameters():
             self.deleteWorkFiles()
 
         modifyScenarioGeneralSettings(scenFile, self.parameterDict)
-
-        # TODO : this doesn't work, doesn't change the display...?
-        # self.fileListWidget.setEnabled(False)
-        # self.btn_runExtractionScenario.setEnabled(False)
 
         # BUILD THE COMMAND (use designer.cmd from GUI)
         command = self.ovScript
@@ -511,9 +514,6 @@ class Dialog(QDialog):
             # Modify extraction scenario to use provided signal file,
             # and rename outputs accordingly
             signalFile = selectedItem.text()
-
-            # TODO : this doesn't work, doesn't change the display...?
-            # self.btn_runExtractionScenario.setText(str("Processing file : " + signalFile) + "...")
 
             filename = signalFile.removesuffix(".ov")
             outputSpect1 = str(filename + "-" + self.parameterDict["Class1"] + ".csv")
@@ -537,11 +537,6 @@ class Dialog(QDialog):
                     if "Application terminated" in str(output):
                         break
 
-        # TODO : this doesn't work, doesn't change the display...?
-        # self.btn_runExtractionScenario.setText(str("Extract Features and Trials"))
-        # self.fileListWidget.setEnabled(True)
-        # self.btn_runExtractionScenario.setEnabled(True)
-
         self.show()
         return
 
@@ -551,7 +546,7 @@ class Dialog(QDialog):
         # We need one CSV file per class, for simplicity...
         # ----------
         if not self.availableSpectraList.selectedItems():
-            myErrorBox("Please select a set of files for analysis")
+            myMsgBox("Please select a set of files for analysis")
             return
 
         self.dataNp1 = []
@@ -590,7 +585,7 @@ class Dialog(QDialog):
             if sampFreq1 != sampFreq2:
                 errMsg = str("Error when loading " + path1 + "\n" + " and " + path2)
                 errMsg = str(errMsg + "sampling frequency mismatch (" + str(sampFreq1) + " vs " + str(sampFreq2) + ")")
-                myErrorBox(errMsg)
+                myMsgBox(errMsg)
                 return
 
             listSampFreq.append(sampFreq1)
@@ -604,7 +599,7 @@ class Dialog(QDialog):
         if not all(freqsamp == listSampFreq[0] for freqsamp in listSampFreq):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Sampling frequency mismatch (" + str(listSampFreq) + ")")
-            myErrorBox(errMsg)
+            myMsgBox(errMsg)
             return
         else:
             self.samplingFreq = listSampFreq[0]
@@ -625,7 +620,7 @@ class Dialog(QDialog):
         # electrodes_orig = channel_generator(nbElectrodes, 'TP9', 'TP10')
         electrodes_orig = elecGroundRef(electrodeList, 'TP9', 'TP10')
         if not electrodes_orig:
-            myErrorBox("Problem with the list of electrodes...")
+            myMsgBox("Problem with the list of electrodes...")
 
         # For multiple runs (ie. multiple selected CSV files), we just concatenate
         # the trials from all files. Then the displayed spectral features (R²map, PSD, topography)
@@ -763,7 +758,7 @@ class Dialog(QDialog):
             qt_plot_topo(self.Features.Rsigned, self.Features.electrodes_final,
                          int(self.freqTopo.text()), self.fres, self.samplingFreq)
         else:
-            myErrorBox("Invalid frequency for topography")
+            myMsgBox("Invalid frequency for topography")
 
     def btnAddPair(self):
         self.selectedFeats.append(QLineEdit())
@@ -801,21 +796,21 @@ class Dialog(QDialog):
         n_bins = int((int(self.parameterDict["PsdSize"]) / 2) + 1)
         for idx, feat in enumerate(self.selectedFeats):
             if feat.text() == "":
-                myErrorBox("Pair " + str(idx + 1) + " is empty...")
+                myMsgBox("Pair " + str(idx + 1) + " is empty...")
                 return
 
             [chan, freqstr] = feat.text().split(";")
             if chan not in channelList:
-                myErrorBox("Channel in pair " + str(idx + 1) + " (" + str(chan) + ") is not in the list...")
+                myMsgBox("Channel in pair " + str(idx + 1) + " (" + str(chan) + ") is not in the list...")
                 return
 
             freqs = freqstr.split(":")
             for freq in freqs:
                 if not freq.isdigit():
-                    myErrorBox("Frequency in pair " + str(idx + 1) + " (" + str(freq) + ") has an invalid format, must be an integer...")
+                    myMsgBox("Frequency in pair " + str(idx + 1) + " (" + str(freq) + ") has an invalid format, must be an integer...")
                     return
                 if int(freq) >= n_bins:
-                    myErrorBox("Frequency in pair " + str(idx + 1) + " (" + str(freq) + ") is not in the acceptable range...")
+                    myMsgBox("Frequency in pair " + str(idx + 1) + " (" + str(freq) + ") is not in the acceptable range...")
                     return
             selectedFeats.append(feat.text().split(";"))
             print(feat)
@@ -830,7 +825,7 @@ class Dialog(QDialog):
         # provide the classification score/accuracy as a textbox
         # ----------
         if not self.fileListWidgetTrain.selectedItems():
-            myErrorBox("Please select a set of files for training")
+            myMsgBox("Please select a set of files for training")
             return
 
         selectedFeats = self.getAndCheckSelectedFeats()
@@ -861,7 +856,7 @@ class Dialog(QDialog):
                 trainingSize = int(self.trainingPartitions.text())
                 err = False
         if err:
-            myErrorBox("Nb of k-fold should be a positive number")
+            myMsgBox("Nb of k-fold should be a positive number")
             return
 
         scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[2])
@@ -880,7 +875,7 @@ class Dialog(QDialog):
         tmax = float(self.parameterDict["StimulationEpoch"])
         compositeCsv = mergeRunsCsv(compositeSigList, self.parameterDict["Class1"], self.parameterDict["Class2"], class1Stim, class2Stim, tmin, tmax)
         if not compositeCsv:
-            myErrorBox("Error merging runs!! Most probably different list of electrodes")
+            myMsgBox("Error merging runs!! Most probably different list of electrodes")
 
         print("Composite file for training: " + compositeCsv)
         compositeCsvBasename = os.path.basename(compositeCsv)
@@ -923,10 +918,10 @@ class Dialog(QDialog):
         # provide the classification score/accuracy as a textbox
         # ----------
         if not self.fileListWidgetTrain.selectedItems():
-            myErrorBox("Please select a set of runs for training")
+            myMsgBox("Please select a set of runs for training")
             return
         elif len(self.fileListWidgetTrain.selectedItems()) > 5:
-            myErrorBox("Please select 5 runs maximum")
+            myMsgBox("Please select 5 runs maximum")
             return
 
         selectedFeats = self.getAndCheckSelectedFeats()
@@ -957,7 +952,7 @@ class Dialog(QDialog):
                 trainingSize = int(self.trainingPartitions.text())
                 err = False
         if err:
-            myErrorBox("Nb of k-fold should be a positive number")
+            myMsgBox("Nb of k-fold should be a positive number")
             return
 
         scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[2])
@@ -986,7 +981,7 @@ class Dialog(QDialog):
                 sigList.append(file)
             compositeCsv = mergeRunsCsv(sigList, self.parameterDict["Class1"], self.parameterDict["Class2"], class1Stim, class2Stim, tmin, tmax)
             if not compositeCsv:
-                myErrorBox("Error merging runs!! Most probably different list of electrodes")
+                myMsgBox("Error merging runs!! Most probably different list of electrodes")
 
             print("Composite file for training: " + compositeCsv)
             compositeCsvBasename = os.path.basename(compositeCsv)
@@ -1101,12 +1096,9 @@ class Dialog(QDialog):
         # ----------
         # Get experimental parameters from the JSON parameters
         # ----------
-        newDict = {'Pipeline': self.parameterDict['pipelineType'],
-                   'Class 1': self.parameterDict["Class1"],
-                   'Class 2': self.parameterDict["Class2"],
-                   'Trial Length': self.parameterDict["TrialLength"],
-                   'Pre Stimulus Time': self.parameterDict["TrialWait"]}
-
+        pipelineKey = self.parameterDict['pipelineType']
+        newDict = settings.pipelineAcqSettings[pipelineKey].copy()
+        print(newDict)
         return newDict
 
     def getExtractionParameters(self):
@@ -1115,15 +1107,7 @@ class Dialog(QDialog):
         # A bit artisanal, but we'll see if we keep that...
         # ----------
         pipelineKey = self.parameterDict['pipelineType']
-        nbParamsExp = settings.scenarioSettingsPartsLength[pipelineKey][0]
-        nbParamsExtract = settings.scenarioSettingsPartsLength[pipelineKey][1]
-
-        newDict = {}
-        for idx, param in enumerate(settings.scenarioSettings[pipelineKey]):
-            if nbParamsExp <= idx < (nbParamsExp + nbParamsExtract + 1):  # print only pipeline-specific
-            # if idx < (nbParamsExp + nbParamsExtract + 1): # print all
-                newDict[param] = self.parameterDict[param]
-
+        newDict = settings.pipelineExtractSettings[pipelineKey].copy()
         print(newDict)
         return newDict
 
@@ -1144,7 +1128,7 @@ def checkFreqsMinMax(fmin, fmax, fs):
     if not ok:
         errorStr = str("fMin and fMax should be numbers between 0 and " + str(fs / 2 + 1))
         errorStr = str(errorStr + "\n and fMin < fMax")
-        myErrorBox(errorStr)
+        myMsgBox(errorStr)
 
     return ok
 
@@ -1163,7 +1147,7 @@ def qt_plot_psd(power_cond2, power_cond1, freqs_array, electrodesList, electrode
             break
 
     if not electrodeExists:
-        myErrorBox("No sensor with this name found")
+        myMsgBox("No sensor with this name found")
     else:
         plot_psd(power_cond2, power_cond1, freqs_array, electrodeIdx, electrodesList,
                  10, fmin, fmax, fres, class1label, class2label)
@@ -1191,7 +1175,7 @@ def qt_plot_tf(timefreq_cond1, timefreq_cond2, time_array, freqs_array, electrod
             Test_existing = True
 
     if not Test_existing:
-        myErrorBox("No Electrode with this name found")
+        myMsgBox("No Electrode with this name found")
     else:
         tf = timefreq_cond1.mean(axis=0)
         tf = np.transpose(tf[Index_electrode, :, :])
@@ -1214,7 +1198,7 @@ def myPowerset(iterable):
     s = list(iterable)
     return chain.from_iterable(combinations(s, r) for r in range(1, len(s)+1))
 
-def myErrorBox(text):
+def myMsgBox(text):
     msg = QMessageBox()
     msg.setText(text)
     msg.exec_()
@@ -1222,7 +1206,6 @@ def myErrorBox(text):
 
 
 if __name__ == '__main__':
-
     app = QApplication(sys.argv)
     dlg = Dialog()
     sys.exit(app.exec_())

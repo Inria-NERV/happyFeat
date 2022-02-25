@@ -1,7 +1,11 @@
 import sys
 import os
+import time
+import subprocess
+import platform
 from shutil import copyfile
 import json
+from threading import Thread
 
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QApplication
@@ -66,7 +70,7 @@ class Dialog(QDialog):
         layout_h.addWidget(self.btn_browse)
 
         # Generate button
-        self.btn_generate = QPushButton("Generate scenarios")
+        self.btn_generate = QPushButton("Generate scenarios, launch OpenViBE and Analysis/Train GUI")
         self.btn_generate.clicked.connect(lambda: self.generate())
 
         self.dlgLayout.addWidget(self.label)
@@ -98,7 +102,7 @@ class Dialog(QDialog):
             hboxLayout = QHBoxLayout()
             vBoxLayouts = [QVBoxLayout(), QVBoxLayout()]
             hboxLayout.addLayout(vBoxLayouts[0])
-            hboxLayout.addLayout(vBoxLayouts[1])
+            # hboxLayout.addLayout(vBoxLayouts[1])
 
             self.parameterDict = {}
 
@@ -111,38 +115,51 @@ class Dialog(QDialog):
             label[0].setAlignment(QtCore.Qt.AlignCenter)
             vBoxLayouts[0].addWidget(label[0])
 
-            labelText[1] = str("=== ")
-            labelText[1] = str(labelText[1] + "Feature Extraction")
-            labelText[1] = str(labelText[1] + " ===")
-            label[1] = QLabel(labelText[1])
-            label[1].setAlignment(QtCore.Qt.AlignCenter)
-            vBoxLayouts[1].addWidget(label[1])
+            # labelText[1] = str("=== ")
+            # labelText[1] = str(labelText[1] + "Feature Extraction")
+            # labelText[1] = str(labelText[1] + " ===")
+            # label[1] = QLabel(labelText[1])
+            # label[1].setAlignment(QtCore.Qt.AlignCenter)
+            # vBoxLayouts[1].addWidget(label[1])
 
             formLayouts = [None, None]
             formLayouts[0] = QFormLayout()
-            formLayouts[1] = QFormLayout()
+            # formLayouts[1] = QFormLayout()
 
             self.parameterDict["pipelineType"] = pipelineKey
             # GET PARAMETER LIST FOR SELECTED BCI PIPELINE, AND DISPLAY THEM
-            for idx, param in enumerate(settings.scenarioSettings[pipelineKey]):
+
+            # for idx, param in enumerate(settings.scenarioSettings[pipelineKey]):
+            #     # init params...
+            #     value = settings.scenarioSettings[pipelineKey][param]
+            #     self.parameterDict[param] = value[0]
+            #     # create widgets...
+            #     paramWidget = QLineEdit()
+            #     paramWidget.setText(str(value[0]))
+            #     settingLabel = str(value[1])
+            #     self.paramWidgets.append(paramWidget)
+            #     self.parameterTextList.append(param)
+            #     if idx < settings.scenarioSettingsPartsLength[pipelineKey][0]:
+            #         formLayouts[0].addRow(settingLabel, self.paramWidgets[-1])
+            #     else:
+            #         formLayouts[1].addRow(settingLabel, self.paramWidgets[-1])
+
+            for idx, param in enumerate(settings.pipelineAcqSettings[pipelineKey]):
                 # init params...
-                value = settings.scenarioSettings[pipelineKey][param]
-                self.parameterDict[param] = value[0]
+                value = settings.pipelineAcqSettings[pipelineKey][param]
+                self.parameterDict[param] = value
                 # create widgets...
                 paramWidget = QLineEdit()
-                paramWidget.setText(str(value[0]))
-                settingLabel = str(value[1])
+                paramWidget.setText(str(value))
+                settingLabel = settings.paramIdText[param]
                 self.paramWidgets.append(paramWidget)
                 self.parameterTextList.append(param)
-                if idx < settings.scenarioSettingsPartsLength[pipelineKey][0]:
-                    formLayouts[0].addRow(settingLabel, self.paramWidgets[-1])
-                else:
-                    formLayouts[1].addRow(settingLabel, self.paramWidgets[-1])
+                formLayouts[0].addRow(settingLabel, self.paramWidgets[-1])
 
             vBoxLayouts[0].addLayout(formLayouts[0])
-            vBoxLayouts[1].addLayout(formLayouts[1])
+            # vBoxLayouts[1].addLayout(formLayouts[1])
             vBoxLayouts[0].setAlignment(QtCore.Qt.AlignTop)
-            vBoxLayouts[1].setAlignment(QtCore.Qt.AlignTop)
+            # vBoxLayouts[1].setAlignment(QtCore.Qt.AlignTop)
 
             # OpenViBE designer file...
             labelOv = QLabel()
@@ -150,7 +167,8 @@ class Dialog(QDialog):
             labelOvtxt = str(labelOvtxt + "\n(in your OpenViBE installation folder)")
             labelOv.setText(labelOvtxt)
             labelOv.setAlignment(QtCore.Qt.AlignCenter)
-            vBoxLayouts[1].addWidget(labelOv)
+            # vBoxLayouts[1].addWidget(labelOv)
+            vBoxLayouts[0].addWidget(labelOv)
 
             self.btn_browseOV = QPushButton("Browse...")
             self.btn_browseOV.clicked.connect(lambda: self.browseForDesigner())
@@ -161,7 +179,8 @@ class Dialog(QDialog):
             self.designerTextBox.setEnabled(False)
             layout_h.addWidget(self.designerTextBox)
             layout_h.addWidget(self.btn_browseOV)
-            vBoxLayouts[1].addWidget(self.designerWidget)
+            # vBoxLayouts[1].addWidget(self.designerWidget)
+            vBoxLayouts[0].addWidget(self.designerWidget)
 
             self.dlgLayout.addLayout(hboxLayout)
             self.dlgLayout.addWidget(self.btn_generate)
@@ -196,48 +215,33 @@ class Dialog(QDialog):
         # FIRST STEP : CREATE PARAMETER DICTIONARY
         ###
 
-        # PIPELINE DEPENDENT :
-        # update params from text fields...
-        overlap = None
-        shift = None
-        length = None
-        idx = None
-
-        for i in range(len(self.paramWidgets)):
-            param = self.parameterTextList[i]
-            if param in self.parameterDict:
-                self.parameterDict[param] = self.paramWidgets[i].text()
-            # /!\ SPECIAL CASE : Overlap becomes shift
-            if param == "TimeWindowLength":
-                length = self.parameterDict[param]
-            elif param == "TimeWindowShift":
-                overlap = self.parameterDict[param]
-                idx = i
-
-        # /!\ SPECIAL CASE : Overlap becomes shift
-        shift = float(length) - float(overlap)
-        print("!! REPLACING overlap " + overlap + " BY shift " + str(shift))
-        self.parameterDict["TimeWindowShift"] = str(shift)
-
-        # ALL PIPELINES : Electrode list...
+        # Electrode list...
         electrodes = None
         if self.electrodesFileTextBox.text() == "":
-            msg = QMessageBox()
-            msg.setText("Please enter a valid file containing electrode names")
-            msg.exec_()
+            myMsgBox("Please enter a valid file containing electrode names")
             return
         else:
             electrodes = self.electrodesFileTextBox.text()
 
-        # ALL PIPELINES : OpenViBE Path...
+        # OpenViBE Path...
         if self.ovScript is None:
-            msg = QMessageBox()
-            msg.setText("Please enter a valid path for the openViBE designer script")
-            msg.exec_()
+            myMsgBox("Please enter a valid path for the openViBE designer script")
             return
 
         self.parameterDict["ChannelNames"] = electrodes
         self.parameterDict["ovDesignerPath"] = self.ovScript
+
+        # Acquisition parameters, set in this GUI...
+        for i in range(len(self.paramWidgets)):
+            param = self.parameterTextList[i]
+            if param in self.parameterDict:
+                self.parameterDict[param] = self.paramWidgets[i].text()
+
+        # Write default parameters for selected pipeline
+        extractParamDict = settings.pipelineExtractSettings[self.parameterDict["pipelineType"]].copy()
+        for idx, (key, val) in enumerate(extractParamDict.items()):
+            self.parameterDict[key] = str(val)
+
         print(self.parameterDict)
 
         # WRITE JSON PARAMETERS FILE
@@ -265,16 +269,73 @@ class Dialog(QDialog):
         modifyAcqScenario(os.path.join(os.getcwd(), self.generatedFolder, settings.templateScenFilenames[3]),
                           self.parameterDict, True)
 
-        text = "Thanks for using the generation script!\nYour files are in " + os.getcwd() + "/generated/"
-        text += "\n\n(Don't forget to double check the generated scenarios...!)\nYou can now close this window."
+        # text = "Thanks for using the generation script!\nYour files are in " + os.getcwd() + "/generated/"
+        # text += "\n\nClose this window to launch OpenViBE with the acquisition scenario."
+        # myMsgBox(text)
 
-        msg = QMessageBox()
-        msg.setText(text)
-        msg.exec_()
-        exit(0)
+        self.accept()
+
+    def closeEvent(self, event):
+        self.reject()
+
+def myMsgBox(text):
+    msg = QMessageBox()
+    msg.setText(text)
+    msg.exec_()
+    return
+
+def featureExtractionThread():
+    p = subprocess.Popen(["python", "2-featureExtractionInterface.py"],
+                         stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    while True:
+        output = p.stdout.readline()
+        if p.poll() is not None:
+            break
+        if output:
+            print(str(output))
+            if "Process finished with exit code" in str(output):
+                break
+    return
+
+def launchOpenvibe(command, acqScen):
+    p = subprocess.Popen([command, "--open", acqScen],
+                         stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    while True:
+        output = p.stdout.readline()
+        if p.poll() is not None:
+            break
+        if output:
+            print(str(output))
+            if "Application terminated" in str(output):
+                break
+    return
 
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     dlg = Dialog()
-    sys.exit(app.exec_())
+    result = dlg.exec()
+    if not result:
+        sys.exit(-1)
+
+    # Get current script path, and openvibe Designer from params.json
+    scriptPath = os.path.dirname(os.path.realpath(sys.argv[0]))
+    print(scriptPath)
+    jsonfullpath = os.path.join(scriptPath, "generated", "params.json")
+    with open(jsonfullpath) as jsonfile:
+        parameterDict = json.load(jsonfile)
+
+    # Launch Openvibe with acq scenario
+    acqScen = os.path.join(os.getcwd(), "generated", settings.templateScenFilenames[0])
+    command = parameterDict["ovDesignerPath"]
+    threadOV = Thread(target=launchOpenvibe, args=(command, acqScen))
+    threadOV.start()
+
+    # Launch offline extraction interface
+    threadFeat = Thread(target=featureExtractionThread)
+    threadFeat.start()
+
+    threadOV.join()
+    threadFeat.join()
+
+    sys.exit()
