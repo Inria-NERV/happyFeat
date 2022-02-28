@@ -4,13 +4,6 @@
 	<CreatorVersion>3.2.0</CreatorVersion>
 	<Settings>
 		<Setting>
-			<Identifier>(0xb327ca82, 0x2716f636)</Identifier>
-			<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
-			<Name>Directory</Name>
-			<DefaultValue>${Player_ScenarioDirectory}</DefaultValue>
-			<Value>${Player_ScenarioDirectory}</Value>
-		</Setting>
-		<Setting>
 			<Identifier>(0xe4d2d40d, 0xe63616c4)</Identifier>
 			<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 			<Name>EEGData</Name>
@@ -57,7 +50,7 @@
 					<TypeIdentifier>(0xb0d0db45, 0x49cbc34a)</TypeIdentifier>
 					<Name>Lua Script</Name>
 					<DefaultValue></DefaultValue>
-					<Value>$var{Directory}/$var{MI_Stimulations}</Value>
+					<Value>${Player_ScenarioDirectory}/$var{MI_Stimulations}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -270,7 +263,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue></DefaultValue>
-					<Value>$var{Directory}/$var{SignalsDirectory}/$var{EEGData}</Value>
+					<Value>${Player_ScenarioDirectory}/$var{SignalsDirectory}/$var{EEGData}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -814,7 +807,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue>record-[$core{date}-$core{time}].csv</DefaultValue>
-					<Value>$var{Directory}/$var{SignalsDirectory}/$var{EEGMetaData}</Value>
+					<Value>${Player_ScenarioDirectory}/$var{SignalsDirectory}/$var{EEGMetaData}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
