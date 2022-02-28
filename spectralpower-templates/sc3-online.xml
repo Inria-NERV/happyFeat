@@ -4,13 +4,6 @@
 	<CreatorVersion>3.2.0</CreatorVersion>
 	<Settings>
 		<Setting>
-			<Identifier>(0x52759445, 0x2a6c3218)</Identifier>
-			<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
-			<Name>Directory</Name>
-			<DefaultValue>${Player_ScenarioDirectory}</DefaultValue>
-			<Value>${Player_ScenarioDirectory}</Value>
-		</Setting>
-		<Setting>
 			<Identifier>(0xcd66436a, 0xfda9a430)</Identifier>
 			<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 			<Name>EEGDataLive</Name>
@@ -289,7 +282,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename to load configuration from</Name>
 					<DefaultValue></DefaultValue>
-					<Value>$var{Directory}/$var{ClassifWeights}</Value>
+					<Value>${Player_ScenarioDirectory}/$var{ClassifWeights}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
@@ -814,7 +807,7 @@
 					<TypeIdentifier>(0xb0d0db45, 0x49cbc34a)</TypeIdentifier>
 					<Name>Lua Script</Name>
 					<DefaultValue></DefaultValue>
-					<Value>$var{Directory}/$var{MI_Stimulations}</Value>
+					<Value>${Player_ScenarioDirectory}/$var{MI_Stimulations}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -1227,7 +1220,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue></DefaultValue>
-					<Value>$var{Directory}/$var{EEGDataLive}</Value>
+					<Value>${Player_ScenarioDirectory}/$var{EEGDataLive}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
