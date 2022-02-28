@@ -15,7 +15,7 @@ def mergeRunsCsv(testSigList, class1, class2, class1Stim, class2Stim, tmin, tmax
 
     # Load raw data and check sampling freqs
     rawData = []
-    channels = None
+    channels = []
     fsamp = None
     for sig in testSigList:
         data = pd.read_csv(sig)
@@ -27,9 +27,9 @@ def mergeRunsCsv(testSigList, class1, class2, class1Stim, class2Stim, tmin, tmax
             fsamp = newfsamp
         elif newfsamp != fsamp:
             return -1
-        if not channels:
+        if len(channels) == 0:
             channels = col[2:-3]  # discard first 2 cols (time & epoch), and 3 last (event info)
-        elif col[2:-3] != channels:
+        elif any(col[2:-3] != channels):
             return None
 
     outCsv = testSigList[0].replace("TRIALS", "TRAINCOMPOSITE")

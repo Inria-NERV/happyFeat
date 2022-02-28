@@ -140,12 +140,12 @@ def _plot_topomap_test(data, pos, vmin=None, vmax=None, cmap=None, sensors=True,
         if any(type_ in ch_type for type_ in ('planar', 'grad')):
             # deal with grad pairs
             picks = topomap._pair_grad_sensors(pos, topomap_coords=False)
-            pos = topomap._find_topomap_coords(pos, picks=picks[::2], sphere=sphere)
+            pos = topomap._find_topomap_coords(pos, picks=picks[::2], sphere=sphere, ignore_overlap=True)
             data, _ = topomap._merge_ch_data(data[picks], ch_type, [])
             data = data.reshape(-1)
         else:
             picks = list(range(data.shape[0]))
-            pos = topomap._find_topomap_coords(pos, picks=picks, sphere=sphere)
+            pos = topomap._find_topomap_coords(pos, picks=picks, sphere=sphere, ignore_overlap=True)
 
     extrapolate = topomap._check_extrapolate(extrapolate, ch_type)
     if data.ndim > 1:
@@ -391,7 +391,7 @@ def plot_psd(Power_MI, Power_Rest, freqs, channel, channel_array, each_point, fm
     ax.tick_params(axis='both', which='both', length=0)
 
     plt.title('Sensor: ' + channel_array[channel], fontsize='large')
-    plt.xticks(range(len(freqs[index_fmin:(index_fmax + 1)])), frequence, fontsize=12)
+    # plt.xticks(range(len(freqs[index_fmin:(index_fmax + 1)])), frequence, fontsize=12)
     plt.xlabel(' Frequency (Hz)', fontdict=font)
     plt.ylabel('Power spectrum (db)', fontdict=font)
     plt.margins(x=0)

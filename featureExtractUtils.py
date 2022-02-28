@@ -87,4 +87,4 @@ def samplesToTime(samples, fSamp):
     return float(samples)/float(fSamp)
 
 def timeToSamples(time, fSamp):
-    return int(time*fSamp)
+    return int(float(time)*float(fSamp))

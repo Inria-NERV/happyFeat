@@ -44,7 +44,7 @@ def extractMetadata(metaCsv):
             rawHeader = row
 
     if not rawHeader:
-        return None
+        return None, None
 
     sampFreq = int(rawHeader[0].split(':')[1].removesuffix('Hz'))
     electrodeList = rawHeader[2:-3]

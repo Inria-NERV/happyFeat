@@ -31,6 +31,7 @@ from Visualization_Data import *
 from featureExtractUtils import *
 from modifyOpenvibeScen import *
 from mergeRunsCsv import mergeRunsCsv
+from extractMetaData import extractMetadata, generateMetadata
 
 import bcipipeline_settings as settings
 
@@ -47,6 +48,7 @@ class Features:
 
     freqs_array = []
     time_array = []
+    fres = []
 
     average_baseline_cond1 = []
     std_baseline_cond1 = []
@@ -72,14 +74,16 @@ class Dialog(QDialog):
 
         # GET PARAMS FROM JSON FILE
         self.scriptPath = os.path.dirname(os.path.realpath(sys.argv[0]))
-        print(self.scriptPath)
-        self.jsonfullpath = os.path.join(self.scriptPath, "generated", "params.json")
-        with open(self.jsonfullpath) as jsonfile:
-            self.parameterDict = json.load(jsonfile)
-        self.ovScript = self.parameterDict["ovDesignerPath"]
-
-        # TODO : get from interface/files !!
-        self.fres = 1
+        if "params.json" in os.listdir(os.path.join(self.scriptPath, "generated")):
+            print("--- Using parameters from params.json...")
+            self.jsonfullpath = os.path.join(self.scriptPath, "generated", "params.json")
+            with open(self.jsonfullpath) as jsonfile:
+                self.parameterDict = json.load(jsonfile)
+            self.ovScript = self.parameterDict["ovDesignerPath"]
+        else:
+            # WARN create a params.json with default parameters
+            myMsgBox("--- WARNING : no params.json found, please use 1-bcipipeline_qt.py first !")
+            self.reject()
 
         # -----------------------------------------------------------------------
         # CREATE INTERFACE...
@@ -127,6 +131,7 @@ class Dialog(QDialog):
         self.layoutExtractLineEdits = QVBoxLayout()
         extractParametersLayout.addLayout(self.layoutExtractLabels)
         extractParametersLayout.addLayout(self.layoutExtractLineEdits)
+
         for idx, (paramId, paramVal) in enumerate(self.extractParamsDict.items()):
             labelTemp = QLabel()
             labelTemp.setText(settings.paramIdText[paramId])
@@ -137,8 +142,9 @@ class Dialog(QDialog):
             #     tempVal = settings.specialParamsDefaultDisplay[paramId]
             #     lineEditExtractTemp.setText(str(tempVal))
             # else:
-            #     lineEditExtractTemp.setText(str(paramVal))
-            lineEditExtractTemp.setText(str(paramVal))
+            #     # Read from json file
+            #     lineEditExtractTemp.setText(self.parameterDict[paramId])
+            lineEditExtractTemp.setText(self.parameterDict[paramId])
             self.layoutExtractLineEdits.addWidget(lineEditExtractTemp)
 
         # Label + un-editable list of parameters for reminder
@@ -492,36 +498,61 @@ class Dialog(QDialog):
     def runExtractionScenario(self):
         # ----------
         # Use extraction scenario (sc2-extract-select.xml) to
-        # generate CSV files, used for visualization
+        # generate CSV files from the OV signal (for visualization and trials
+        # concatenation for training)
+        # Before that, make sure the Metadata file associated to the OV signal file
+        # exists, or generate it using toolbox-generate-metadata.xml
         # ----------
 
-        scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[1])
-
+        # Check if files/sessions have been selected...
         if not self.fileListWidget.selectedItems():
             myMsgBox("Please select a set of files for feature extraction")
             return
 
+        # Update extraction parameters, and delete work files if necessary
         if self.updateExtractParameters():
             self.deleteWorkFiles()
 
-        modifyScenarioGeneralSettings(scenFile, self.parameterDict)
-
-        # BUILD THE COMMAND (use designer.cmd from GUI)
+        # Build the command line (use designer.cmd from GUI)
         command = self.ovScript
         if platform.system() == 'Windows':
             command = command.replace("/", "\\")
 
-        # RUN THE SCENARIO FOR ALL SELECTED FILES
         for selectedItem in self.fileListWidget.selectedItems():
-            # Modify extraction scenario to use provided signal file,
-            # and rename outputs accordingly
-            signalFile = selectedItem.text()
 
+            # Verify the existence of metadata files for each selected files,
+            # and if not, generate them.
+            # Then extract sampling frequency and electrode list
+            sampFreq = None
+            electrodeList = None
+            signalFile = selectedItem.text()
+            metaFile = signalFile.replace(".ov", "-META.csv")
+            signalFolder = os.path.join(self.scriptPath, "generated", "signals")
+            if metaFile in os.listdir(signalFolder):
+                sampFreq, electrodeList = extractMetadata(os.path.join(signalFolder, metaFile))
+            else:
+                generateMetadata(os.path.join(signalFolder, signalFile), self.ovScript)
+                sampFreq, electrodeList = extractMetadata(os.path.join(signalFolder, metaFile))
+            # Check everything went ok...
+            if not sampFreq:
+                myMsgBox("Error while loading metadata CSV file for session ", signalFile)
+                return
+
+            # Modify the extraction scenario with entered parameters
+            # /!\ after updating ARburg order and FFT size using sampfreq
+            fileParamDict = self.parameterDict.copy()
+            fileParamDict["ChannelNames"] = ";".join(electrodeList)
+            fileParamDict["AutoRegressiveOrder"] = str(timeToSamples(float(fileParamDict["AutoRegressiveOrderTime"]), sampFreq))
+            fileParamDict["PsdSize"] = str(freqResToPsdSize(float(fileParamDict["FreqRes"]), sampFreq))
+            scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[1])
+            modifyScenarioGeneralSettings(scenFile, fileParamDict)
+
+            # Modify extraction scenario to use provided signal file, and rename outputs accordingly
             filename = signalFile.removesuffix(".ov")
-            outputSpect1 = str(filename + "-" + self.parameterDict["Class1"] + ".csv")
-            outputSpect2 = str(filename + "-" + self.parameterDict["Class2"] + ".csv")
-            outputBaseline1 = str(filename + "-" + self.parameterDict["Class1"] + "-BASELINE.csv")
-            outputBaseline2 = str(filename + "-" + self.parameterDict["Class2"] + "-BASELINE.csv")
+            outputSpect1 = str(filename + "-" + fileParamDict["Class1"] + ".csv")
+            outputSpect2 = str(filename + "-" + fileParamDict["Class2"] + ".csv")
+            outputBaseline1 = str(filename + "-" + fileParamDict["Class1"] + "-BASELINE.csv")
+            outputBaseline2 = str(filename + "-" + fileParamDict["Class2"] + "-BASELINE.csv")
             outputTrials = str(filename + "-TRIALS.csv")
             modifyExtractionIO(scenFile, signalFile, outputSpect1, outputSpect2, outputBaseline1, outputBaseline2, outputTrials)
 
@@ -557,6 +588,8 @@ class Dialog(QDialog):
         self.dataNp2baseline = []
 
         listSampFreq = []
+        listElectrodeList = []
+        listFreqBins = []
 
         for selectedItem in self.availableSpectraList.selectedItems():
             selectedSpectra = selectedItem.text()
@@ -584,20 +617,41 @@ class Dialog(QDialog):
             # 32 is channels, 251 is freq bins, 500 is sampling frequency)
             sampFreq1 = int(data1.columns.values[0].split(":")[-1])
             sampFreq2 = int(data2.columns.values[0].split(":")[-1])
-            if sampFreq1 != sampFreq2:
+            freqBins1 = int(data1.columns.values[0].split(":")[1].split("x")[1])
+            freqBins2 = int(data2.columns.values[0].split(":")[1].split("x")[1])
+            if sampFreq1 != sampFreq2 or freqBins1 != freqBins2:
                 errMsg = str("Error when loading " + path1 + "\n" + " and " + path2)
-                errMsg = str(errMsg + "sampling frequency mismatch (" + str(sampFreq1) + " vs " + str(sampFreq2) + ")")
+                errMsg = str(errMsg + "\nSampling frequency or frequency bins mismatch")
+                errMsg = str(errMsg + "\n(" + str(sampFreq1) + " vs " + str(sampFreq2) + " or " )
+                errMsg = str(errMsg + str(freqBins1) + " vs " + str(freqBins2) + ")")
                 myMsgBox(errMsg)
                 return
 
             listSampFreq.append(sampFreq1)
+            listFreqBins.append(freqBins1)
+
+            elecTemp1 = data1.columns.values[2:-3]
+            elecTemp2 = data2.columns.values[2:-3]
+            electrodeList1 = []
+            electrodeList2 = []
+            for i in range(0, len(elecTemp1), freqBins1):
+                electrodeList1.append(elecTemp1[i].split(":")[0])
+                electrodeList2.append(elecTemp2[i].split(":")[0])
+
+            if electrodeList1 != electrodeList2:
+                errMsg = str("Error when loading " + path1 + "\n" + " and " + path2)
+                errMsg = str(errMsg + "\nElectrode List mismatch")
+                myMsgBox(errMsg)
+                return
+
+            listElectrodeList.append(electrodeList1)
 
             self.dataNp1.append(data1.to_numpy())
             self.dataNp2.append(data2.to_numpy())
             self.dataNp1baseline.append(data1baseline.to_numpy())
             self.dataNp2baseline.append(data2baseline.to_numpy())
 
-        # Check if all files have the same sampling freq. If not, for now, we don't process further
+        # Check if all files have the same sampling freq and electrode list. If not, for now, we don't process further
         if not all(freqsamp == listSampFreq[0] for freqsamp in listSampFreq):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Sampling frequency mismatch (" + str(listSampFreq) + ")")
@@ -607,15 +661,33 @@ class Dialog(QDialog):
             self.samplingFreq = listSampFreq[0]
             print("Sampling Frequency for selected files : " + str(self.samplingFreq))
 
+        if not all(electrodeList == listElectrodeList[0] for electrodeList in listElectrodeList):
+            errMsg = str("Error when loading CSV files\n")
+            errMsg = str(errMsg + "Electrode List mismatch")
+            myMsgBox(errMsg)
+            return
+        else:
+            print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
+
+        if not all(freqBins == listFreqBins[0] for freqBins in listFreqBins):
+            errMsg = str("Error when loading CSV files\n")
+            errMsg = str(errMsg + "Not same number of frequency bins (" + str(listSampFreq) + ")")
+            myMsgBox(errMsg)
+            return
+        else:
+            print("Frequency bins: " + str(listFreqBins[0]))
+
+
         # ----------
         # Compute the features used for visualization
         # ----------
         trialLength = float(self.parameterDict["StimulationEpoch"])
         trials = int(self.parameterDict["TrialNb"])
-        electrodeListStr = self.parameterDict["ChannelNames"]
-        electrodeList = electrodeListStr.split(";")
+        # electrodeListStr = self.parameterDict["ChannelNames"]
+        # electrodeList = electrodeListStr.split(";")
+        electrodeList = listElectrodeList[0]
         nbElectrodes = len(electrodeList)
-        n_bins = int((int(self.parameterDict["PsdSize"]) / 2) + 1)
+        n_bins = listFreqBins[0]
         winLen = float(self.parameterDict["TimeWindowLength"])
         winShift = float(self.parameterDict["TimeWindowShift"])
 
@@ -669,6 +741,7 @@ class Dialog(QDialog):
         windowLength = float(self.parameterDict["TimeWindowLength"])
         windowShift = float(self.parameterDict["TimeWindowShift"])
         segmentsPerTrial = round((trialLength-windowLength) / windowShift)
+        fres = float(self.parameterDict["FreqRes"])
 
         timeVectAtomic = [0]
         for i in range(segmentsPerTrial-1):
@@ -682,7 +755,7 @@ class Dialog(QDialog):
             idxTrial += 1
 
         # Statistical Analysis
-        freqs_array = np.arange(0, n_bins)
+        freqs_array = np.arange(0, n_bins, fres)
 
         Rsigned = Compute_Rsquare_Map_Welch(power_cond2_final[:, :, :(n_bins-1)], power_cond1_final[:, :, :(n_bins-1)])
         Wsquare, Wpvalues = Compute_Wilcoxon_Map(power_cond2_final[:, :, :(n_bins-1)], power_cond1_final[:, :, :(n_bins-1)])
@@ -698,6 +771,7 @@ class Dialog(QDialog):
         # self.Features.time_array = time_array
         self.Features.time_array = timeVectAtomic
         self.Features.freqs_array = freqs_array
+        self.Features.fres = fres
         self.Features.electrodes_final = electrodes_final
         self.Features.Rsigned = Rsigned_2
         self.Features.Wsigned = Wsquare_2
@@ -714,14 +788,14 @@ class Dialog(QDialog):
             plot_stats(self.Features.Rsigned,
                        self.Features.freqs_array,
                        self.Features.electrodes_final,
-                       self.fres, int(self.userFmin.text()), int(self.userFmax.text()))
+                       self.Features.fres, int(self.userFmin.text()), int(self.userFmax.text()))
 
     def btnW2(self):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             plot_stats(self.Features.Wsigned,
                        self.Features.freqs_array,
                        self.Features.electrodes_final,
-                       self.fres, int(self.userFmin.text()), int(self.userFmax.text()))
+                       self.Features.fres, int(self.userFmin.text()), int(self.userFmax.text()))
 
     def btnTimeFreq(self):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
@@ -736,7 +810,7 @@ class Dialog(QDialog):
 
             qt_plot_tf(self.Features.timefreq_cond1, self.Features.timefreq_cond2,
                        self.Features.time_array, self.Features.freqs_array,
-                       self.electrodePsd.text(), self.fres,
+                       self.electrodePsd.text(), self.Features.fres,
                        self.Features.average_baseline_cond1, self.Features.average_baseline_cond2,
                        self.Features.std_baseline_cond1, self.Features.std_baseline_cond2,
                        self.Features.electrodes_final,
@@ -751,14 +825,14 @@ class Dialog(QDialog):
             qt_plot_psd(self.Features.power_cond2, self.Features.power_cond1,
                         self.Features.freqs_array, self.Features.electrodes_final,
                         self.electrodePsd.text(),
-                        self.fres, fmin, fmax, class1, class2)
+                        self.Features.fres, fmin, fmax, class1, class2)
 
     def btnTopo(self):
         if self.freqTopo.text().isdigit() \
                 and 0 < int(self.freqTopo.text()) < (self.samplingFreq / 2):
             print("Freq Topo: " + self.freqTopo.text())
             qt_plot_topo(self.Features.Rsigned, self.Features.electrodes_final,
-                         int(self.freqTopo.text()), self.fres, self.samplingFreq)
+                         int(self.freqTopo.text()), self.Features.fres, self.samplingFreq)
         else:
             myMsgBox("Invalid frequency for topography")
 
@@ -788,24 +862,21 @@ class Dialog(QDialog):
 
         return
 
-    def getAndCheckSelectedFeats(self):
+    def getAndCheckSelectedFeats(self, sampFreq, electrodeList):
         selectedFeats = []
         # Checks :
         # - No empty field
         # - frequencies in acceptable ranges
         # - channels in list
-        channelList = self.parameterDict["ChannelNames"].split(";") + self.Features.electrodes_final
-        n_bins = int((int(self.parameterDict["PsdSize"]) / 2) + 1)
+        n_bins = int((sampFreq / 2) + 1)
         for idx, feat in enumerate(self.selectedFeats):
             if feat.text() == "":
                 myMsgBox("Pair " + str(idx + 1) + " is empty...")
                 return
-
             [chan, freqstr] = feat.text().split(";")
-            if chan not in channelList:
+            if chan not in electrodeList:
                 myMsgBox("Channel in pair " + str(idx + 1) + " (" + str(chan) + ") is not in the list...")
                 return
-
             freqs = freqstr.split(":")
             for freq in freqs:
                 if not freq.isdigit():
@@ -830,7 +901,36 @@ class Dialog(QDialog):
             myMsgBox("Please select a set of files for training")
             return
 
-        selectedFeats = self.getAndCheckSelectedFeats()
+        # Get electrodes lists and sampling freqs, and check that they match
+        # + that the selected channels are in the list of electrodes
+        compositeSigList = []
+        listSampFreq = []
+        listElectrodeList = []
+        for selectedItem in self.fileListWidgetTrain.selectedItems():
+            print("Selected file for training: " + selectedItem.text())
+            path = os.path.join(self.scriptPath, "generated", "signals", "training", selectedItem.text())
+            header = pd.read_csv(path, nrows=0).columns.tolist()
+            listSampFreq.append(int(header[0].split(':')[1].removesuffix('Hz')))
+            listElectrodeList.append(header[2:-3])
+            compositeSigList.append(path)
+
+        if not all(freqsamp == listSampFreq[0] for freqsamp in listSampFreq):
+            errMsg = str("Error when loading CSV files\n")
+            errMsg = str(errMsg + "Sampling frequency mismatch (" + str(listSampFreq) + ")")
+            myMsgBox(errMsg)
+            return
+        else:
+            print("Sampling Frequency for selected files : " + str(listSampFreq[0]))
+
+        if not all(electrodeList == listElectrodeList[0] for electrodeList in listElectrodeList):
+            errMsg = str("Error when loading CSV files\n")
+            errMsg = str(errMsg + "Electrode List mismatch")
+            myMsgBox(errMsg)
+            return
+        else:
+            print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
+
+        selectedFeats = self.getAndCheckSelectedFeats(listSampFreq[0], listElectrodeList[0])
 
         # FIRST RE-COPY sc2 & sc3 FROM TEMPLATE, SO THE USER CAN DO THIS MULTIPLE TIMES...
         pipelineType = self.parameterDict["pipelineType"]
@@ -865,12 +965,6 @@ class Dialog(QDialog):
         modifyTrainPartitions(trainingSize, scenFile)
 
         # Create composite file from selected items
-        compositeSigList = []
-        for selectedItem in self.fileListWidgetTrain.selectedItems():
-            print("Selected file for training: " + selectedItem.text())
-            path = os.path.join(self.scriptPath, "generated", "signals", "training", selectedItem.text())
-            compositeSigList.append(path)
-
         class1Stim = "OVTK_GDF_Left"
         class2Stim = "OVTK_GDF_Right"
         tmin = 0
@@ -926,7 +1020,36 @@ class Dialog(QDialog):
             myMsgBox("Please select 5 runs maximum")
             return
 
-        selectedFeats = self.getAndCheckSelectedFeats()
+        # Get electrodes lists and sampling freqs, and check that they match
+        # + that the selected channels are in the list of electrodes
+        compositeSigList = []
+        listSampFreq = []
+        listElectrodeList = []
+        for selectedItem in self.fileListWidgetTrain.selectedItems():
+            print("Selected file for training: " + selectedItem.text())
+            path = os.path.join(self.scriptPath, "generated", "signals", "training", selectedItem.text())
+            header = pd.read_csv(path, nrows=0).columns.tolist()
+            listSampFreq.append(int(header[0].split(':')[1].removesuffix('Hz')))
+            listElectrodeList.append(header[2:-3])
+            compositeSigList.append(path)
+
+        if not all(freqsamp == listSampFreq[0] for freqsamp in listSampFreq):
+            errMsg = str("Error when loading CSV files\n")
+            errMsg = str(errMsg + "Sampling frequency mismatch (" + str(listSampFreq) + ")")
+            myMsgBox(errMsg)
+            return
+        else:
+            print("Sampling Frequency for selected files : " + str(listSampFreq[0]))
+
+        if not all(electrodeList == listElectrodeList[0] for electrodeList in listElectrodeList):
+            errMsg = str("Error when loading CSV files\n")
+            errMsg = str(errMsg + "Electrode List mismatch")
+            myMsgBox(errMsg)
+            return
+        else:
+            print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
+
+        selectedFeats = self.getAndCheckSelectedFeats(listSampFreq[0], listElectrodeList[0])
 
         # FIRST RE-COPY sc2 & sc3 FROM TEMPLATE, SO THE USER CAN DO THIS MULTIPLE TIMES...
         pipelineType = self.parameterDict["pipelineType"]
@@ -961,12 +1084,6 @@ class Dialog(QDialog):
         modifyTrainPartitions(trainingSize, scenFile)
 
         # Create list of files from selected items
-        compositeSigList = []
-        for selectedItem in self.fileListWidgetTrain.selectedItems():
-            print("Selected file for training: " + selectedItem.text())
-            path = os.path.join(self.scriptPath, "generated", "signals", "training", selectedItem.text())
-            compositeSigList.append(path)
-
         combinationsList = list(myPowerset(compositeSigList))
         sigIdxList = range(len(compositeSigList))
         combIdx = list(myPowerset(sigIdxList))

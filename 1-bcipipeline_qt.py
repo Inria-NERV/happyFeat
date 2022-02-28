@@ -37,7 +37,7 @@ class Dialog(QDialog):
         # SCENARIO PARAMETERS...
         self.parameterDict = {}
         self.parameterTextList = []  # for parsing later...
-        self.electrodesList = ['Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'FC5', 'FC1', 'FC2', 'FC6', 'T7', 'C3', 'Cz', 'C4', 'T8', 'TP9', 'CP5', 'CP1', 'CP2', 'CP6', 'TP10', 'P7', 'P3', 'Pz', 'P4', 'P8', 'PO9', 'O1', 'Oz', 'O2', 'PO10']
+        # self.electrodesList = ['Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'FC5', 'FC1', 'FC2', 'FC6', 'T7', 'C3', 'Cz', 'C4', 'T8', 'TP9', 'CP5', 'CP1', 'CP2', 'CP6', 'TP10', 'P7', 'P3', 'Pz', 'P4', 'P8', 'PO9', 'O1', 'Oz', 'O2', 'PO10']
 
         # INTERFACE INIT...
         self.setWindowTitle('goodViBEs - an easy openViBE-based GUI')
@@ -56,16 +56,16 @@ class Dialog(QDialog):
         self.paramWidgets = []
 
         # Electrodes file...
-        self.electrodesFile = None
-        self.btn_browse = QPushButton("Browse for electrode file...")
-        self.btn_browse.clicked.connect(lambda: self.browseForElectrodeFile())
-        self.electrodesFileWidget = QWidget()
-        layout_h = QHBoxLayout(self.electrodesFileWidget)
-        self.electrodesFileTextBox = QLineEdit()
-        self.electrodesFileTextBox.setText(";".join(self.electrodesList))
-        self.electrodesFileTextBox.setEnabled(True)
-        layout_h.addWidget(self.electrodesFileTextBox)
-        layout_h.addWidget(self.btn_browse)
+        # self.electrodesFile = None
+        # self.btn_browse = QPushButton("Browse for electrode file...")
+        # self.btn_browse.clicked.connect(lambda: self.browseForElectrodeFile())
+        # self.electrodesFileWidget = QWidget()
+        # layout_h = QHBoxLayout(self.electrodesFileWidget)
+        # self.electrodesFileTextBox = QLineEdit()
+        # self.electrodesFileTextBox.setText(";".join(self.electrodesList))
+        # self.electrodesFileTextBox.setEnabled(True)
+        # layout_h.addWidget(self.electrodesFileTextBox)
+        # layout_h.addWidget(self.btn_browse)
 
         # Generate button
         self.btn_generateLaunch = QPushButton("Generate scenarios, launch OpenViBE and Analysis/Train GUI")
@@ -95,8 +95,8 @@ class Dialog(QDialog):
             formLayout = QFormLayout()
 
             # PARAMETER ALWAYS PRESENT : LIST OF CHANNELS
-            formLayout.addRow("Electrodes List", self.electrodesFileWidget)
-            self.dlgLayout.addLayout(formLayout)
+            # formLayout.addRow("Electrodes List", self.electrodesFileWidget)
+            # self.dlgLayout.addLayout(formLayout)
 
             # TWO COLUMNS OF PARAMETERS
             hboxLayout = QHBoxLayout()
@@ -217,19 +217,19 @@ class Dialog(QDialog):
         ###
 
         # Electrode list...
-        electrodes = None
-        if self.electrodesFileTextBox.text() == "":
-            myMsgBox("Please enter a valid file containing electrode names")
-            return
-        else:
-            electrodes = self.electrodesFileTextBox.text()
+        # electrodes = None
+        # if self.electrodesFileTextBox.text() == "":
+        #     myMsgBox("Please enter a valid file containing electrode names")
+        #     return
+        # else:
+        #     electrodes = self.electrodesFileTextBox.text()
 
         # OpenViBE Path...
         if self.ovScript is None:
             myMsgBox("Please enter a valid path for the openViBE designer script")
             return
 
-        self.parameterDict["ChannelNames"] = electrodes
+        # self.parameterDict["ChannelNames"] = electrodes
         self.parameterDict["ovDesignerPath"] = self.ovScript
 
         # Acquisition parameters, set in this GUI...

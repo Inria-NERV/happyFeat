@@ -68,8 +68,10 @@ pipelineExtractSettings = {optionKeys[0]: None,
                                 "StimulationDelay": 0,
                                 "TimeWindowLength": 0.25,
                                 "TimeWindowShift": 0.161,
-                                "AutoRegressiveOrder": 19,
-                                "PsdSize": 500,
+                                # "AutoRegressiveOrder": 19,
+                                "AutoRegressiveOrderTime": 0.038,
+                                # "PsdSize": 500,
+                                "FreqRes": 1,
                                 },
 
                            # CONNECTIVITY
@@ -83,6 +85,7 @@ pipelineExtractSettings = {optionKeys[0]: None,
                                 "WelchWinLength": 0.25,
                                 "WelchWinOverlap": 50,
                                 "FftSize": 256,
+                                "FreqRes": 1,
                                 }
 
                            }
@@ -102,9 +105,9 @@ paramIdText = {"TrialNb": "Nb Trials per class",
                "TimeWindowLength": "Sliding Window (Burg) (s)",
                "TimeWindowShift": "Overlap (Burg) (s)",
                "AutoRegressiveOrder": "AR Burg Order (samples)",
-               # "AutoRegressiveOrder": "Auto-regressive estim. length (s)",
+               "AutoRegressiveOrderTime": "Auto-regressive estim. length (s)",
                "PsdSize": "FFT Size",
-               # "PsdSize": "Frequency resolution (ratio)",
+               "FreqRes": "Frequency resolution (ratio)",
                "ConnectivityMetric": "Connectivity Metric (MSC or IMCOH)",
                "WelchLength": "Length of a Connectivity estimation (s)",
                "WelchOverlap": "Connectivity estimation overlapping (%)",
@@ -115,6 +118,6 @@ paramIdText = {"TrialNb": "Nb Trials per class",
                }
 
 global specialParamsDefaultDisplay
-specialParamsDefaultDisplay = {"AutoRegressiveOrder": 0.038,  # in (s) assuming order = 19 and fsamp = 500
-                               "PsdSize": 1,  # ratio fsamp/psdsize, assuming fsamp=500 and psdSize=500
+specialParamsDefaultDisplay = {"AutoRegressiveOrderTime": 0.038,  # in (s) assuming order = 19 and fsamp = 500
+                               "FreqRes": 1,  # ratio fsamp/psdsize, assuming fsamp=500 and psdSize=500
                                }
