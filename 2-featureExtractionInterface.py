@@ -1208,8 +1208,57 @@ class Dialog(QDialog):
                     stringToWrite = str(output).replace("\\r\\n\'", "")
                     stringToWrite = stringToWrite.split("trainer> ")
                     classifierScoreStr = str(classifierScoreStr + stringToWrite[1] + "\n")
+        f = open("Training.txt", mode = "w")
+        f.write(classifierScoreStr)
+        f.close()
 
-        return classifierScoreStr
+        file = open("Training.txt", 'r')
+        lines = file.readlines()
+        print("open")
+        file.close()
+
+        Target_1_True_Negative =0
+        Target_1_False_Positive = 0
+
+        Target_2_False_Negative = 0
+        Target_2_True_Positive = 0
+        i = 0
+
+        for line in lines:
+    
+    
+            if i == 2:
+                parts = line.split() # split line into parts
+                Target_1_True_Negative = parts[2]
+                Target_1_False_Positive = parts[3]    
+
+            if i == 3:
+                parts = line.split() # split line into parts
+                Target_2_False_Negative = parts[2]
+                Target_2_True_Positive = parts[3]  
+            i+=1
+
+        Target_1_True_Negative = float(Target_1_True_Negative)
+        Target_1_False_Positive = float(Target_1_False_Positive)
+
+        Target_2_False_Negative = float(Target_2_False_Negative)
+        Target_2_True_Positive = float(Target_2_True_Positive)
+
+        Precision_Class_1 = round(Target_1_True_Negative/(Target_1_True_Negative+Target_2_False_Negative),2)
+        Sensitivity_Class_1 = round(Target_1_True_Negative/(Target_1_True_Negative+Target_1_False_Positive),2)
+
+        Precision_Class_2 = round(Target_2_True_Positive/(Target_2_True_Positive+Target_1_False_Positive),2)
+        Sensitivity_Class_2 = round(Target_2_True_Positive/(Target_2_True_Positive+Target_2_False_Negative),2)
+
+        Accuracy  = round((Target_1_True_Negative+Target_2_True_Positive)/(Target_1_True_Negative+Target_1_False_Positive+Target_2_False_Negative+Target_2_True_Positive),2)
+
+        F_1_Score_Class_1 = round(2*Precision_Class_1*Sensitivity_Class_1/(Precision_Class_1+Sensitivity_Class_1),2)
+        F_1_Score_Class_2 = round(2*Precision_Class_2*Sensitivity_Class_2/(Precision_Class_2+Sensitivity_Class_2),2)
+
+        MessageClassif = "Overall accuracy : " + str(Accuracy) + "\n\nClass 1 | Precision  : " + str(Precision_Class_1) + " | " + "Sensitivity : " + str(Sensitivity_Class_1) + " | F_1 Score : "+ str(F_1_Score_Class_1) + "\n\nClass 2 | Precision  : " + str(Precision_Class_2) + " | " + "Sensitivity : " + str(Sensitivity_Class_2) + " | F_1 Score : " + str(F_1_Score_Class_2) + "\n \n"
+
+
+        return MessageClassif
 
     def getExperimentalParameters(self):
         # ----------
