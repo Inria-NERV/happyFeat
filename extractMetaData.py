@@ -1,7 +1,7 @@
 import os
+import pandas as pd
 import subprocess
 from shutil import copyfile
-import csv
 
 from modifyOpenvibeScen import *
 
@@ -36,13 +36,7 @@ def generateMetadata(ovFile, openvibeDesigner):
     return
 
 def extractMetadata(metaCsv):
-    rawHeader = None
-    with open(metaCsv, 'r') as csvfile:
-        reader = csv.reader(csvfile, delimiter=',')
-        for row in reader:
-            print(row)
-            rawHeader = row
-
+    rawHeader = pd.read_csv(metaCsv, nrows=0).columns.tolist()
     if not rawHeader:
         return None, None
 
@@ -57,7 +51,7 @@ if __name__ == '__main__':
     openvibeDesigner = "C:\\openvibeTestArthur\\dist\\x64\\Release\\openvibe-designer.cmd"
 
     testSig = "C:\\Users\\arthur.desbois\\Documents\\dev\\openvibeScripting\\openvibe-automation\\generated\\signals\\motor-imagery.ov"
-    # generateMetadata(testSig, openvibeDesigner)
+    generateMetadata(testSig, openvibeDesigner)
 
     testCsv = "C:\\Users\\arthur.desbois\\Documents\\dev\\openvibeScripting\\openvibe-automation\\generated\\signals\\motor-imagery-META.csv"
     sampFreq, electrodeList = extractMetadata(testCsv)
