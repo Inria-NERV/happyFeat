@@ -91,7 +91,8 @@ class Dialog(QDialog):
         # Left-most: layoutExtract (for running sc2-extract)
         # Center: Visualization
         # Right-most: Feature Selection & classifier training
-        self.setWindowTitle('goodViBEs - Feature Selection interface')
+        #self.setWindowTitle('goodViBEs - Feature Selection interface')
+        self.setWindowTitle('Feature Selection interface')
         self.dlgLayout = QHBoxLayout()
 
         # -----------------------------------------------------------------------
