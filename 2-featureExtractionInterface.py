@@ -521,7 +521,7 @@ class Dialog(QDialog):
 
         self.extractThread = Extraction(self.ovScript, scenFile, signalFiles, signalFolder, self.parameterDict)
         self.extractThread.info.connect(self.progressBar.increment)
-        self.extractThread.over.connect(lambda: self.extraction_over())
+        self.extractThread.over.connect(self.extraction_over)
         self.extractThread.start()
 
     def extraction_over(self, success, text):
@@ -553,7 +553,7 @@ class Dialog(QDialog):
         self.loadSpectraThread = LoadSpectra(spectrumFiles, signalFolder, self.parameterDict, self.Features, self.samplingFreq)
         self.loadSpectraThread.info.connect(self.progressBar.increment)
         self.loadSpectraThread.info2.connect(self.progressBar.changeLabel)
-        self.loadSpectraThread.over.connect(lambda: self.loadspectra_over())
+        self.loadSpectraThread.over.connect(self.loadspectra_over)
         self.loadSpectraThread.start()
 
     def loadspectra_over(self, success, text):
