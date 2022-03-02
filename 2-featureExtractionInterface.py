@@ -24,14 +24,14 @@ from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtWidgets import QFrame
 from PyQt5.QtWidgets import QSizePolicy
-
-from PyQt5.QtCore import QTimer
+from PyQt5.QtCore import QTimer, pyqtSignal
 
 from Visualization_Data import *
 from featureExtractUtils import *
 from modifyOpenvibeScen import *
 from mergeRunsCsv import mergeRunsCsv
 from extractMetaData import extractMetadata, generateMetadata
+from myProgressBar import ProgressBar, ProgressBarNoInfo
 
 import bcipipeline_settings as settings
 
@@ -55,6 +55,8 @@ class Features:
     average_baseline_cond2 = []
     std_baseline_cond2 = []
 
+    samplingFreq = []
+
 
 class Dialog(QDialog):
 
@@ -68,6 +70,13 @@ class Dialog(QDialog):
         self.dataNp1baseline = []
         self.dataNp2baseline = []
         self.Features = Features()
+        self.progressBar = None
+
+        self.extractThread = None
+        self.loadSpectraThread = None
+        self.trainClassThread = None
+
+        self.plotBtnsEnabled = False
 
         # Sampling Freq: to be loaded later, in Spectrum CSV files
         self.samplingFreq = None
@@ -124,8 +133,6 @@ class Dialog(QDialog):
         self.labelExtractParams = QLabel(labelExtractParams)
         self.labelExtractParams.setAlignment(QtCore.Qt.AlignCenter)
 
-        self.extractParamsListWidget = QListWidget()
-        self.extractParamsListWidget.setEnabled(False)
         self.extractParamsDict = self.getExtractionParameters()
         extractParametersLayout = QHBoxLayout()
         self.layoutExtractLabels = QVBoxLayout()
@@ -204,11 +211,11 @@ class Dialog(QDialog):
         # Param : fmin for frequency based viz
         self.userFmin = QLineEdit()
         self.userFmin.setText('0')
-        self.formLayoutVizu.addRow('frequency min', self.userFmin)
+        self.formLayoutVizu.addRow('Frequency min', self.userFmin)
         # Param : fmax for frequency based viz
         self.userFmax = QLineEdit()
         self.userFmax.setText('40')
-        self.formLayoutVizu.addRow('frequency max', self.userFmax)
+        self.formLayoutVizu.addRow('Frequency max', self.userFmax)
 
         # Param : Electrode to use for PSD display
         self.electrodePsd = QLineEdit()
@@ -223,14 +230,14 @@ class Dialog(QDialog):
 
         self.layoutVizButtons = QVBoxLayout()
 
-        self.btn_load_extract = QPushButton("Load spectrum file(s) for analysis")
+        self.btn_loadSpectra = QPushButton("Load spectrum file(s) for analysis")
         self.btn_r2map = QPushButton("Plot Frequency-channel R² map")
         self.btn_timefreq = QPushButton("Plot Time-Frequency ERD/ERS analysis")
         self.btn_psd = QPushButton("Plot PSD comparison between classes")
         self.btn_topo = QPushButton("Plot Brain Topography")
         # self.btn_w2map = QPushButton("Plot Wilcoxon Map")
         # self.btn_psd_r2 = QPushButton("Plot PSD comparison between classes")
-        self.btn_load_extract.clicked.connect(lambda: self.load_extract())
+        self.btn_loadSpectra.clicked.connect(lambda: self.loadSpectra())
         self.btn_r2map.clicked.connect(lambda: self.btnR2())
         self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq())
         self.btn_psd.clicked.connect(lambda: self.btnPsd())
@@ -238,7 +245,7 @@ class Dialog(QDialog):
         # self.btn_w2map.clicked.connect(lambda: self.btnW2())
         # self.btn_psd_r2.clicked.connect(lambda: self.btnpsdR2())
 
-        self.layoutVizButtons.addWidget(self.btn_load_extract)
+        self.layoutVizButtons.addWidget(self.btn_loadSpectra)
         self.layoutVizButtons.addWidget(self.btn_r2map)
         self.layoutVizButtons.addWidget(self.btn_psd)
         self.layoutVizButtons.addWidget(self.btn_timefreq)
@@ -314,7 +321,8 @@ class Dialog(QDialog):
 
         # display initial layout
         self.setLayout(self.dlgLayout)
-        self.initialWindow()
+        self.btn_loadSpectra.setEnabled(True)
+        self.enablePlotBtns(False)
 
         self.refreshLists(os.path.join(self.scriptPath, "generated", "signals"))
 
@@ -328,28 +336,14 @@ class Dialog(QDialog):
     # -----------------------------------------------------------------------
     # CLASS METHODS
     # -----------------------------------------------------------------------
-
-    def initialWindow(self):
+    def enablePlotBtns(self, myBool):
         # ----------
-        # Init buttons & fields, set enabled/disabled states in the interface
+        # Update status of buttons used for plotting
         # ----------
-        self.btn_r2map.setEnabled(False)
-        self.btn_timefreq.setEnabled(False)
-        self.btn_psd.setEnabled(False)
-        self.btn_topo.setEnabled(False)
-        # self.btn_w2map.setEnabled(False)
-        # self.btn_psd_r2.setEnabled(False)
-        self.show()
-
-    def plotWindow(self):
-        # ----------
-        # Update interface once spectrum/feature files have been read
-        # ----------
-        self.btn_load_extract.setEnabled(True)
-        self.btn_r2map.setEnabled(True)
-        self.btn_timefreq.setEnabled(True)
-        self.btn_psd.setEnabled(True)
-        self.btn_topo.setEnabled(True)
+        self.btn_r2map.setEnabled(myBool)
+        self.btn_timefreq.setEnabled(myBool)
+        self.btn_psd.setEnabled(myBool)
+        self.btn_topo.setEnabled(myBool)
         # self.btn_w2map.setEnabled(True)
         # self.btn_psd_r2.setEnabled(True)
         self.show()
@@ -519,62 +513,27 @@ class Dialog(QDialog):
         if platform.system() == 'Windows':
             command = command.replace("/", "\\")
 
+        # create progress bar window...
+        self.progressBar = ProgressBar("Extraction", len(self.fileListWidget.selectedItems()) )
+
+        signalFiles = []
         for selectedItem in self.fileListWidget.selectedItems():
+            signalFiles.append(selectedItem.text() )
+        signalFolder = os.path.join(self.scriptPath, "generated", "signals")
+        scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[1])
 
-            # Verify the existence of metadata files for each selected files,
-            # and if not, generate them.
-            # Then extract sampling frequency and electrode list
-            sampFreq = None
-            electrodeList = None
-            signalFile = selectedItem.text()
-            metaFile = signalFile.replace(".ov", "-META.csv")
-            signalFolder = os.path.join(self.scriptPath, "generated", "signals")
-            if metaFile in os.listdir(signalFolder):
-                sampFreq, electrodeList = extractMetadata(os.path.join(signalFolder, metaFile))
-            else:
-                generateMetadata(os.path.join(signalFolder, signalFile), self.ovScript)
-                sampFreq, electrodeList = extractMetadata(os.path.join(signalFolder, metaFile))
-            # Check everything went ok...
-            if not sampFreq:
-                myMsgBox("Error while loading metadata CSV file for session ", signalFile)
-                return
+        self.enableGui(False)
 
-            # Modify the extraction scenario with entered parameters
-            # /!\ after updating ARburg order and FFT size using sampfreq
-            fileParamDict = self.parameterDict.copy()
-            fileParamDict["ChannelNames"] = ";".join(electrodeList)
-            fileParamDict["AutoRegressiveOrder"] = str(timeToSamples(float(fileParamDict["AutoRegressiveOrderTime"]), sampFreq))
-            fileParamDict["PsdSize"] = str(freqResToPsdSize(float(fileParamDict["FreqRes"]), sampFreq))
-            scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[1])
-            modifyScenarioGeneralSettings(scenFile, fileParamDict)
+        self.extractThread = Extraction(command, scenFile, signalFiles, signalFolder, self.parameterDict)
+        self.extractThread.info.connect(self.progressBar.increment)
+        self.extractThread.over.connect(lambda: self.extraction_over())
+        self.extractThread.start()
 
-            # Modify extraction scenario to use provided signal file, and rename outputs accordingly
-            filename = signalFile.removesuffix(".ov")
-            outputSpect1 = str(filename + "-" + fileParamDict["Class1"] + ".csv")
-            outputSpect2 = str(filename + "-" + fileParamDict["Class2"] + ".csv")
-            outputBaseline1 = str(filename + "-" + fileParamDict["Class1"] + "-BASELINE.csv")
-            outputBaseline2 = str(filename + "-" + fileParamDict["Class2"] + "-BASELINE.csv")
-            outputTrials = str(filename + "-TRIALS.csv")
-            modifyExtractionIO(scenFile, signalFile, outputSpect1, outputSpect2, outputBaseline1, outputBaseline2, outputTrials)
+    def extraction_over(self):
+        self.progressBar.finish()
+        self.enableGui(True)
 
-            # Run command (openvibe-designer.cmd --no-gui --play-fast <scen.xml>)
-            p = subprocess.Popen([command, "--no-gui", "--play-fast", scenFile],
-                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-
-            # Print console output, and detect end of process...
-            while True:
-                output = p.stdout.readline()
-                if p.poll() is not None:
-                    break
-                if output:
-                    print(str(output))
-                    if "Application terminated" in str(output):
-                        break
-
-        self.show()
-        return
-
-    def load_extract(self):
+    def loadSpectra(self):
         # ----------
         # Load CSV files of selected extracted spectra for visualization
         # We need one CSV file per class, for simplicity...
@@ -583,206 +542,27 @@ class Dialog(QDialog):
             myMsgBox("Please select a set of files for analysis")
             return
 
-        self.dataNp1 = []
-        self.dataNp2 = []
-        self.dataNp1baseline = []
-        self.dataNp2baseline = []
+        # create progress bar window...
+        self.progressBar = ProgressBar("Loading Spectrum data", len(self.availableSpectraList.selectedItems()))
 
-        listSampFreq = []
-        listElectrodeList = []
-        listFreqBins = []
-
+        spectrumFiles = []
         for selectedItem in self.availableSpectraList.selectedItems():
-            selectedSpectra = selectedItem.text()
-            class1label = self.parameterDict["Class1"]
-            class2label = self.parameterDict["Class2"]
-            selectedBasename = selectedSpectra.removesuffix(str("-SPECTRUM"))
+            spectrumFiles.append(selectedItem.text())
+        signalFolder = os.path.join(self.scriptPath, "generated", "signals")
 
-            path1 = os.path.join(self.scriptPath, "generated", "signals", "analysis",
-                                 str(selectedBasename + "-" + class1label + ".csv"))
-            path2 = os.path.join(self.scriptPath, "generated", "signals", "analysis",
-                                 str(selectedBasename + "-" + class2label + ".csv"))
-            path1baseline = os.path.join(self.scriptPath, "generated", "signals", "analysis",
-                                         str(selectedBasename + "-" + class1label + "-BASELINE.csv"))
-            path2baseline = os.path.join(self.scriptPath, "generated", "signals", "analysis",
-                                         str(selectedBasename + "-" + class2label + "-BASELINE.csv"))
+        self.enableGui(False)
 
-            data1 = load_csv_cond(path1)
-            data2 = load_csv_cond(path2)
-            data1baseline = load_csv_cond(path1baseline)
-            data2baseline = load_csv_cond(path2baseline)
+        self.loadSpectraThread = LoadSpectra(spectrumFiles, signalFolder, self.parameterDict, self.Features, self.samplingFreq)
+        self.loadSpectraThread.info.connect(self.progressBar.increment)
+        self.loadSpectraThread.info2.connect(self.progressBar.changeLabel)
+        self.loadSpectraThread.over.connect(lambda: self.loadspectra_over())
+        self.loadSpectraThread.start()
 
-            # Sampling frequency
-            # Infos in the columns header of the CSVs in format "Time:32x251:500"
-            # (Column zero contains starting time of the row)
-            # 32 is channels, 251 is freq bins, 500 is sampling frequency)
-            sampFreq1 = int(data1.columns.values[0].split(":")[-1])
-            sampFreq2 = int(data2.columns.values[0].split(":")[-1])
-            freqBins1 = int(data1.columns.values[0].split(":")[1].split("x")[1])
-            freqBins2 = int(data2.columns.values[0].split(":")[1].split("x")[1])
-            if sampFreq1 != sampFreq2 or freqBins1 != freqBins2:
-                errMsg = str("Error when loading " + path1 + "\n" + " and " + path2)
-                errMsg = str(errMsg + "\nSampling frequency or frequency bins mismatch")
-                errMsg = str(errMsg + "\n(" + str(sampFreq1) + " vs " + str(sampFreq2) + " or " )
-                errMsg = str(errMsg + str(freqBins1) + " vs " + str(freqBins2) + ")")
-                myMsgBox(errMsg)
-                return
-
-            listSampFreq.append(sampFreq1)
-            listFreqBins.append(freqBins1)
-
-            elecTemp1 = data1.columns.values[2:-3]
-            elecTemp2 = data2.columns.values[2:-3]
-            electrodeList1 = []
-            electrodeList2 = []
-            for i in range(0, len(elecTemp1), freqBins1):
-                electrodeList1.append(elecTemp1[i].split(":")[0])
-                electrodeList2.append(elecTemp2[i].split(":")[0])
-
-            if electrodeList1 != electrodeList2:
-                errMsg = str("Error when loading " + path1 + "\n" + " and " + path2)
-                errMsg = str(errMsg + "\nElectrode List mismatch")
-                myMsgBox(errMsg)
-                return
-
-            listElectrodeList.append(electrodeList1)
-
-            self.dataNp1.append(data1.to_numpy())
-            self.dataNp2.append(data2.to_numpy())
-            self.dataNp1baseline.append(data1baseline.to_numpy())
-            self.dataNp2baseline.append(data2baseline.to_numpy())
-
-        # Check if all files have the same sampling freq and electrode list. If not, for now, we don't process further
-        if not all(freqsamp == listSampFreq[0] for freqsamp in listSampFreq):
-            errMsg = str("Error when loading CSV files\n")
-            errMsg = str(errMsg + "Sampling frequency mismatch (" + str(listSampFreq) + ")")
-            myMsgBox(errMsg)
-            return
-        else:
-            self.samplingFreq = listSampFreq[0]
-            print("Sampling Frequency for selected files : " + str(self.samplingFreq))
-
-        if not all(electrodeList == listElectrodeList[0] for electrodeList in listElectrodeList):
-            errMsg = str("Error when loading CSV files\n")
-            errMsg = str(errMsg + "Electrode List mismatch")
-            myMsgBox(errMsg)
-            return
-        else:
-            print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
-
-        if not all(freqBins == listFreqBins[0] for freqBins in listFreqBins):
-            errMsg = str("Error when loading CSV files\n")
-            errMsg = str(errMsg + "Not same number of frequency bins (" + str(listSampFreq) + ")")
-            myMsgBox(errMsg)
-            return
-        else:
-            print("Frequency bins: " + str(listFreqBins[0]))
-
-
-        # ----------
-        # Compute the features used for visualization
-        # ----------
-        trialLength = float(self.parameterDict["StimulationEpoch"])
-        trials = int(self.parameterDict["TrialNb"])
-        # electrodeListStr = self.parameterDict["ChannelNames"]
-        # electrodeList = electrodeListStr.split(";")
-        electrodeList = listElectrodeList[0]
-        nbElectrodes = len(electrodeList)
-        n_bins = listFreqBins[0]
-        winLen = float(self.parameterDict["TimeWindowLength"])
-        winShift = float(self.parameterDict["TimeWindowShift"])
-
-        # electrodes_orig = channel_generator(nbElectrodes, 'TP9', 'TP10')
-        electrodes_orig = elecGroundRef(electrodeList, 'TP9', 'TP10')
-        if not electrodes_orig:
-            myMsgBox("Problem with the list of electrodes...")
-
-        # For multiple runs (ie. multiple selected CSV files), we just concatenate
-        # the trials from all files. Then the displayed spectral features (R²map, PSD, topography)
-        # will be computed as averages over all the trials.
-        power_cond1_final = None
-        power_cond2_final = None
-        power_cond1_baseline_final = None
-        power_cond2_baseline_final = None
-        timefreq_cond1_final = None
-        timefreq_cond2_final = None
-        timefreq_cond1_baseline_final = None
-        timefreq_cond2_baseline_final = None
-        for run in range(len(self.dataNp1)):
-            power_cond1, timefreq_cond1 = \
-                Extract_CSV_Data(self.dataNp1[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
-            power_cond2, timefreq_cond2 = \
-                Extract_CSV_Data(self.dataNp2[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
-            power_cond1_baseline, timefreq_cond1_baseline = \
-                Extract_CSV_Data(self.dataNp1baseline[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
-            power_cond2_baseline, timefreq_cond2_baseline = \
-                Extract_CSV_Data(self.dataNp2baseline[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
-
-            if power_cond1_final is None:
-                power_cond1_final = power_cond1
-                power_cond2_final = power_cond2
-                power_cond1_baseline_final = power_cond1_baseline
-                power_cond2_baseline_final = power_cond2_baseline
-                timefreq_cond1_final = timefreq_cond1
-                timefreq_cond2_final = timefreq_cond2
-                timefreq_cond1_baseline_final = timefreq_cond1_baseline
-                timefreq_cond2_baseline_final = timefreq_cond2_baseline
-            else:
-                power_cond1_final = np.concatenate((power_cond1_final, power_cond1))
-                power_cond2_final = np.concatenate((power_cond2_final, power_cond2))
-                power_cond1_baseline_final = np.concatenate((power_cond1_baseline_final, power_cond1_baseline))
-                power_cond2_baseline_final = np.concatenate((power_cond2_baseline_final, power_cond2_baseline))
-                timefreq_cond1_final = np.concatenate((timefreq_cond1_final, timefreq_cond1))
-                timefreq_cond2_final = np.concatenate((timefreq_cond2_final, timefreq_cond2))
-                timefreq_cond1_baseline_final = np.concatenate((timefreq_cond1_baseline_final, timefreq_cond1_baseline), axis=2)
-                timefreq_cond2_baseline_final = np.concatenate((timefreq_cond2_baseline_final, timefreq_cond2_baseline), axis=2)
-
-        trialLengthSec = float(self.parameterDict["TrialLength"])
-        totalTrials = len(self.dataNp1) * trials
-        windowLength = float(self.parameterDict["TimeWindowLength"])
-        windowShift = float(self.parameterDict["TimeWindowShift"])
-        segmentsPerTrial = round((trialLength-windowLength) / windowShift)
-        fres = float(self.parameterDict["FreqRes"])
-
-        timeVectAtomic = [0]
-        for i in range(segmentsPerTrial-1):
-            timeVectAtomic.append((i+1)*windowShift)
-
-        timeVectAtomic = np.array(timeVectAtomic)
-        time_array = np.empty(0)
-        idxTrial = 0
-        for trial in range(totalTrials):
-            time_array = np.concatenate((time_array, timeVectAtomic + (idxTrial*trialLengthSec)))
-            idxTrial += 1
-
-        # Statistical Analysis
-        freqs_array = np.arange(0, n_bins, fres)
-
-        Rsigned = Compute_Rsquare_Map_Welch(power_cond2_final[:, :, :(n_bins-1)], power_cond1_final[:, :, :(n_bins-1)])
-        Wsquare, Wpvalues = Compute_Wilcoxon_Map(power_cond2_final[:, :, :(n_bins-1)], power_cond1_final[:, :, :(n_bins-1)])
-
-        Rsigned_2, Wsquare_2, Wpvalues_2, electrodes_final, power_cond1_2, power_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
-            = Reorder_Rsquare(Rsigned, Wsquare, Wpvalues, electrodes_orig, power_cond1_final, power_cond2_final, timefreq_cond1_final, timefreq_cond2_final)
-
-        self.Features.electrodes_orig = electrodes_orig
-        self.Features.power_cond2 = power_cond2_2
-        self.Features.power_cond1 = power_cond1_2
-        self.Features.timefreq_cond1 = timefreq_cond1_2
-        self.Features.timefreq_cond2 = timefreq_cond2_2
-        # self.Features.time_array = time_array
-        self.Features.time_array = timeVectAtomic
-        self.Features.freqs_array = freqs_array
-        self.Features.fres = fres
-        self.Features.electrodes_final = electrodes_final
-        self.Features.Rsigned = Rsigned_2
-        self.Features.Wsigned = Wsquare_2
-
-        self.Features.average_baseline_cond1 = np.mean(power_cond1_baseline_final, axis=0)
-        self.Features.std_baseline_cond1 = np.std(power_cond1_baseline_final, axis=0)
-        self.Features.average_baseline_cond2 = np.mean(power_cond2_baseline_final, axis=0)
-        self.Features.std_baseline_cond2 = np.std(power_cond2_baseline_final, axis=0)
-
-        self.plotWindow()
+    def loadspectra_over(self):
+        self.progressBar.finish()
+        self.samplingFreq = self.Features.samplingFreq
+        self.plotBtnsEnabled = True
+        self.enableGui(True)
 
     def btnR2(self):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
@@ -863,7 +643,670 @@ class Dialog(QDialog):
 
         return
 
-    def getAndCheckSelectedFeats(self, sampFreq, electrodeList):
+    def btnSelectFeatures(self):
+        # ----------
+        # Callback from button :
+        # Select features in fields, check if they're correctly formatted,
+        # launch openvibe with sc2-train.xml (in the background) to train the classifier,
+        # provide the classification score/accuracy as a textbox
+        # ----------
+        if not self.fileListWidgetTrain.selectedItems():
+            myMsgBox("Please select a set of files for training")
+            return
+
+        # Get training param from GUI and modify training scenario
+        err = True
+        trainingSize = 0
+        if self.trainingPartitions.text().isdigit():
+            if int(self.trainingPartitions.text()) > 0:
+                trainingSize = int(self.trainingPartitions.text())
+                err = False
+        if err:
+            myMsgBox("Nb of k-fold should be a positive number")
+            return
+
+        # create progress bar window...
+        self.progressBar = ProgressBar("Creating composite file", 2)
+
+        trainingFiles = []
+        for selectedItem in self.fileListWidgetTrain.selectedItems():
+            trainingFiles.append(selectedItem.text())
+        signalFolder = os.path.join(self.scriptPath, "generated", "signals")
+        pipelineType = self.parameterDict["pipelineType"]
+        templateFolder = os.path.join(self.scriptPath, settings.optionsTemplatesDir[pipelineType])
+        scriptsFolder = self.scriptPath
+
+        self.enableGui(False)
+
+        self.trainClassThread = TrainClassifier(False, trainingFiles,
+                                                signalFolder, templateFolder, scriptsFolder, self.ovScript,
+                                                trainingSize, self.selectedFeats,
+                                                self.parameterDict, self.samplingFreq)
+        self.trainClassThread.info.connect(self.progressBar.increment)
+        self.trainClassThread.info2.connect(self.progressBar.changeLabel)
+        self.trainClassThread.over.connect(self.training_over)
+        self.trainClassThread.start()
+
+    def btnAllCombinations(self):
+        # ----------
+        # Callback from button :
+        # Select features in fields, check if they're correctly formatted,
+        # launch openvibe with sc2-train.xml (in the background) to train the classifier,
+        # provide the classification score/accuracy as a textbox
+        # ----------
+        if not self.fileListWidgetTrain.selectedItems():
+            myMsgBox("Please select a set of runs for training")
+            return
+        elif len(self.fileListWidgetTrain.selectedItems()) > 5:
+            myMsgBox("Please select 5 runs maximum")
+            return
+
+        # Get training param from GUI and modify training scenario
+        err = True
+        trainingSize = 0
+        if self.trainingPartitions.text().isdigit():
+            if int(self.trainingPartitions.text()) > 0:
+                trainingSize = int(self.trainingPartitions.text())
+                err = False
+        if err:
+            myMsgBox("Nb of k-fold should be a positive number")
+            return
+
+        # create progress bar window...
+        i = []
+        for item in self.fileListWidgetTrain.selectedItems():
+            i.append("a")
+        nbCombinations = len(list(myPowerset(i)))
+        self.progressBar = ProgressBar("First combination", nbCombinations)
+
+        trainingFiles = []
+        for selectedItem in self.fileListWidgetTrain.selectedItems():
+            trainingFiles.append(selectedItem.text())
+        signalFolder = os.path.join(self.scriptPath, "generated", "signals")
+        pipelineType = self.parameterDict["pipelineType"]
+        templateFolder = os.path.join(self.scriptPath, settings.optionsTemplatesDir[pipelineType])
+        scriptsFolder = self.scriptPath
+
+        self.enableGui(False)
+
+        self.trainClassThread = TrainClassifier(True, trainingFiles,
+                                                signalFolder, templateFolder, scriptsFolder, self.ovScript,
+                                                trainingSize, self.selectedFeats,
+                                                self.parameterDict, self.samplingFreq)
+        self.trainClassThread.info.connect(self.progressBar.increment)
+        self.trainClassThread.info2.connect(self.progressBar.changeLabel)
+        self.trainClassThread.over.connect(self.training_over)
+        self.trainClassThread.start()
+
+    def training_over(self, text):
+        self.progressBar.finish()
+
+        msg = QMessageBox()
+        msg.setText(text)
+        msg.setStyleSheet("QLabel{min-width: 1000px;}")
+        msg.setWindowTitle("Classifier Training Score")
+        msg.exec_()
+
+        self.enableGui(True)
+
+    def enableGui(self, myBool):
+        # Extraction part...
+        for idx in range(self.layoutExtractLabels.count()):
+            self.layoutExtractLineEdits.itemAt(idx).widget().setEnabled(myBool)
+        self.btn_runExtractionScenario.setEnabled(myBool)
+        self.fileListWidget.setEnabled(myBool)
+        self.btn_browseOvScript.setEnabled(myBool)
+        # Viz part...
+        self.btn_loadSpectra.setEnabled(myBool)
+        self.availableSpectraList.setEnabled(myBool)
+        self.userFmin.setEnabled(myBool)
+        self.userFmax.setEnabled(myBool)
+        self.electrodePsd.setEnabled(myBool)
+        self.freqTopo.setEnabled(myBool)
+        self.btn_loadSpectra.setEnabled(myBool)
+        if myBool and self.plotBtnsEnabled:
+            self.enablePlotBtns(True)
+        if not myBool:
+            self.enablePlotBtns(False)
+        # Training part...
+        self.btn_addPair.setEnabled(myBool)
+        self.btn_removePair.setEnabled(myBool)
+        self.btn_selectFeatures.setEnabled(myBool)
+        self.btn_allCombinations.setEnabled(myBool)
+        for item in self.selectedFeats:
+            item.setEnabled(myBool)
+        self.trainingPartitions.setEnabled(myBool)
+        self.fileListWidgetTrain.setEnabled(myBool)
+
+    def getExperimentalParameters(self):
+        # ----------
+        # Get experimental parameters from the JSON parameters
+        # ----------
+        pipelineKey = self.parameterDict['pipelineType']
+        newDict = settings.pipelineAcqSettings[pipelineKey].copy()
+        print(newDict)
+        return newDict
+
+    def getExtractionParameters(self):
+        # ----------
+        # Get "extraction" parameters from the JSON parameters
+        # A bit artisanal, but we'll see if we keep that...
+        # ----------
+        pipelineKey = self.parameterDict['pipelineType']
+        newDict = settings.pipelineExtractSettings[pipelineKey].copy()
+        print(newDict)
+        return newDict
+
+# ------------------------------------------------------
+# CLASSES FOR LONG-RUNNING OPERATIONS IN THREADS
+# ------------------------------------------------------
+class Extraction(QtCore.QThread):
+    info = pyqtSignal(bool)
+    over = pyqtSignal(bool)
+
+    def __init__(self, command, scenFile, signalFiles, signalFolder,
+                 parameterDict, parent=None):
+
+        super().__init__(parent)
+        self.stop = False
+        self.command = command
+        self.scenFile = scenFile
+        self.signalFiles = signalFiles
+        self.signalFolder = signalFolder
+        self.parameterDict = parameterDict.copy()
+
+    def run(self):
+
+        for signalFile in self.signalFiles:
+            # Verify the existence of metadata files for each selected files,
+            # and if not, generate them.
+            # Then extract sampling frequency and electrode list
+
+            sampFreq = None
+            electrodeList = None
+            metaFile = signalFile.replace(".ov", "-META.csv")
+
+            if metaFile in os.listdir(self.signalFolder):
+                sampFreq, electrodeList = extractMetadata(os.path.join(self.signalFolder, metaFile))
+            else:
+                generateMetadata(os.path.join(self.signalFolder, signalFile), self.ovScript)
+                sampFreq, electrodeList = extractMetadata(os.path.join(self.signalFolder, metaFile))
+            # Check everything went ok...
+            if not sampFreq:
+                myMsgBox("Error while loading metadata CSV file for session ", signalFile)
+                self.stop = False
+                self.over.emit(self.stop)
+                return
+
+            # Modify the extraction scenario with entered parameters
+            # /!\ after updating ARburg order and FFT size using sampfreq
+            self.parameterDict["ChannelNames"] = ";".join(electrodeList)
+            self.parameterDict["AutoRegressiveOrder"] = str(
+                timeToSamples(float(self.parameterDict["AutoRegressiveOrderTime"]), sampFreq))
+            self.parameterDict["PsdSize"] = str(freqResToPsdSize(float(self.parameterDict["FreqRes"]), sampFreq))
+
+            modifyScenarioGeneralSettings(self.scenFile, self.parameterDict)
+
+            # Modify extraction scenario to use provided signal file, and rename outputs accordingly
+            filename = signalFile.removesuffix(".ov")
+            outputSpect1 = str(filename + "-" + self.parameterDict["Class1"] + ".csv")
+            outputSpect2 = str(filename + "-" + self.parameterDict["Class2"] + ".csv")
+            outputBaseline1 = str(filename + "-" + self.parameterDict["Class1"] + "-BASELINE.csv")
+            outputBaseline2 = str(filename + "-" + self.parameterDict["Class2"] + "-BASELINE.csv")
+            outputTrials = str(filename + "-TRIALS.csv")
+            modifyExtractionIO(self.scenFile, signalFile, outputSpect1, outputSpect2,
+                               outputBaseline1, outputBaseline2, outputTrials)
+
+            p = subprocess.Popen([self.command, "--no-gui", "--play-fast", self.scenFile],
+                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+
+            # Print console output, and detect end of process...
+            while True:
+                output = p.stdout.readline()
+                if p.poll() is not None:
+                    break
+                if output:
+                    print(str(output))
+                    if "Application terminated" in str(output):
+                        break
+
+            self.info.emit(True)
+
+        self.stop = True
+        self.over.emit(self.stop)
+
+    def stopThread(self):
+        self.stop = True
+
+
+class LoadSpectra(QtCore.QThread):
+    info = pyqtSignal(bool)
+    info2 = pyqtSignal(str)
+    over = pyqtSignal(bool)
+
+    def __init__(self, spectrumFiles, signalFolder, parameterDict, Features, sampFreq, parent=None):
+
+        super().__init__(parent)
+        self.stop = False
+        self.spectrumFiles = spectrumFiles
+        self.signalFolder = signalFolder
+        self.parameterDict = parameterDict.copy()
+        self.Features = Features
+        self.samplingFreq = sampFreq
+
+        self.dataNp1 = []
+        self.dataNp2 = []
+        self.dataNp1baseline = []
+        self.dataNp2baseline = []
+
+    def run(self):
+
+        listSampFreq = []
+        listElectrodeList = []
+        listFreqBins = []
+        idxFile = 0
+
+        for selectedSpectra in self.spectrumFiles:
+            idxFile += 1
+            class1label = self.parameterDict["Class1"]
+            class2label = self.parameterDict["Class2"]
+            selectedBasename = selectedSpectra.removesuffix(str("-SPECTRUM"))
+
+            path1 = os.path.join(self.signalFolder, "analysis",
+                                 str(selectedBasename + "-" + class1label + ".csv"))
+            path2 = os.path.join(self.signalFolder, "analysis",
+                                 str(selectedBasename + "-" + class2label + ".csv"))
+            path1baseline = os.path.join(self.signalFolder, "analysis",
+                                         str(selectedBasename + "-" + class1label + "-BASELINE.csv"))
+            path2baseline = os.path.join(self.signalFolder, "analysis",
+                                         str(selectedBasename + "-" + class2label + "-BASELINE.csv"))
+
+            self.info2.emit(str("Loading Spectra for file " + str(idxFile)))
+            data1 = load_csv_cond(path1)
+            data2 = load_csv_cond(path2)
+            self.info2.emit(str("Loading Baselines for file " + str(idxFile)))
+            data1baseline = load_csv_cond(path1baseline)
+            data2baseline = load_csv_cond(path2baseline)
+
+            # Sampling frequency
+            # Infos in the columns header of the CSVs in format "Time:32x251:500"
+            # (Column zero contains starting time of the row)
+            # 32 is channels, 251 is freq bins, 500 is sampling frequency)
+            sampFreq1 = int(data1.columns.values[0].split(":")[-1])
+            sampFreq2 = int(data2.columns.values[0].split(":")[-1])
+            freqBins1 = int(data1.columns.values[0].split(":")[1].split("x")[1])
+            freqBins2 = int(data2.columns.values[0].split(":")[1].split("x")[1])
+            if sampFreq1 != sampFreq2 or freqBins1 != freqBins2:
+                errMsg = str("Error when loading " + path1 + "\n" + " and " + path2)
+                errMsg = str(errMsg + "\nSampling frequency or frequency bins mismatch")
+                errMsg = str(errMsg + "\n(" + str(sampFreq1) + " vs " + str(sampFreq2) + " or ")
+                errMsg = str(errMsg + str(freqBins1) + " vs " + str(freqBins2) + ")")
+                myMsgBox(errMsg)
+                return
+
+            listSampFreq.append(sampFreq1)
+            listFreqBins.append(freqBins1)
+
+            elecTemp1 = data1.columns.values[2:-3]
+            elecTemp2 = data2.columns.values[2:-3]
+            electrodeList1 = []
+            electrodeList2 = []
+            for i in range(0, len(elecTemp1), freqBins1):
+                electrodeList1.append(elecTemp1[i].split(":")[0])
+                electrodeList2.append(elecTemp2[i].split(":")[0])
+
+            if electrodeList1 != electrodeList2:
+                errMsg = str("Error when loading " + path1 + "\n" + " and " + path2)
+                errMsg = str(errMsg + "\nElectrode List mismatch")
+                myMsgBox(errMsg)
+                return
+
+            listElectrodeList.append(electrodeList1)
+
+            self.dataNp1.append(data1.to_numpy())
+            self.dataNp2.append(data2.to_numpy())
+            self.dataNp1baseline.append(data1baseline.to_numpy())
+            self.dataNp2baseline.append(data2baseline.to_numpy())
+
+            self.info.emit(True)
+
+        # Check if all files have the same sampling freq and electrode list. If not, for now, we don't process further
+        if not all(freqsamp == listSampFreq[0] for freqsamp in listSampFreq):
+            errMsg = str("Error when loading CSV files\n")
+            errMsg = str(errMsg + "Sampling frequency mismatch (" + str(listSampFreq) + ")")
+            myMsgBox(errMsg)
+            return
+        else:
+            self.samplingFreq = listSampFreq[0]
+            print("Sampling Frequency for selected files : " + str(listSampFreq[0]))
+
+        if not all(electrodeList == listElectrodeList[0] for electrodeList in listElectrodeList):
+            errMsg = str("Error when loading CSV files\n")
+            errMsg = str(errMsg + "Electrode List mismatch")
+            myMsgBox(errMsg)
+            return
+        else:
+            print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
+
+        if not all(freqBins == listFreqBins[0] for freqBins in listFreqBins):
+            errMsg = str("Error when loading CSV files\n")
+            errMsg = str(errMsg + "Not same number of frequency bins (" + str(listSampFreq) + ")")
+            myMsgBox(errMsg)
+            return
+        else:
+            print("Frequency bins: " + str(listFreqBins[0]))
+
+        # ----------
+        # Compute the features used for visualization
+        # ----------
+        trialLength = float(self.parameterDict["StimulationEpoch"])
+        trials = int(self.parameterDict["TrialNb"])
+        electrodeList = listElectrodeList[0]
+        nbElectrodes = len(electrodeList)
+        n_bins = listFreqBins[0]
+        winLen = float(self.parameterDict["TimeWindowLength"])
+        winShift = float(self.parameterDict["TimeWindowShift"])
+
+        # electrodes_orig = channel_generator(nbElectrodes, 'TP9', 'TP10')
+        electrodes_orig = elecGroundRef(electrodeList, 'TP9', 'TP10')
+        if not electrodes_orig:
+            myMsgBox("Problem with the list of electrodes...")
+
+        # For multiple runs (ie. multiple selected CSV files), we just concatenate
+        # the trials from all files. Then the displayed spectral features (R²map, PSD, topography)
+        # will be computed as averages over all the trials.
+        power_cond1_final = None
+        power_cond2_final = None
+        power_cond1_baseline_final = None
+        power_cond2_baseline_final = None
+        timefreq_cond1_final = None
+        timefreq_cond2_final = None
+        timefreq_cond1_baseline_final = None
+        timefreq_cond2_baseline_final = None
+        idxFile = 0
+        for run in range(len(self.dataNp1)):
+            idxFile += 1
+            self.info2.emit(str("Processing data for file " + str(idxFile)))
+            power_cond1, timefreq_cond1 = \
+                Extract_CSV_Data(self.dataNp1[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
+            power_cond2, timefreq_cond2 = \
+                Extract_CSV_Data(self.dataNp2[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
+            power_cond1_baseline, timefreq_cond1_baseline = \
+                Extract_CSV_Data(self.dataNp1baseline[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
+            power_cond2_baseline, timefreq_cond2_baseline = \
+                Extract_CSV_Data(self.dataNp2baseline[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
+
+            if power_cond1_final is None:
+                power_cond1_final = power_cond1
+                power_cond2_final = power_cond2
+                power_cond1_baseline_final = power_cond1_baseline
+                power_cond2_baseline_final = power_cond2_baseline
+                timefreq_cond1_final = timefreq_cond1
+                timefreq_cond2_final = timefreq_cond2
+                timefreq_cond1_baseline_final = timefreq_cond1_baseline
+                timefreq_cond2_baseline_final = timefreq_cond2_baseline
+            else:
+                power_cond1_final = np.concatenate((power_cond1_final, power_cond1))
+                power_cond2_final = np.concatenate((power_cond2_final, power_cond2))
+                power_cond1_baseline_final = np.concatenate((power_cond1_baseline_final, power_cond1_baseline))
+                power_cond2_baseline_final = np.concatenate((power_cond2_baseline_final, power_cond2_baseline))
+                timefreq_cond1_final = np.concatenate((timefreq_cond1_final, timefreq_cond1))
+                timefreq_cond2_final = np.concatenate((timefreq_cond2_final, timefreq_cond2))
+                timefreq_cond1_baseline_final = np.concatenate((timefreq_cond1_baseline_final, timefreq_cond1_baseline),
+                                                               axis=2)
+                timefreq_cond2_baseline_final = np.concatenate((timefreq_cond2_baseline_final, timefreq_cond2_baseline),
+                                                               axis=2)
+
+        self.info2.emit("Computing statistics")
+
+        trialLengthSec = float(self.parameterDict["TrialLength"])
+        totalTrials = len(self.dataNp1) * trials
+        windowLength = float(self.parameterDict["TimeWindowLength"])
+        windowShift = float(self.parameterDict["TimeWindowShift"])
+        segmentsPerTrial = round((trialLength - windowLength) / windowShift)
+        fres = float(self.parameterDict["FreqRes"])
+
+        timeVectAtomic = [0]
+        for i in range(segmentsPerTrial - 1):
+            timeVectAtomic.append((i + 1) * windowShift)
+
+        timeVectAtomic = np.array(timeVectAtomic)
+        time_array = np.empty(0)
+        idxTrial = 0
+        for trial in range(totalTrials):
+            time_array = np.concatenate((time_array, timeVectAtomic + (idxTrial * trialLengthSec)))
+            idxTrial += 1
+
+        # Statistical Analysis
+        freqs_array = np.arange(0, n_bins, fres)
+
+        Rsigned = Compute_Rsquare_Map_Welch(power_cond2_final[:, :, :(n_bins - 1)],
+                                            power_cond1_final[:, :, :(n_bins - 1)])
+        Wsquare, Wpvalues = Compute_Wilcoxon_Map(power_cond2_final[:, :, :(n_bins - 1)],
+                                                 power_cond1_final[:, :, :(n_bins - 1)])
+
+        Rsigned_2, Wsquare_2, Wpvalues_2, electrodes_final, power_cond1_2, power_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
+            = Reorder_Rsquare(Rsigned, Wsquare, Wpvalues, electrodes_orig, power_cond1_final, power_cond2_final,
+                              timefreq_cond1_final, timefreq_cond2_final)
+
+        self.Features.electrodes_orig = electrodes_orig
+        self.Features.power_cond2 = power_cond2_2
+        self.Features.power_cond1 = power_cond1_2
+        self.Features.timefreq_cond1 = timefreq_cond1_2
+        self.Features.timefreq_cond2 = timefreq_cond2_2
+        # self.Features.time_array = time_array
+        self.Features.time_array = timeVectAtomic
+        self.Features.freqs_array = freqs_array
+        self.Features.fres = fres
+        self.Features.electrodes_final = electrodes_final
+        self.Features.Rsigned = Rsigned_2
+        self.Features.Wsigned = Wsquare_2
+
+        self.Features.average_baseline_cond1 = np.mean(power_cond1_baseline_final, axis=0)
+        self.Features.std_baseline_cond1 = np.std(power_cond1_baseline_final, axis=0)
+        self.Features.average_baseline_cond2 = np.mean(power_cond2_baseline_final, axis=0)
+        self.Features.std_baseline_cond2 = np.std(power_cond2_baseline_final, axis=0)
+
+        self.Features.samplingFreq = self.samplingFreq
+
+        self.stop = True
+        self.over.emit(self.stop)
+
+    def stopThread(self):
+        self.stop = True
+
+
+class TrainClassifier(QtCore.QThread):
+    info = pyqtSignal(bool)
+    info2 = pyqtSignal(str)
+    over = pyqtSignal(str)
+
+    def __init__(self, isCombinationComputing, trainingFiles,
+                 signalFolder, templateFolder, scriptFolder, ovScript,
+                 trainingSize, selectedFeats,
+                 parameterDict, sampFreq, parent=None):
+
+        super().__init__(parent)
+        self.stop = False
+        self.isCombinationComputing = isCombinationComputing
+        self.trainingFiles = trainingFiles
+        self.signalFolder = signalFolder
+        self.templateFolder = templateFolder
+        self.scriptFolder = scriptFolder
+        self.ovScript = ovScript
+        self.trainingSize = trainingSize
+        self.selectedFeats = selectedFeats
+        self.parameterDict = parameterDict.copy()
+        self.samplingFreq = sampFreq
+        self.exitText = ""
+
+    def run(self):
+        # Get electrodes lists and sampling freqs, and check that they match
+        # + that the selected channels are in the list of electrodes
+        compositeSigList = []
+        listSampFreq = []
+        listElectrodeList = []
+        for trainingFile in self.trainingFiles:
+            path = os.path.join(self.signalFolder, "training", trainingFile)
+            header = pd.read_csv(path, nrows=0).columns.tolist()
+            listSampFreq.append(int(header[0].split(':')[1].removesuffix('Hz')))
+            listElectrodeList.append(header[2:-3])
+            compositeSigList.append(path)
+
+        if not all(freqsamp == listSampFreq[0] for freqsamp in listSampFreq):
+            errMsg = str("Error when loading CSV files\n")
+            errMsg = str(errMsg + "Sampling frequency mismatch (" + str(listSampFreq) + ")")
+            myMsgBox(errMsg)
+            return
+        else:
+            print("Sampling Frequency for selected files : " + str(listSampFreq[0]))
+
+        if not all(electrodeList == listElectrodeList[0] for electrodeList in listElectrodeList):
+            errMsg = str("Error when loading CSV files\n")
+            errMsg = str(errMsg + "Electrode List mismatch")
+            myMsgBox(errMsg)
+            return
+        else:
+            print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
+
+        selectedFeats = self.checkSelectedFeats(listSampFreq[0], listElectrodeList[0])
+
+        # RE-COPY sc2 & sc3 FROM TEMPLATE, SO THE USER CAN DO THIS MULTIPLE TIMES...
+        for i in [2, 3]:
+            scenName = settings.templateScenFilenames[i]
+            srcFile = os.path.join(self.templateFolder, scenName)
+            destFile = os.path.join(self.scriptFolder, "generated", scenName)
+            print("---Copying file " + srcFile + " to " + destFile)
+            copyfile(srcFile, destFile)
+            modifyScenarioGeneralSettings(destFile, self.parameterDict)
+            if i == 2:
+                modifyTrainScenario(selectedFeats, destFile)
+            elif i == 3:
+                modifyAcqScenario(destFile, self.parameterDict, True)
+                modifyOnlineScenario(selectedFeats, destFile)
+
+        scenFile = os.path.join(self.scriptFolder, "generated", settings.templateScenFilenames[2])
+        modifyTrainPartitions(self.trainingSize, scenFile)
+
+        # Create composite file from selected items
+        class1Stim = "OVTK_GDF_Left"
+        class2Stim = "OVTK_GDF_Right"
+        tmin = 0
+        tmax = float(self.parameterDict["StimulationEpoch"])
+
+        if not self.isCombinationComputing:
+            compositeCsv = mergeRunsCsv(compositeSigList, self.parameterDict["Class1"], self.parameterDict["Class2"],
+                                        class1Stim, class2Stim, tmin, tmax)
+            if not compositeCsv:
+                myMsgBox("Error merging runs!! Most probably different list of electrodes")
+
+            self.info.emit(True)
+
+            print("Composite file for training: " + compositeCsv)
+            compositeCsvBasename = os.path.basename(compositeCsv)
+            newWeightsName = "classifier-weights.xml"
+            modifyTrainIO(compositeCsvBasename, newWeightsName, scenFile)
+
+            self.info2.emit("Running Training Scenario")
+
+            # RUN THE CLASSIFIER TRAINING SCENARIO
+            classifierScoreStr = self.runClassifierScenario()
+
+            # Copy weights file to generated/classifier-weights.xml
+            newWeights = os.path.join(self.signalFolder, "training", "classifier-weights.xml")
+            origFilename = os.path.join(self.scriptFolder, "generated", "classifier-weights.xml")
+            copyfile(newWeights, origFilename)
+
+            # PREPARE GOODBYE MESSAGE...
+            textFeats = str("Using spectral features:\n")
+            for i in range(len(selectedFeats)):
+                textFeats += str("  Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+
+            textGoodbye = str("Results written in file:\t generated/classifier-weights.xml\n")
+            textGoodbye += str("If those results are satisfying, you can now open generated/sc3-online.xml in the Designer")
+
+            textDisplay = textFeats
+            textDisplay += str("\n" + classifierScoreStr)
+            textDisplay += str("\n" + textGoodbye)
+
+            self.exitText = textDisplay
+
+        else:
+            # Create list of files from selected items
+            combinationsList = list(myPowerset(compositeSigList))
+            sigIdxList = range(len(compositeSigList))
+            combIdx = list(myPowerset(sigIdxList))
+            scores = [0 for x in range(len(combIdx))]
+
+            for idxcomb, comb in enumerate(combinationsList):
+                newLabel = str("Combination " + str(combIdx[idxcomb]))
+                self.info2.emit(newLabel)
+
+                sigList = []
+                for file in comb:
+                    sigList.append(file)
+                compositeCsv = mergeRunsCsv(sigList, self.parameterDict["Class1"], self.parameterDict["Class2"],
+                                            class1Stim, class2Stim, tmin, tmax)
+                if not compositeCsv:
+                    myMsgBox("Error merging runs!! Most probably different list of electrodes")
+
+                print("Composite file for training: " + compositeCsv)
+                compositeCsvBasename = os.path.basename(compositeCsv)
+                newWeightsName = str("classifier-weights-" + str(idxcomb) + ".xml")
+                modifyTrainIO(compositeCsvBasename, newWeightsName, scenFile)
+
+                # RUN THE CLASSIFIER TRAINING SCENARIO
+                classifierScoreStr = self.runClassifierScenario()
+                scores[idxcomb] = float(classifierScoreStr.split("is ")[1].split("%")[0])
+
+                self.info.emit(True)
+
+            # Find max score
+            maxIdx = scores.index(max(scores))
+            # Copy weights file to generated/classifier-weights.xml
+            maxFilename = os.path.join(self.scriptFolder, "generated", "signals", "training", "classifier-weights-")
+            maxFilename += str(str(maxIdx) + ".xml")
+            origFilename = os.path.join(self.scriptFolder, "generated", "classifier-weights.xml")
+            copyfile(maxFilename, origFilename)
+
+            # ==========================
+            # PREPARE GOODBYE MESSAGE...
+            textFeats = str("Using spectral features:\n")
+            for i in range(len(selectedFeats)):
+                textFeats += str("\tChannel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+            textFeats += str("\n... and experiment runs:\n")
+            for i in range(len(compositeSigList)):
+                textFeats += str("\t[" + str(i) + "]: " + os.path.basename(compositeSigList[i]) + "\n")
+
+            textScore = str("Training Cross-Validation Test Accuracies per combination:\n")
+            for i in range(len(combIdx)):
+                combIdxStr = []
+                for j in combIdx[i]:
+                    combIdxStr.append(str(j))
+                textScore += str("\t[" + ",".join(combIdxStr) + "]: " + str(scores[i]) + "%\n")
+            maxIdxStr = []
+            for j in combIdx[maxIdx]:
+                maxIdxStr.append(str(j))
+            textScore += str("\nMax is combination [" + ','.join(maxIdxStr) + "] with " + str(max(scores)) + "%\n")
+
+            textGoodbye = str("The weights for this combination have been written to:\n")
+            textGoodbye += str("\tgenerated/classifier-weights.xml\n")
+            textGoodbye += str("If those results are satisfying, you can now open this scenario in the Designer:\n")
+            textGoodbye += str("\tgenerated/sc3-online.xml")
+
+            textDisplay = textFeats
+            textDisplay = str(textDisplay + "\n" + textScore)
+            textDisplay = str(textDisplay + "\n" + textGoodbye)
+
+            self.exitText = textDisplay
+
+        self.stop = True
+        self.over.emit(self.exitText)
+
+    def stopThread(self):
+        self.stop = True
+
+    def checkSelectedFeats(self, sampFreq, electrodeList):
         selectedFeats = []
         # Checks :
         # - No empty field
@@ -891,295 +1334,30 @@ class Dialog(QDialog):
 
         return selectedFeats
 
-    def btnSelectFeatures(self):
-        # ----------
-        # Callback from button :
-        # Select features in fields, check if they're correctly formatted,
-        # launch openvibe with sc2-train.xml (in the background) to train the classifier,
-        # provide the classification score/accuracy as a textbox
-        # ----------
-        if not self.fileListWidgetTrain.selectedItems():
-            myMsgBox("Please select a set of files for training")
-            return
-
-        # Get electrodes lists and sampling freqs, and check that they match
-        # + that the selected channels are in the list of electrodes
-        compositeSigList = []
-        listSampFreq = []
-        listElectrodeList = []
-        for selectedItem in self.fileListWidgetTrain.selectedItems():
-            print("Selected file for training: " + selectedItem.text())
-            path = os.path.join(self.scriptPath, "generated", "signals", "training", selectedItem.text())
-            header = pd.read_csv(path, nrows=0).columns.tolist()
-            listSampFreq.append(int(header[0].split(':')[1].removesuffix('Hz')))
-            listElectrodeList.append(header[2:-3])
-            compositeSigList.append(path)
-
-        if not all(freqsamp == listSampFreq[0] for freqsamp in listSampFreq):
-            errMsg = str("Error when loading CSV files\n")
-            errMsg = str(errMsg + "Sampling frequency mismatch (" + str(listSampFreq) + ")")
-            myMsgBox(errMsg)
-            return
-        else:
-            print("Sampling Frequency for selected files : " + str(listSampFreq[0]))
-
-        if not all(electrodeList == listElectrodeList[0] for electrodeList in listElectrodeList):
-            errMsg = str("Error when loading CSV files\n")
-            errMsg = str(errMsg + "Electrode List mismatch")
-            myMsgBox(errMsg)
-            return
-        else:
-            print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
-
-        selectedFeats = self.getAndCheckSelectedFeats(listSampFreq[0], listElectrodeList[0])
-
-        # FIRST RE-COPY sc2 & sc3 FROM TEMPLATE, SO THE USER CAN DO THIS MULTIPLE TIMES...
-        pipelineType = self.parameterDict["pipelineType"]
-        templateFolder = settings.optionsTemplatesDir[pipelineType]
-        generatedFolder = "generated"
-
-        for i in [2, 3]:
-            scenName = settings.templateScenFilenames[i]
-            srcFile = os.path.join(self.scriptPath, templateFolder, scenName)
-            destFile = os.path.join(self.scriptPath, generatedFolder, scenName)
-            print("---Copying file " + srcFile + " to " + destFile)
-            copyfile(srcFile, destFile)
-            modifyScenarioGeneralSettings(destFile, self.parameterDict)
-            if i == 2:
-                modifyTrainScenario(selectedFeats, destFile)
-            elif i == 3:
-                modifyAcqScenario(destFile, self.parameterDict, True)
-                modifyOnlineScenario(selectedFeats, destFile)
-
-        # Get training param from GUI and modify training scenario
-        err = True
-        trainingSize = 0
-        if self.trainingPartitions.text().isdigit():
-            if int(self.trainingPartitions.text()) > 0:
-                trainingSize = int(self.trainingPartitions.text())
-                err = False
-        if err:
-            myMsgBox("Nb of k-fold should be a positive number")
-            return
-
-        scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[2])
-        modifyTrainPartitions(trainingSize, scenFile)
-
-        # Create composite file from selected items
-        class1Stim = "OVTK_GDF_Left"
-        class2Stim = "OVTK_GDF_Right"
-        tmin = 0
-        tmax = float(self.parameterDict["StimulationEpoch"])
-        compositeCsv = mergeRunsCsv(compositeSigList, self.parameterDict["Class1"], self.parameterDict["Class2"], class1Stim, class2Stim, tmin, tmax)
-        if not compositeCsv:
-            myMsgBox("Error merging runs!! Most probably different list of electrodes")
-
-        print("Composite file for training: " + compositeCsv)
-        compositeCsvBasename = os.path.basename(compositeCsv)
-        newWeightsName = "classifier-weights.xml"
-        modifyTrainIO(compositeCsvBasename, newWeightsName, scenFile)
-
-        # RUN THE CLASSIFIER TRAINING SCENARIO
-        classifierScoreStr = self.runClassifierScenario()
-
-        # Copy weights file to generated/classifier-weights.xml
-        newWeights = os.path.join(self.scriptPath, "generated", "signals", "training", "classifier-weights.xml")
-        origFilename = os.path.join(self.scriptPath, "generated", "classifier-weights.xml")
-        copyfile(newWeights, origFilename)
-
-        # PREPARE GOODBYE MESSAGE...
-        textFeats = str("Using spectral features:\n")
-        for i in range(len(selectedFeats)):
-            textFeats += str("  Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
-
-        textGoodbye = str("Results written in file:\t generated/classifier-weights.xml\n")
-        textGoodbye += str("If those results are satisfying, you can now open generated/sc3-online.xml in the Designer")
-
-        textDisplay = textFeats
-        textDisplay += str("\n" + classifierScoreStr)
-        textDisplay += str("\n" + textGoodbye)
-
-        msg = QMessageBox()
-        msg.setText(textDisplay)
-        msg.setStyleSheet("QLabel{min-width: 600px;}")
-        msg.setWindowTitle("Classifier Training Score")
-        msg.exec_()
-
-        return
-
-    def btnAllCombinations(self):
-        # ----------
-        # Callback from button :
-        # Select features in fields, check if they're correctly formatted,
-        # launch openvibe with sc2-train.xml (in the background) to train the classifier,
-        # provide the classification score/accuracy as a textbox
-        # ----------
-        if not self.fileListWidgetTrain.selectedItems():
-            myMsgBox("Please select a set of runs for training")
-            return
-        elif len(self.fileListWidgetTrain.selectedItems()) > 5:
-            myMsgBox("Please select 5 runs maximum")
-            return
-
-        # Get electrodes lists and sampling freqs, and check that they match
-        # + that the selected channels are in the list of electrodes
-        compositeSigList = []
-        listSampFreq = []
-        listElectrodeList = []
-        for selectedItem in self.fileListWidgetTrain.selectedItems():
-            print("Selected file for training: " + selectedItem.text())
-            path = os.path.join(self.scriptPath, "generated", "signals", "training", selectedItem.text())
-            header = pd.read_csv(path, nrows=0).columns.tolist()
-            listSampFreq.append(int(header[0].split(':')[1].removesuffix('Hz')))
-            listElectrodeList.append(header[2:-3])
-            compositeSigList.append(path)
-
-        if not all(freqsamp == listSampFreq[0] for freqsamp in listSampFreq):
-            errMsg = str("Error when loading CSV files\n")
-            errMsg = str(errMsg + "Sampling frequency mismatch (" + str(listSampFreq) + ")")
-            myMsgBox(errMsg)
-            return
-        else:
-            print("Sampling Frequency for selected files : " + str(listSampFreq[0]))
-
-        if not all(electrodeList == listElectrodeList[0] for electrodeList in listElectrodeList):
-            errMsg = str("Error when loading CSV files\n")
-            errMsg = str(errMsg + "Electrode List mismatch")
-            myMsgBox(errMsg)
-            return
-        else:
-            print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
-
-        selectedFeats = self.getAndCheckSelectedFeats(listSampFreq[0], listElectrodeList[0])
-
-        # FIRST RE-COPY sc2 & sc3 FROM TEMPLATE, SO THE USER CAN DO THIS MULTIPLE TIMES...
-        pipelineType = self.parameterDict["pipelineType"]
-        templateFolder = settings.optionsTemplatesDir[pipelineType]
-        generatedFolder = "generated"
-
-        for i in [2, 3]:
-            scenName = settings.templateScenFilenames[i]
-            srcFile = os.path.join(self.scriptPath, templateFolder, scenName)
-            destFile = os.path.join(self.scriptPath, generatedFolder, scenName)
-            print("---Copying file " + srcFile + " to " + destFile)
-            copyfile(srcFile, destFile)
-            modifyScenarioGeneralSettings(destFile, self.parameterDict)
-            if i == 2:
-                modifyTrainScenario(selectedFeats, destFile)
-            elif i == 3:
-                modifyAcqScenario(destFile, self.parameterDict, True)
-                modifyOnlineScenario(selectedFeats, destFile)
-
-        # Get training param from GUI and modify training scenario
-        err = True
-        trainingSize = 0
-        if self.trainingPartitions.text().isdigit():
-            if int(self.trainingPartitions.text()) > 0:
-                trainingSize = int(self.trainingPartitions.text())
-                err = False
-        if err:
-            myMsgBox("Nb of k-fold should be a positive number")
-            return
-
-        scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[2])
-        modifyTrainPartitions(trainingSize, scenFile)
-
-        # Create list of files from selected items
-        combinationsList = list(myPowerset(compositeSigList))
-        sigIdxList = range(len(compositeSigList))
-        combIdx = list(myPowerset(sigIdxList))
-        scores = [0 for x in range(len(combIdx))]
-
-        class1Stim = "OVTK_GDF_Left"
-        class2Stim = "OVTK_GDF_Right"
-        tmin = 0
-        tmax = float(self.parameterDict["StimulationEpoch"])
-
-        for idxcomb, comb in enumerate(combinationsList):
-            sigList = []
-            for file in comb:
-                sigList.append(file)
-            compositeCsv = mergeRunsCsv(sigList, self.parameterDict["Class1"], self.parameterDict["Class2"], class1Stim, class2Stim, tmin, tmax)
-            if not compositeCsv:
-                myMsgBox("Error merging runs!! Most probably different list of electrodes")
-
-            print("Composite file for training: " + compositeCsv)
-            compositeCsvBasename = os.path.basename(compositeCsv)
-            newWeightsName = str("classifier-weights-" + str(idxcomb) + ".xml")
-            modifyTrainIO(compositeCsvBasename, newWeightsName, scenFile)
-
-            # RUN THE CLASSIFIER TRAINING SCENARIO
-            classifierScoreStr = self.runClassifierScenario()
-            scores[idxcomb] = float(classifierScoreStr.split("is ")[1].split("%")[0])
-
-        # Find max score
-        maxIdx = scores.index(max(scores))
-        # Copy weights file to generated/classifier-weights.xml
-        maxFilename = os.path.join(self.scriptPath, "generated", "signals", "training", "classifier-weights-")
-        maxFilename += str(str(maxIdx) + ".xml")
-        origFilename = os.path.join(self.scriptPath, "generated", "classifier-weights.xml")
-        copyfile(maxFilename, origFilename)
-
-        # ==========================
-        # PREPARE GOODBYE MESSAGE...
-        textFeats = str("Using spectral features:\n")
-        for i in range(len(selectedFeats)):
-            textFeats += str("\tChannel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
-        textFeats += str("\n... and experiment runs:\n")
-        for i in range(len(compositeSigList)):
-            textFeats += str("\t[" + str(i) + "]: " + os.path.basename(compositeSigList[i]) + "\n")
-
-        textScore = str("Training Cross-Validation Test Accuracies per combination:\n")
-        for i in range(len(combIdx)):
-            combIdxStr = []
-            for j in combIdx[i]:
-                combIdxStr.append(str(j))
-            textScore += str("\t[" + ",".join(combIdxStr) + "]: " + str(scores[i]) + "%\n")
-        maxIdxStr = []
-        for j in combIdx[maxIdx]:
-            maxIdxStr.append(str(j))
-        textScore += str("\nMax is combination [" + ','.join(maxIdxStr) + "] with " + str(max(scores)) + "%\n")
-
-        textGoodbye = str("The weights for this combination have been written to:\n")
-        textGoodbye += str("\tgenerated/classifier-weights.xml\n")
-        textGoodbye += str("If those results are satisfying, you can now open this scenario in the Designer:\n")
-        textGoodbye += str("\tgenerated/sc3-online.xml")
-
-        textDisplay = textFeats
-        textDisplay = str(textDisplay + "\n" + textScore)
-        textDisplay = str(textDisplay + "\n" + textGoodbye)
-        msg = QMessageBox()
-        msg.setText(textDisplay)
-        msg.setStyleSheet("QLabel{min-width: 600px;}")
-        msg.setWindowTitle("Classifier Training Score")
-        msg.exec_()
-
-        return
-
     def runClassifierScenario(self):
         # ----------
         # Run the classifier training scen (sc2-train.xml), using the provided parameters
         # and features
         # ----------
-        scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[2])
+        scenFile = os.path.join(self.scriptFolder, "generated", settings.templateScenFilenames[2])
 
         # TODO WARNING : MAYBE CHANGE THAT IN THE FUTURE...
-        enableConfChange = False
-        if enableConfChange:
-            # CHECK IF openvibe.conf has randomization of k-fold enabled
-            # if not, change it
-            confFile = os.path.join(os.path.dirname(self.ovScript), "share", "openvibe", "kernel", "openvibe.conf")
-            if platform.system() == 'Windows':
-                confFile = confFile.replace("/", "\\")
-            modifyConf = False
-            with open(confFile, 'r') as conf:
-                confdata = conf.read()
-                if "Plugin_Classification_RandomizeKFoldTestData = false" in confdata:
-                    modifyConf = True
-                    confdata = confdata.replace("Plugin_Classification_RandomizeKFoldTestData = false", "Plugin_Classification_RandomizeKFoldTestData = true")
-            if modifyConf:
-                with open(confFile, 'w') as conf:
-                    conf.write(confdata)
+        # enableConfChange = False
+        # if enableConfChange:
+        #     # CHECK IF openvibe.conf has randomization of k-fold enabled
+        #     # if not, change it
+        #     confFile = os.path.join(os.path.dirname(self.ovScript), "share", "openvibe", "kernel", "openvibe.conf")
+        #     if platform.system() == 'Windows':
+        #         confFile = confFile.replace("/", "\\")
+        #     modifyConf = False
+        #     with open(confFile, 'r') as conf:
+        #         confdata = conf.read()
+        #         if "Plugin_Classification_RandomizeKFoldTestData = false" in confdata:
+        #             modifyConf = True
+        #             confdata = confdata.replace("Plugin_Classification_RandomizeKFoldTestData = false", "Plugin_Classification_RandomizeKFoldTestData = true")
+        #     if modifyConf:
+        #         with open(confFile, 'w') as conf:
+        #             conf.write(confdata)
 
         # BUILD THE COMMAND (use designer.cmd from GUI)
         command = self.ovScript
@@ -1212,24 +1390,6 @@ class Dialog(QDialog):
 
         return classifierScoreStr
 
-    def getExperimentalParameters(self):
-        # ----------
-        # Get experimental parameters from the JSON parameters
-        # ----------
-        pipelineKey = self.parameterDict['pipelineType']
-        newDict = settings.pipelineAcqSettings[pipelineKey].copy()
-        print(newDict)
-        return newDict
-
-    def getExtractionParameters(self):
-        # ----------
-        # Get "extraction" parameters from the JSON parameters
-        # A bit artisanal, but we'll see if we keep that...
-        # ----------
-        pipelineKey = self.parameterDict['pipelineType']
-        newDict = settings.pipelineExtractSettings[pipelineKey].copy()
-        print(newDict)
-        return newDict
 
 # ------------------------------------------------------
 # STATIC FUNCTIONS
