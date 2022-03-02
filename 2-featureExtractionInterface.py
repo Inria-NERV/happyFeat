@@ -666,7 +666,7 @@ class Dialog(QDialog):
         if success:
             msg = QMessageBox()
             msg.setText(text)
-            msg.setStyleSheet("QLabel{min-width: 1000px;}")
+            msg.setStyleSheet("QLabel{min-width: 1200px;}")
             msg.setWindowTitle("Classifier Training Score")
             msg.exec_()
         else:
@@ -1221,7 +1221,7 @@ class TrainClassifier(QtCore.QThread):
             self.info2.emit("Running Training Scenario")
 
             # RUN THE CLASSIFIER TRAINING SCENARIO
-            classifierScoreStr = self.runClassifierScenario()
+            classifierScoreStr, accuracy = self.runClassifierScenario()
 
             # Copy weights file to generated/classifier-weights.xml
             newWeights = os.path.join(self.signalFolder, "training", "classifier-weights.xml")
@@ -1231,14 +1231,14 @@ class TrainClassifier(QtCore.QThread):
             # PREPARE GOODBYE MESSAGE...
             textFeats = str("Using spectral features:\n")
             for i in range(len(selectedFeats)):
-                textFeats += str("  Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+                textFeats += str("  Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz")
 
             textGoodbye = str("Results written in file:\t generated/classifier-weights.xml\n")
             textGoodbye += str("If those results are satisfying, you can now open generated/sc3-online.xml in the Designer")
 
             textDisplay = textFeats
-            textDisplay += str("\n" + classifierScoreStr)
-            textDisplay += str("\n" + textGoodbye)
+            textDisplay += str("\n\n" + classifierScoreStr)
+            textDisplay += str("\n\n" + textGoodbye)
 
             self.exitText = textDisplay
 
@@ -1248,7 +1248,8 @@ class TrainClassifier(QtCore.QThread):
             sigIdxList = range(len(compositeSigList))
             combIdx = list(myPowerset(sigIdxList))
             scores = [0 for x in range(len(combIdx))]
-
+            classifierScoreStrList = ["" for x in range(len(combIdx))]
+            
             for idxcomb, comb in enumerate(combinationsList):
                 newLabel = str("Combination " + str(combIdx[idxcomb]))
                 self.info2.emit(newLabel)
@@ -1268,8 +1269,7 @@ class TrainClassifier(QtCore.QThread):
                 modifyTrainIO(compositeCsvBasename, newWeightsName, scenFile)
 
                 # RUN THE CLASSIFIER TRAINING SCENARIO
-                classifierScoreStr = self.runClassifierScenario()
-                scores[idxcomb] = float(classifierScoreStr.split("is ")[1].split("%")[0])
+                classifierScoreStrList[idxcomb], scores[idxcomb] = self.runClassifierScenario()
 
                 self.info.emit(True)
 
@@ -1288,7 +1288,7 @@ class TrainClassifier(QtCore.QThread):
                 textFeats += str("\tChannel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
             textFeats += str("\n... and experiment runs:\n")
             for i in range(len(compositeSigList)):
-                textFeats += str("\t[" + str(i) + "]: " + os.path.basename(compositeSigList[i]) + "\n")
+                textFeats += str("\t[" + str(i) + "]: " + os.path.basename(compositeSigList[i]))
 
             textScore = str("Training Cross-Validation Test Accuracies per combination:\n")
             for i in range(len(combIdx)):
@@ -1300,6 +1300,7 @@ class TrainClassifier(QtCore.QThread):
             for j in combIdx[maxIdx]:
                 maxIdxStr.append(str(j))
             textScore += str("\nMax is combination [" + ','.join(maxIdxStr) + "] with " + str(max(scores)) + "%\n")
+            textScore += classifierScoreStrList[maxIdx]
 
             textGoodbye = str("The weights for this combination have been written to:\n")
             textGoodbye += str("\tgenerated/classifier-weights.xml\n")
@@ -1307,8 +1308,8 @@ class TrainClassifier(QtCore.QThread):
             textGoodbye += str("\tgenerated/sc3-online.xml")
 
             textDisplay = textFeats
-            textDisplay = str(textDisplay + "\n" + textScore)
-            textDisplay = str(textDisplay + "\n" + textGoodbye)
+            textDisplay = str(textDisplay + "\n\n" + textScore)
+            textDisplay = str(textDisplay + "\n\n" + textGoodbye)
 
             self.exitText = textDisplay
 
@@ -1400,57 +1401,31 @@ class TrainClassifier(QtCore.QThread):
                     stringToWrite = str(output).replace("\\r\\n\'", "")
                     stringToWrite = stringToWrite.split("trainer> ")
                     classifierScoreStr = str(classifierScoreStr + stringToWrite[1] + "\n")
-        f = open("Training.txt", mode = "w")
-        f.write(classifierScoreStr)
-        f.close()
 
-        file = open("Training.txt", 'r')
-        lines = file.readlines()
-        print("open")
-        file.close()
+        lines = classifierScoreStr.splitlines()
 
-        Target_1_True_Negative =0
-        Target_1_False_Positive = 0
+        target_1_True_Negative = float(lines[2].split()[2])
+        target_1_False_Positive = float(lines[2].split()[3])
+        target_2_False_Negative = float(lines[3].split()[2])
+        target_2_True_Positive = float(lines[3].split()[3])
 
-        Target_2_False_Negative = 0
-        Target_2_True_Positive = 0
-        i = 0
+        precision_Class_1 = round(target_1_True_Negative/(target_1_True_Negative+target_2_False_Negative), 2)
+        sensitivity_Class_1 = round(target_1_True_Negative/(target_1_True_Negative+target_1_False_Positive), 2)
+        precision_Class_2 = round(target_2_True_Positive/(target_2_True_Positive+target_1_False_Positive), 2)
+        sensitivity_Class_2 = round(target_2_True_Positive/(target_2_True_Positive+target_2_False_Negative), 2)
 
-        for line in lines:
-    
-    
-            if i == 2:
-                parts = line.split() # split line into parts
-                Target_1_True_Negative = parts[2]
-                Target_1_False_Positive = parts[3]    
+        accuracy = round(100.0*(target_1_True_Negative+target_2_True_Positive)/(target_1_True_Negative+target_1_False_Positive+target_2_False_Negative+target_2_True_Positive), 2)
 
-            if i == 3:
-                parts = line.split() # split line into parts
-                Target_2_False_Negative = parts[2]
-                Target_2_True_Positive = parts[3]  
-            i+=1
+        F_1_Score_Class_1 = round(2*precision_Class_1*sensitivity_Class_1/(precision_Class_1+sensitivity_Class_1), 2)
+        F_1_Score_Class_2 = round(2*precision_Class_2*sensitivity_Class_2/(precision_Class_2+sensitivity_Class_2), 2)
 
-        Target_1_True_Negative = float(Target_1_True_Negative)
-        Target_1_False_Positive = float(Target_1_False_Positive)
+        messageClassif = "Overall accuracy : " + str(accuracy) + "%\n"
+        messageClassif += "Class 1 | Precision  : " + str(precision_Class_1) + " | " + "Sensitivity : " + str(sensitivity_Class_1)
+        messageClassif += " | F_1 Score : " + str(F_1_Score_Class_1) + "\n"
+        messageClassif += "Class 2 | Precision  : " + str(precision_Class_2) + " | " + "Sensitivity : " + str(sensitivity_Class_2)
+        messageClassif += " | F_1 Score : " + str(F_1_Score_Class_2)
 
-        Target_2_False_Negative = float(Target_2_False_Negative)
-        Target_2_True_Positive = float(Target_2_True_Positive)
-
-        Precision_Class_1 = round(Target_1_True_Negative/(Target_1_True_Negative+Target_2_False_Negative),2)
-        Sensitivity_Class_1 = round(Target_1_True_Negative/(Target_1_True_Negative+Target_1_False_Positive),2)
-
-        Precision_Class_2 = round(Target_2_True_Positive/(Target_2_True_Positive+Target_1_False_Positive),2)
-        Sensitivity_Class_2 = round(Target_2_True_Positive/(Target_2_True_Positive+Target_2_False_Negative),2)
-
-        Accuracy  = round((Target_1_True_Negative+Target_2_True_Positive)/(Target_1_True_Negative+Target_1_False_Positive+Target_2_False_Negative+Target_2_True_Positive),2)
-
-        F_1_Score_Class_1 = round(2*Precision_Class_1*Sensitivity_Class_1/(Precision_Class_1+Sensitivity_Class_1),2)
-        F_1_Score_Class_2 = round(2*Precision_Class_2*Sensitivity_Class_2/(Precision_Class_2+Sensitivity_Class_2),2)
-
-        MessageClassif = "Overall accuracy : " + str(Accuracy) + "\n\nClass 1 | Precision  : " + str(Precision_Class_1) + " | " + "Sensitivity : " + str(Sensitivity_Class_1) + " | F_1 Score : "+ str(F_1_Score_Class_1) + "\n\nClass 2 | Precision  : " + str(Precision_Class_2) + " | " + "Sensitivity : " + str(Sensitivity_Class_2) + " | F_1 Score : " + str(F_1_Score_Class_2) + "\n \n"
-
-
-        return MessageClassif
+        return messageClassif, accuracy
 
 
 # ------------------------------------------------------
