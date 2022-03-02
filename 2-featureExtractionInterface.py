@@ -524,8 +524,11 @@ class Dialog(QDialog):
         self.extractThread.over.connect(lambda: self.extraction_over())
         self.extractThread.start()
 
-    def extraction_over(self):
+    def extraction_over(self, success, text):
         self.progressBar.finish()
+        if not success:
+            myMsgBox(text)
+
         self.enableGui(True)
 
     def loadSpectra(self):
@@ -553,10 +556,14 @@ class Dialog(QDialog):
         self.loadSpectraThread.over.connect(lambda: self.loadspectra_over())
         self.loadSpectraThread.start()
 
-    def loadspectra_over(self):
+    def loadspectra_over(self, success, text):
         self.progressBar.finish()
-        self.samplingFreq = self.Features.samplingFreq
-        self.plotBtnsEnabled = True
+        if not success:
+            myMsgBox(text)
+            self.plotBtnsEnabled = False
+        else:
+            self.samplingFreq = self.Features.samplingFreq
+            self.plotBtnsEnabled = True
         self.enableGui(True)
 
     def btnSelectFeatures(self):
@@ -654,14 +661,16 @@ class Dialog(QDialog):
         self.trainClassThread.over.connect(self.training_over)
         self.trainClassThread.start()
 
-    def training_over(self, text):
+    def training_over(self, success, text):
         self.progressBar.finish()
-
-        msg = QMessageBox()
-        msg.setText(text)
-        msg.setStyleSheet("QLabel{min-width: 1000px;}")
-        msg.setWindowTitle("Classifier Training Score")
-        msg.exec_()
+        if success:
+            msg = QMessageBox()
+            msg.setText(text)
+            msg.setStyleSheet("QLabel{min-width: 1000px;}")
+            msg.setWindowTitle("Classifier Training Score")
+            msg.exec_()
+        else:
+            myMsgBox(text)
 
         self.enableGui(True)
 
@@ -796,7 +805,7 @@ class Dialog(QDialog):
 # ------------------------------------------------------
 class Extraction(QtCore.QThread):
     info = pyqtSignal(bool)
-    over = pyqtSignal(bool)
+    over = pyqtSignal(bool, str)
 
     def __init__(self, ovScript, scenFile, signalFiles, signalFolder,
                  parameterDict, parent=None):
@@ -830,9 +839,8 @@ class Extraction(QtCore.QThread):
                 sampFreq, electrodeList = extractMetadata(os.path.join(self.signalFolder, metaFile))
             # Check everything went ok...
             if not sampFreq:
-                myMsgBox("Error while loading metadata CSV file for session ", signalFile)
-                self.stop = False
-                self.over.emit(self.stop)
+                errMsg = str("Error while loading metadata CSV file for session " + signalFile)
+                self.over.emit(False, errMsg)
                 return
 
             # Modify the extraction scenario with entered parameters
@@ -870,7 +878,7 @@ class Extraction(QtCore.QThread):
             self.info.emit(True)
 
         self.stop = True
-        self.over.emit(self.stop)
+        self.over.emit(True, "")
 
     def stopThread(self):
         self.stop = True
@@ -879,7 +887,7 @@ class Extraction(QtCore.QThread):
 class LoadSpectra(QtCore.QThread):
     info = pyqtSignal(bool)
     info2 = pyqtSignal(str)
-    over = pyqtSignal(bool)
+    over = pyqtSignal(bool, str)
 
     def __init__(self, spectrumFiles, signalFolder, parameterDict, Features, sampFreq, parent=None):
 
@@ -938,7 +946,7 @@ class LoadSpectra(QtCore.QThread):
                 errMsg = str(errMsg + "\nSampling frequency or frequency bins mismatch")
                 errMsg = str(errMsg + "\n(" + str(sampFreq1) + " vs " + str(sampFreq2) + " or ")
                 errMsg = str(errMsg + str(freqBins1) + " vs " + str(freqBins2) + ")")
-                myMsgBox(errMsg)
+                self.over.emit(False, errMsg)
                 return
 
             listSampFreq.append(sampFreq1)
@@ -955,7 +963,7 @@ class LoadSpectra(QtCore.QThread):
             if electrodeList1 != electrodeList2:
                 errMsg = str("Error when loading " + path1 + "\n" + " and " + path2)
                 errMsg = str(errMsg + "\nElectrode List mismatch")
-                myMsgBox(errMsg)
+                self.over.emit(False, errMsg)
                 return
 
             listElectrodeList.append(electrodeList1)
@@ -971,7 +979,7 @@ class LoadSpectra(QtCore.QThread):
         if not all(freqsamp == listSampFreq[0] for freqsamp in listSampFreq):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Sampling frequency mismatch (" + str(listSampFreq) + ")")
-            myMsgBox(errMsg)
+            self.over.emit(False, errMsg)
             return
         else:
             self.samplingFreq = listSampFreq[0]
@@ -980,7 +988,7 @@ class LoadSpectra(QtCore.QThread):
         if not all(electrodeList == listElectrodeList[0] for electrodeList in listElectrodeList):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Electrode List mismatch")
-            myMsgBox(errMsg)
+            self.over.emit(False, errMsg)
             return
         else:
             print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
@@ -988,7 +996,7 @@ class LoadSpectra(QtCore.QThread):
         if not all(freqBins == listFreqBins[0] for freqBins in listFreqBins):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Not same number of frequency bins (" + str(listSampFreq) + ")")
-            myMsgBox(errMsg)
+            self.over.emit(False, errMsg)
             return
         else:
             print("Frequency bins: " + str(listFreqBins[0]))
@@ -1007,7 +1015,9 @@ class LoadSpectra(QtCore.QThread):
         # electrodes_orig = channel_generator(nbElectrodes, 'TP9', 'TP10')
         electrodes_orig = elecGroundRef(electrodeList, 'TP9', 'TP10')
         if not electrodes_orig:
-            myMsgBox("Problem with the list of electrodes...")
+            errMsg = str("Problem with the list of electrodes...")
+            self.over.emit(False, errMsg)
+            return
 
         # For multiple runs (ie. multiple selected CSV files), we just concatenate
         # the trials from all files. Then the displayed spectral features (R²map, PSD, topography)
@@ -1107,7 +1117,7 @@ class LoadSpectra(QtCore.QThread):
         self.Features.samplingFreq = self.samplingFreq
 
         self.stop = True
-        self.over.emit(self.stop)
+        self.over.emit(True, "")
 
     def stopThread(self):
         self.stop = True
@@ -1116,7 +1126,7 @@ class LoadSpectra(QtCore.QThread):
 class TrainClassifier(QtCore.QThread):
     info = pyqtSignal(bool)
     info2 = pyqtSignal(str)
-    over = pyqtSignal(str)
+    over = pyqtSignal(bool, str)
 
     def __init__(self, isCombinationComputing, trainingFiles,
                  signalFolder, templateFolder, scriptFolder, ovScript,
@@ -1153,7 +1163,7 @@ class TrainClassifier(QtCore.QThread):
         if not all(freqsamp == listSampFreq[0] for freqsamp in listSampFreq):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Sampling frequency mismatch (" + str(listSampFreq) + ")")
-            myMsgBox(errMsg)
+            self.over.emit(False, errMsg)
             return
         else:
             print("Sampling Frequency for selected files : " + str(listSampFreq[0]))
@@ -1161,12 +1171,15 @@ class TrainClassifier(QtCore.QThread):
         if not all(electrodeList == listElectrodeList[0] for electrodeList in listElectrodeList):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Electrode List mismatch")
-            myMsgBox(errMsg)
+            self.over.emit(False, errMsg)
             return
         else:
             print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
 
-        selectedFeats = self.checkSelectedFeats(listSampFreq[0], listElectrodeList[0])
+        selectedFeats, errMsg = self.checkSelectedFeats(listSampFreq[0], listElectrodeList[0])
+        if not selectedFeats:
+            self.over.emit(False, errMsg)
+            return
 
         # RE-COPY sc2 & sc3 FROM TEMPLATE, SO THE USER CAN DO THIS MULTIPLE TIMES...
         for i in [2, 3]:
@@ -1195,7 +1208,8 @@ class TrainClassifier(QtCore.QThread):
             compositeCsv = mergeRunsCsv(compositeSigList, self.parameterDict["Class1"], self.parameterDict["Class2"],
                                         class1Stim, class2Stim, tmin, tmax)
             if not compositeCsv:
-                myMsgBox("Error merging runs!! Most probably different list of electrodes")
+                self.over.emit(False, "Error merging runs!! Most probably different list of electrodes")
+                return
 
             self.info.emit(True)
 
@@ -1245,7 +1259,8 @@ class TrainClassifier(QtCore.QThread):
                 compositeCsv = mergeRunsCsv(sigList, self.parameterDict["Class1"], self.parameterDict["Class2"],
                                             class1Stim, class2Stim, tmin, tmax)
                 if not compositeCsv:
-                    myMsgBox("Error merging runs!! Most probably different list of electrodes")
+                    self.over.emit(False, "Error merging runs!! Most probably different list of electrodes")
+                    return
 
                 print("Composite file for training: " + compositeCsv)
                 compositeCsvBasename = os.path.basename(compositeCsv)
@@ -1298,13 +1313,14 @@ class TrainClassifier(QtCore.QThread):
             self.exitText = textDisplay
 
         self.stop = True
-        self.over.emit(self.exitText)
+        self.over.emit(True, self.exitText)
 
     def stopThread(self):
         self.stop = True
 
     def checkSelectedFeats(self, sampFreq, electrodeList):
         selectedFeats = []
+        errMsg = ""
         # Checks :
         # - No empty field
         # - frequencies in acceptable ranges
@@ -1312,24 +1328,24 @@ class TrainClassifier(QtCore.QThread):
         n_bins = int((sampFreq / 2) + 1)
         for idx, feat in enumerate(self.selectedFeats):
             if feat.text() == "":
-                myMsgBox("Pair " + str(idx + 1) + " is empty...")
-                return
+                errMsg = str("Pair " + str(idx + 1) + " is empty...")
+                return None, errMsg
             [chan, freqstr] = feat.text().split(";")
             if chan not in electrodeList:
-                myMsgBox("Channel in pair " + str(idx + 1) + " (" + str(chan) + ") is not in the list...")
-                return
+                errMsg = str("Channel in pair " + str(idx + 1) + " (" + str(chan) + ") is not in the list...")
+                return None, errMsg
             freqs = freqstr.split(":")
             for freq in freqs:
                 if not freq.isdigit():
-                    myMsgBox("Frequency in pair " + str(idx + 1) + " (" + str(freq) + ") has an invalid format, must be an integer...")
-                    return
+                    errMsg = str("Frequency in pair " + str(idx + 1) + " (" + str(freq) + ") has an invalid format, must be an integer...")
+                    return None, errMsg
                 if int(freq) >= n_bins:
-                    myMsgBox("Frequency in pair " + str(idx + 1) + " (" + str(freq) + ") is not in the acceptable range...")
-                    return
+                    errMsg = str("Frequency in pair " + str(idx + 1) + " (" + str(freq) + ") is not in the acceptable range...")
+                    return None, errMsg
             selectedFeats.append(feat.text().split(";"))
             print(feat)
 
-        return selectedFeats
+        return selectedFeats, errMsg
 
     def runClassifierScenario(self):
         # ----------
