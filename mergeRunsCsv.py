@@ -8,6 +8,7 @@ stimulationCodes = {
     "OVTK_GDF_Left": "769",
     "OVTK_GDF_Right": "770",
     "OVTK_StimulationId_Train": "33281",
+    "OVTK_StimulationId_Label_00": "33024",
 }
 
 def mergeRunsCsv(testSigList, class1, class2, class1Stim, class2Stim, tmin, tmax):
@@ -45,6 +46,7 @@ def mergeRunsCsv(testSigList, class1, class2, class1Stim, class2Stim, tmin, tmax
 def writeCompositeCsv(filename, rawData, class1Stim, class2Stim, channels, tmin, tmax, fsamp):
     class1StimCode = stimulationCodes[class1Stim]
     class2StimCode = stimulationCodes[class2Stim]
+    dummyCode = stimulationCodes["OVTK_StimulationId_Label_00"]
     trainStimCode = stimulationCodes["OVTK_StimulationId_Train"]
 
     with open(filename, 'w', newline='') as csvfile:
@@ -80,7 +82,7 @@ def writeCompositeCsv(filename, rawData, class1Stim, class2Stim, channels, tmin,
                 dataToWrite = ["" for x in range(np.shape(row)[0])]
                 if currentEpoch != int(row[1]):
                     currentEpoch = int(row[1])
-                    timeOffset = round(timeOffset + 0.5, 8) # arbitrary, to create a gap between trials
+                    timeOffset = round(timeOffset + 0.5, 8)  # arbitrary, to create a gap between trials
                     newEpoch = True
 
                 # Time field
@@ -109,14 +111,10 @@ def writeCompositeCsv(filename, rawData, class1Stim, class2Stim, channels, tmin,
                     elif class2StimCode in eventList:
                         currentEventStimCode = class2StimCode
 
-                    if currentEventStimCode:
-                        # Add current Stimulation...
-                        # Event id
-                        dataToWrite[-3] = currentEventStimCode
-                        # Event date
-                        dataToWrite[-2] = dataToWrite[0]
-                        # Event duration
-                        dataToWrite[-1] = str("0")
+                    if currentEventStimCode:  # Add current Stimulation...
+                        dataToWrite[-3] = currentEventStimCode  # Event id
+                        dataToWrite[-2] = dataToWrite[0]  # Event date
+                        dataToWrite[-1] = str("0")  # Event duration
                     else:  # not possible??
                         dataToWrite[-3] = ""
                         dataToWrite[-2] = ""
@@ -134,33 +132,34 @@ def writeCompositeCsv(filename, rawData, class1Stim, class2Stim, channels, tmin,
             epochOffset = lastEpoch+1
 
         # TODO : why do we need that ?
-        # -- TEST : Add another (empty) frame with class2 stimulation
+        # -- TEST : Add another (empty) frame with dummy stimulation
         # For *some reason* in OpenViBE the classifier trainer doesn't
         # take into account the feature vectors of the last stim, when using
         # a composite signal...
-        timeOffset = round(timeOffset + 0.5, 8)
-        dataToWrite = [str(timeOffset), str(epochOffset)]
-        for elec in range(nbElec):
-            dataToWrite.append("0.0")
-        dataToWrite.append(class2StimCode)
-        dataToWrite.append(str(timeOffset))
-        dataToWrite.append(str("0"))
-        writer.writerow(dataToWrite)
-        # add more data frames to fit in an Epoch...
-        remSamples = int(tmax*fsamp) - 1
-        currentTime = timeIncrement
-        for x in list(range(1, remSamples + 1, 1)):
-            dataToWrite = [str(currentTime + timeOffset), str(epochOffset)]
+        for i in range(0, 3):
+            timeOffset = round(timeOffset + 0.5, 8)
+            dataToWrite = [str(timeOffset), str(epochOffset)]
             for elec in range(nbElec):
                 dataToWrite.append("0.0")
-            dataToWrite.append("")
-            dataToWrite.append("")
-            dataToWrite.append("")
+            dataToWrite.append(dummyCode)
+            dataToWrite.append(str(timeOffset))
+            dataToWrite.append(str("0"))
             writer.writerow(dataToWrite)
-            currentTime = round(currentTime + timeIncrement, 8)
+            # add more data frames to fit in an Epoch...
+            remSamples = int(tmax*fsamp) - 1
+            currentTime = timeIncrement
+            for x in list(range(1, remSamples + 1, 1)):
+                dataToWrite = [str(currentTime + timeOffset), str(epochOffset)]
+                for elec in range(nbElec):
+                    dataToWrite.append("0.0")
+                dataToWrite.append("")
+                dataToWrite.append("")
+                dataToWrite.append("")
+                writer.writerow(dataToWrite)
+                currentTime = round(currentTime + timeIncrement, 8)
 
-        epochOffset += 1
-        timeOffset += currentTime
+            epochOffset += 1
+            timeOffset += currentTime
         # -- END OF CONFUSING PART
 
         # Add an empty data frame, bearing only a "Train" Stimulation

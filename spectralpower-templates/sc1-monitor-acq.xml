@@ -15,7 +15,7 @@
 			<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 			<Name>EEGMetaData</Name>
 			<DefaultValue>example-META.csv</DefaultValue>
-			<Value>example-META.csv</Value>
+			<Value>MI-[$core{date}-$core{time}]-META.csv</Value>
 		</Setting>
 		<Setting>
 			<Identifier>(0xfa3e9b11, 0x9fe2a448)</Identifier>
