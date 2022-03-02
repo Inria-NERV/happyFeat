@@ -1286,9 +1286,9 @@ class TrainClassifier(QtCore.QThread):
             textFeats = str("Using spectral features:\n")
             for i in range(len(selectedFeats)):
                 textFeats += str("\tChannel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
-            textFeats += str("\n... and experiment runs:\n")
+            textFeats += str("\n... and experiment runs:")
             for i in range(len(compositeSigList)):
-                textFeats += str("\t[" + str(i) + "]: " + os.path.basename(compositeSigList[i]))
+                textFeats += str("\n\t[" + str(i) + "]: " + os.path.basename(compositeSigList[i]))
 
             textScore = str("Training Cross-Validation Test Accuracies per combination:\n")
             for i in range(len(combIdx)):
