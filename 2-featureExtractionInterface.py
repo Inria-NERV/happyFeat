@@ -508,11 +508,6 @@ class Dialog(QDialog):
         if self.updateExtractParameters():
             self.deleteWorkFiles()
 
-        # Build the command line (use designer.cmd from GUI)
-        command = self.ovScript
-        if platform.system() == 'Windows':
-            command = command.replace("/", "\\")
-
         # create progress bar window...
         self.progressBar = ProgressBar("Extraction", len(self.fileListWidget.selectedItems()) )
 
@@ -524,7 +519,7 @@ class Dialog(QDialog):
 
         self.enableGui(False)
 
-        self.extractThread = Extraction(command, scenFile, signalFiles, signalFolder, self.parameterDict)
+        self.extractThread = Extraction(self.ovScript, scenFile, signalFiles, signalFolder, self.parameterDict)
         self.extractThread.info.connect(self.progressBar.increment)
         self.extractThread.over.connect(lambda: self.extraction_over())
         self.extractThread.start()
@@ -803,18 +798,21 @@ class Extraction(QtCore.QThread):
     info = pyqtSignal(bool)
     over = pyqtSignal(bool)
 
-    def __init__(self, command, scenFile, signalFiles, signalFolder,
+    def __init__(self, ovScript, scenFile, signalFiles, signalFolder,
                  parameterDict, parent=None):
 
         super().__init__(parent)
         self.stop = False
-        self.command = command
+        self.ovScript = ovScript
         self.scenFile = scenFile
         self.signalFiles = signalFiles
         self.signalFolder = signalFolder
         self.parameterDict = parameterDict.copy()
 
     def run(self):
+        command = self.ovScript
+        if platform.system() == 'Windows':
+            command = command.replace("/", "\\")
 
         for signalFile in self.signalFiles:
             # Verify the existence of metadata files for each selected files,
@@ -856,7 +854,7 @@ class Extraction(QtCore.QThread):
             modifyExtractionIO(self.scenFile, signalFile, outputSpect1, outputSpect2,
                                outputBaseline1, outputBaseline2, outputTrials)
 
-            p = subprocess.Popen([self.command, "--no-gui", "--play-fast", self.scenFile],
+            p = subprocess.Popen([command, "--no-gui", "--play-fast", self.scenFile],
                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
             # Print console output, and detect end of process...
