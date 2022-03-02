@@ -564,85 +564,6 @@ class Dialog(QDialog):
         self.plotBtnsEnabled = True
         self.enableGui(True)
 
-    def btnR2(self):
-        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
-            plot_stats(self.Features.Rsigned,
-                       self.Features.freqs_array,
-                       self.Features.electrodes_final,
-                       self.Features.fres, int(self.userFmin.text()), int(self.userFmax.text()))
-
-    def btnW2(self):
-        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
-            plot_stats(self.Features.Wsigned,
-                       self.Features.freqs_array,
-                       self.Features.electrodes_final,
-                       self.Features.fres, int(self.userFmin.text()), int(self.userFmax.text()))
-
-    def btnTimeFreq(self):
-        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
-            print("TimeFreq for sensor: " + self.electrodePsd.text())
-
-            tmin = float(self.parameterDict['StimulationDelay'])
-            tmax = float(self.parameterDict['StimulationEpoch'])
-            fmin = int(self.userFmin.text())
-            fmax = int(self.userFmax.text())
-            class1 = self.parameterDict["Class1"]
-            class2 = self.parameterDict["Class2"]
-
-            qt_plot_tf(self.Features.timefreq_cond1, self.Features.timefreq_cond2,
-                       self.Features.time_array, self.Features.freqs_array,
-                       self.electrodePsd.text(), self.Features.fres,
-                       self.Features.average_baseline_cond1, self.Features.average_baseline_cond2,
-                       self.Features.std_baseline_cond1, self.Features.std_baseline_cond2,
-                       self.Features.electrodes_final,
-                       fmin, fmax, tmin, tmax, class1, class2)
-
-    def btnPsd(self):
-        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
-            fmin = int(self.userFmin.text())
-            fmax = int(self.userFmax.text())
-            class1 = self.parameterDict["Class1"]
-            class2 = self.parameterDict["Class2"]
-            qt_plot_psd(self.Features.power_cond2, self.Features.power_cond1,
-                        self.Features.freqs_array, self.Features.electrodes_final,
-                        self.electrodePsd.text(),
-                        self.Features.fres, fmin, fmax, class1, class2)
-
-    def btnTopo(self):
-        if self.freqTopo.text().isdigit() \
-                and 0 < int(self.freqTopo.text()) < (self.samplingFreq / 2):
-            print("Freq Topo: " + self.freqTopo.text())
-            qt_plot_topo(self.Features.Rsigned, self.Features.electrodes_final,
-                         int(self.freqTopo.text()), self.Features.fres, self.samplingFreq)
-        else:
-            myMsgBox("Invalid frequency for topography")
-
-    def btnAddPair(self):
-        self.selectedFeats.append(QLineEdit())
-        self.selectedFeats[-1].setText('C4;22')
-        self.qvBoxLayouts[0].addRow("Selected Feats Pair", self.selectedFeats[-1])
-
-    def btnRemovePair(self):
-        if len(self.selectedFeats) > 1:
-            result = self.qvBoxLayouts[0].getWidgetPosition(self.selectedFeats[-1])
-            self.qvBoxLayouts[0].removeRow(result[0])
-            self.selectedFeats.pop()
-
-    def browseForDesigner(self):
-        # ----------
-        # Allow user to browse for the "openvibe-designer.cmd" windows cmd
-        # ----------
-        directory = os.getcwd()
-        newPath, dummy = QFileDialog.getOpenFileName(self, "OpenViBE designer", str(directory))
-        if "openvibe-designer.cmd" in newPath:
-            self.designerTextBox.setText(newPath)
-            self.ovScript = newPath
-
-        # TODO : update json file
-        # ...
-
-        return
-
     def btnSelectFeatures(self):
         # ----------
         # Callback from button :
@@ -796,6 +717,84 @@ class Dialog(QDialog):
         newDict = settings.pipelineExtractSettings[pipelineKey].copy()
         print(newDict)
         return newDict
+
+    def btnR2(self):
+        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
+            plot_stats(self.Features.Rsigned,
+                       self.Features.freqs_array,
+                       self.Features.electrodes_final,
+                       self.Features.fres, int(self.userFmin.text()), int(self.userFmax.text()))
+
+    def btnW2(self):
+        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
+            plot_stats(self.Features.Wsigned,
+                       self.Features.freqs_array,
+                       self.Features.electrodes_final,
+                       self.Features.fres, int(self.userFmin.text()), int(self.userFmax.text()))
+
+    def btnTimeFreq(self):
+        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
+            print("TimeFreq for sensor: " + self.electrodePsd.text())
+
+            tmin = float(self.parameterDict['StimulationDelay'])
+            tmax = float(self.parameterDict['StimulationEpoch'])
+            fmin = int(self.userFmin.text())
+            fmax = int(self.userFmax.text())
+            class1 = self.parameterDict["Class1"]
+            class2 = self.parameterDict["Class2"]
+
+            qt_plot_tf(self.Features.timefreq_cond1, self.Features.timefreq_cond2,
+                       self.Features.time_array, self.Features.freqs_array,
+                       self.electrodePsd.text(), self.Features.fres,
+                       self.Features.average_baseline_cond1, self.Features.average_baseline_cond2,
+                       self.Features.std_baseline_cond1, self.Features.std_baseline_cond2,
+                       self.Features.electrodes_final,
+                       fmin, fmax, tmin, tmax, class1, class2)
+
+    def btnPsd(self):
+        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
+            fmin = int(self.userFmin.text())
+            fmax = int(self.userFmax.text())
+            class1 = self.parameterDict["Class1"]
+            class2 = self.parameterDict["Class2"]
+            qt_plot_psd(self.Features.power_cond2, self.Features.power_cond1,
+                        self.Features.freqs_array, self.Features.electrodes_final,
+                        self.electrodePsd.text(),
+                        self.Features.fres, fmin, fmax, class1, class2)
+
+    def btnTopo(self):
+        if self.freqTopo.text().isdigit() \
+                and 0 < int(self.freqTopo.text()) < (self.samplingFreq / 2):
+            print("Freq Topo: " + self.freqTopo.text())
+            qt_plot_topo(self.Features.Rsigned, self.Features.electrodes_final,
+                         int(self.freqTopo.text()), self.Features.fres, self.samplingFreq)
+        else:
+            myMsgBox("Invalid frequency for topography")
+
+    def btnAddPair(self):
+        self.selectedFeats.append(QLineEdit())
+        self.selectedFeats[-1].setText('C4;22')
+        self.qvBoxLayouts[0].addRow("Selected Feats Pair", self.selectedFeats[-1])
+
+    def btnRemovePair(self):
+        if len(self.selectedFeats) > 1:
+            result = self.qvBoxLayouts[0].getWidgetPosition(self.selectedFeats[-1])
+            self.qvBoxLayouts[0].removeRow(result[0])
+            self.selectedFeats.pop()
+
+    def browseForDesigner(self):
+        # ----------
+        # Allow user to browse for the "openvibe-designer.cmd" windows cmd
+        # ----------
+        directory = os.getcwd()
+        newPath, dummy = QFileDialog.getOpenFileName(self, "OpenViBE designer", str(directory))
+        if "openvibe-designer.cmd" in newPath:
+            self.designerTextBox.setText(newPath)
+            self.ovScript = newPath
+
+        # TODO : update json file
+        # ...
+        return
 
 # ------------------------------------------------------
 # CLASSES FOR LONG-RUNNING OPERATIONS IN THREADS
