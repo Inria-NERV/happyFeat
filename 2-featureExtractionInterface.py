@@ -1399,8 +1399,9 @@ class TrainClassifier(QtCore.QThread):
                     activateScoreMsgBox = True
                 if activateScoreMsgBox:
                     stringToWrite = str(output).replace("\\r\\n\'", "")
-                    stringToWrite = stringToWrite.split("trainer> ")
-                    classifierScoreStr = str(classifierScoreStr + stringToWrite[1] + "\n")
+                    if "trainer>" in stringToWrite:
+                        stringToWrite = stringToWrite.split("trainer> ")
+                        classifierScoreStr = str(classifierScoreStr + stringToWrite[1] + "\n")
 
         lines = classifierScoreStr.splitlines()
 
