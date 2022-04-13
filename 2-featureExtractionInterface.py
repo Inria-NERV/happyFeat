@@ -778,7 +778,7 @@ class Dialog(QDialog):
     def btnAddPair(self):
         self.selectedFeats.append(QLineEdit())
         self.selectedFeats[-1].setText('C4;22')
-        self.qvBoxLayouts[0].addRow("Selected Feats Pair", self.selectedFeats[-1])
+        self.qvBoxLayouts[0].addRow("Feature", self.selectedFeats[-1])
 
     def btnRemovePair(self):
         if len(self.selectedFeats) > 1:
@@ -792,7 +792,7 @@ class Dialog(QDialog):
         # ----------
         directory = os.getcwd()
         newPath, dummy = QFileDialog.getOpenFileName(self, "OpenViBE designer", str(directory))
-        if "openvibe-designer.cmd" in newPath:
+        if "openvibe-designer.cmd" or "openvibe-designer.sh" in newPath:
             self.designerTextBox.setText(newPath)
             self.ovScript = newPath
 
