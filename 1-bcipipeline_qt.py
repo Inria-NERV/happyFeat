@@ -57,7 +57,7 @@ class Dialog(QDialog):
         self.paramWidgets = []
 
         # Electrodes file...
-        # self.electrodesFile = None
+        self.electrodesFile = None
         # self.btn_browse = QPushButton("Browse for electrode file...")
         # self.btn_browse.clicked.connect(lambda: self.browseForElectrodeFile())
         # self.electrodesFileWidget = QWidget()
@@ -99,11 +99,8 @@ class Dialog(QDialog):
             # formLayout.addRow("Electrodes List", self.electrodesFileWidget)
             # self.dlgLayout.addLayout(formLayout)
 
-            # TWO COLUMNS OF PARAMETERS
-            hboxLayout = QHBoxLayout()
-            vBoxLayouts = [QVBoxLayout(), QVBoxLayout()]
-            hboxLayout.addLayout(vBoxLayouts[0])
-            # hboxLayout.addLayout(vBoxLayouts[1])
+            # COLUMN OF PARAMETERS
+            vBoxLayout = QVBoxLayout()
 
             self.parameterDict = {}
 
@@ -114,37 +111,14 @@ class Dialog(QDialog):
             labelText[0] = str(labelText[0] + " ===")
             label[0] = QLabel(labelText[0])
             label[0].setAlignment(QtCore.Qt.AlignCenter)
-            vBoxLayouts[0].addWidget(label[0])
+            vBoxLayout.addWidget(label[0])
 
-            # labelText[1] = str("=== ")
-            # labelText[1] = str(labelText[1] + "Feature Extraction")
-            # labelText[1] = str(labelText[1] + " ===")
-            # label[1] = QLabel(labelText[1])
-            # label[1].setAlignment(QtCore.Qt.AlignCenter)
-            # vBoxLayouts[1].addWidget(label[1])
-
-            formLayouts = [None, None]
-            formLayouts[0] = QFormLayout()
-            # formLayouts[1] = QFormLayout()
+            formLayout = None
+            formLayout = QFormLayout()
 
             self.parameterDict["pipelineType"] = pipelineKey
+
             # GET PARAMETER LIST FOR SELECTED BCI PIPELINE, AND DISPLAY THEM
-
-            # for idx, param in enumerate(settings.scenarioSettings[pipelineKey]):
-            #     # init params...
-            #     value = settings.scenarioSettings[pipelineKey][param]
-            #     self.parameterDict[param] = value[0]
-            #     # create widgets...
-            #     paramWidget = QLineEdit()
-            #     paramWidget.setText(str(value[0]))
-            #     settingLabel = str(value[1])
-            #     self.paramWidgets.append(paramWidget)
-            #     self.parameterTextList.append(param)
-            #     if idx < settings.scenarioSettingsPartsLength[pipelineKey][0]:
-            #         formLayouts[0].addRow(settingLabel, self.paramWidgets[-1])
-            #     else:
-            #         formLayouts[1].addRow(settingLabel, self.paramWidgets[-1])
-
             for idx, param in enumerate(settings.pipelineAcqSettings[pipelineKey]):
                 # init params...
                 value = settings.pipelineAcqSettings[pipelineKey][param]
@@ -155,12 +129,10 @@ class Dialog(QDialog):
                 settingLabel = settings.paramIdText[param]
                 self.paramWidgets.append(paramWidget)
                 self.parameterTextList.append(param)
-                formLayouts[0].addRow(settingLabel, self.paramWidgets[-1])
+                formLayout.addRow(settingLabel, self.paramWidgets[-1])
 
-            vBoxLayouts[0].addLayout(formLayouts[0])
-            # vBoxLayouts[1].addLayout(formLayouts[1])
-            vBoxLayouts[0].setAlignment(QtCore.Qt.AlignTop)
-            # vBoxLayouts[1].setAlignment(QtCore.Qt.AlignTop)
+            vBoxLayout.addLayout(formLayout)
+            vBoxLayout.setAlignment(QtCore.Qt.AlignTop)
 
             # OpenViBE designer file...
             labelOv = QLabel()
@@ -168,8 +140,7 @@ class Dialog(QDialog):
             labelOvtxt = str(labelOvtxt + "\n(in your OpenViBE installation folder)")
             labelOv.setText(labelOvtxt)
             labelOv.setAlignment(QtCore.Qt.AlignCenter)
-            # vBoxLayouts[1].addWidget(labelOv)
-            vBoxLayouts[0].addWidget(labelOv)
+            vBoxLayout.addWidget(labelOv)
 
             self.btn_browseOV = QPushButton("Browse...")
             self.btn_browseOV.clicked.connect(lambda: self.browseForDesigner())
@@ -180,10 +151,9 @@ class Dialog(QDialog):
             self.designerTextBox.setEnabled(False)
             layout_h.addWidget(self.designerTextBox)
             layout_h.addWidget(self.btn_browseOV)
-            # vBoxLayouts[1].addWidget(self.designerWidget)
-            vBoxLayouts[0].addWidget(self.designerWidget)
+            vBoxLayout.addWidget(self.designerWidget)
 
-            self.dlgLayout.addLayout(hboxLayout)
+            self.dlgLayout.addLayout(vBoxLayout)
             self.dlgLayout.addWidget(self.btn_generateLaunch)
             self.dlgLayout.addWidget(self.btn_generate)
             self.show()
@@ -216,14 +186,6 @@ class Dialog(QDialog):
         ####
         # FIRST STEP : CREATE PARAMETER DICTIONARY
         ###
-
-        # Electrode list...
-        # electrodes = None
-        # if self.electrodesFileTextBox.text() == "":
-        #     myMsgBox("Please enter a valid file containing electrode names")
-        #     return
-        # else:
-        #     electrodes = self.electrodesFileTextBox.text()
 
         # OpenViBE Path...
         if self.ovScript is None:

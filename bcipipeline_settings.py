@@ -10,7 +10,7 @@ optionKeys = ["",
 global optionsComboText
 optionsComboText = {optionKeys[0]: "",
                     optionKeys[1]: "GrazBCI - Power Spectrum Features (2 classes)",
-                    optionKeys[2]: "GrazBCI - Connectivity Features"}
+                    optionKeys[2]: "GrazBCI - Connectivity Features (2 classes)"}
 
 global optionsNbParams
 optionsNbParams = {optionKeys[0]: 0,
@@ -19,8 +19,8 @@ optionsNbParams = {optionKeys[0]: 0,
 
 global optionsTemplatesDir
 optionsTemplatesDir = {optionKeys[0]: None,
-                       optionKeys[1]: "spectralpower-templates",
-                       optionKeys[2]: "connectivity-templates"}
+                       optionKeys[1]: "templates-spectralpower",
+                       optionKeys[2]: "templates-connectivity"}
 
 global templateScenFilenames
 templateScenFilenames = ["sc1-monitor-acq.xml",
@@ -79,11 +79,14 @@ pipelineExtractSettings = {optionKeys[0]: None,
                                {"StimulationEpoch": 1.5,
                                 "StimulationDelay": 0,
                                 "ConnectivityMetric": "MSC",
-                                "WelchLength": 4,
-                                "WelchOverlap": 50,
-                                "WindowMethod": "Hann",
-                                "WelchWinLength": 0.25,
-                                "WelchWinOverlap": 50,
+                                "ConnectivityLength": 1,
+                                "ConnectivityOverlap": 50,
+                                # "ConnectivityMethod" : "Burg"
+                                # "AutoRegressiveOrder": 19,
+                                "AutoRegressiveOrderTime": 0.038,
+                                # "WindowMethod": "Hann",
+                                # "WelchWinLength": 0.25,
+                                # "WelchWinOverlap": 50,
                                 "FftSize": 256,
                                 "FreqRes": 1,
                                 }
@@ -109,6 +112,9 @@ paramIdText = {"TrialNb": "Nb Trials per class",
                "PsdSize": "FFT Size",
                "FreqRes": "Frequency resolution (ratio)",
                "ConnectivityMetric": "Connectivity Metric (MSC or IMCOH)",
+               "ConnectivityLength": "Length of a connectivity measure (s)",
+               "ConnectivityOverlap": "Overlap between connectivity measures (%)",
+               "ConnectivityMethod": "Method used for connectivity (Burg or Welch)",
                "WelchLength": "Length of a Connectivity estimation (s)",
                "WelchOverlap": "Connectivity estimation overlapping (%)",
                "WindowMethod": "Welch sliding window (Hann or Hamming)",
@@ -116,8 +122,3 @@ paramIdText = {"TrialNb": "Nb Trials per class",
                "WelchWinOverlap": "Welch sliding window overlap (%)",
                "ConnectFftSize": "Connectivity: FFT Size"
                }
-
-global specialParamsDefaultDisplay
-specialParamsDefaultDisplay = {"AutoRegressiveOrderTime": 0.038,  # in (s) assuming order = 19 and fsamp = 500
-                               "FreqRes": 1,  # ratio fsamp/psdsize, assuming fsamp=500 and psdSize=500
-                               }

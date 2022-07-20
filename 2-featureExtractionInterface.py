@@ -145,13 +145,6 @@ class Dialog(QDialog):
             labelTemp.setText(settings.paramIdText[paramId])
             self.layoutExtractLabels.addWidget(labelTemp)
             lineEditExtractTemp = QLineEdit()
-            # # SPECIAL CASES... DEFAULT VALUES, SINCE WE DON'T KNOW FSAMP
-            # if paramId in settings.specialParamsDefaultDisplay:
-            #     tempVal = settings.specialParamsDefaultDisplay[paramId]
-            #     lineEditExtractTemp.setText(str(tempVal))
-            # else:
-            #     # Read from json file
-            #     lineEditExtractTemp.setText(self.parameterDict[paramId])
             lineEditExtractTemp.setText(self.parameterDict[paramId])
             self.layoutExtractLineEdits.addWidget(lineEditExtractTemp)
 
