@@ -136,7 +136,7 @@ class Dialog(QDialog):
 
             # OpenViBE designer file...
             labelOv = QLabel()
-            labelOvtxt = str("OpenViBE designer script (openvibe-designer.cmd or .sh)")
+            labelOvtxt = str("OpenViBE designer script (openvibe-designer.cmd or .exe or .sh)")
             labelOvtxt = str(labelOvtxt + "\n(in your OpenViBE installation folder)")
             labelOv.setText(labelOvtxt)
             labelOv.setAlignment(QtCore.Qt.AlignCenter)
@@ -161,7 +161,7 @@ class Dialog(QDialog):
     def browseForDesigner(self):
         directory = os.getcwd()
         self.ovScript, dummy = QFileDialog.getOpenFileName(self, "OpenViBE designer script", str(directory))
-        if "openvibe-designer.cmd" or "openvibe-designer.sh" in self.ovScript:
+        if "openvibe-designer.cmd" or "openvibe-designer.exe" or "openvibe-designer.sh" in self.ovScript:
             self.designerTextBox.setText(self.ovScript)
         else:
             self.ovScript = None

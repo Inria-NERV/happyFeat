@@ -78,7 +78,7 @@ class Dialog(QDialog):
 
         self.plotBtnsEnabled = False
 
-        # Sampling Freq: to be loaded later, in Spectrum CSV files
+        # Sampling Freq: to be loaded later, in CSV files
         self.samplingFreq = None
 
         # GET PARAMS FROM JSON FILE
@@ -785,7 +785,7 @@ class Dialog(QDialog):
         # ----------
         directory = os.getcwd()
         newPath, dummy = QFileDialog.getOpenFileName(self, "OpenViBE designer", str(directory))
-        if "openvibe-designer.cmd" or "openvibe-designer.sh" in newPath:
+        if "openvibe-designer.cmd" or "openvibe-designer.exe" or "openvibe-designer.sh" in newPath:
             self.designerTextBox.setText(newPath)
             self.ovScript = newPath
 
