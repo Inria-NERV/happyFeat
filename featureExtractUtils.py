@@ -1,5 +1,8 @@
 from Statistical_analysis import *
 import pandas as pd
+import dask.dataframe as dsk
+import csv
+import numpy as np
 
 def channel_generator(number_of_channel, Ground, Ref):
     if number_of_channel == 32:
@@ -50,14 +53,23 @@ def elecGroundRef(electrodeList, ground, ref):
 
     return newElecList
 
-def load_csv_cond(file):
-    # Read data from file 'filename.csv'
-    # (in the same directory that your python process is based)
-    # Control delimiters, rows, column names with read_csv (see later)
+def load_csv_pd(file):
+    # Read data from CSV file with pandas
+    # Practical due to automatic conversion to DataFrame.
+    # But very slow with big files.
     data = pd.read_csv(file)
-    # Preview the first 5 lines of the loaded data
-    data.head()
     return data
+
+def load_csv_np(file):
+    # Read data from CSV file with numpy
+    # Very fast. But need to separate header & data.
+    # Here it's specific for OpenViBE CSV structure.
+    # Header : ['Time:dim1xdim2' , 'End time', 'Chan1', 'Chan2', ... , 'ChanN', 'Event Id', 'Event Date', 'Event Duration']
+    # For the data, we discard the last 3 cols (not used in our case)
+    header = np.loadtxt(file, dtype=str, delimiter=',', max_rows=1)
+    nbcols = header.size-3
+    data = np.loadtxt(file, dtype=float, delimiter=',', skiprows=1, usecols=list(range(nbcols)))
+    return header, data
 
 def Extract_CSV_Data(data_cond, trialLength, nbElectrodes, bins, n_window, shift):
     # shift = n_window - overlap
@@ -76,6 +88,24 @@ def Extract_CSV_Data(data_cond, trialLength, nbElectrodes, bins, n_window, shift
             timefreq[i, j, :, :] = data[(i * length):(i * length + length), (j * bins):(j * bins + bins)]
 
     return power, timefreq
+
+def Extract_Connect_CSV_Data(data_cond, trialLength, nbElectrodes, bins, connectLength, connectOverlap):
+    # Only keep the actual data, discard time & stimulations info...
+    data = data_cond[:, 2:]
+    data = data[:, :bins*nbElectrodes*nbElectrodes]
+
+    shift = connectLength * (1.0-connectOverlap/100.0)
+    length = int(np.floor(trialLength / shift))
+    nbTrials = int(np.shape(data)[0] / length)
+
+    connectivityMatrix = np.zeros([nbTrials, bins, nbElectrodes, nbElectrodes])
+    for i in range(connectivityMatrix.shape[0]):
+        for j in range(connectivityMatrix.shape[1]):
+            for k in range(connectivityMatrix.shape[2]):
+                connectivityMatrix[i, j, k, :] = data[(i * length):(i * length + length),
+                                                 (j*nbElectrodes*nbElectrodes + k*nbElectrodes):(j*nbElectrodes*nbElectrodes + k*nbElectrodes + nbElectrodes)].mean(axis=0)
+
+    return connectivityMatrix
 
 def psdSizeToFreqRes(psdSize, fSamp):
     return float(fSamp) / float(psdSize)

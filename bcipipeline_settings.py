@@ -82,13 +82,14 @@ pipelineExtractSettings = {optionKeys[0]: None,
                                 "ConnectivityLength": 1,
                                 "ConnectivityOverlap": 50,
                                 # "ConnectivityMethod" : "Burg"
-                                # "AutoRegressiveOrder": 19,
-                                "AutoRegressiveOrderTime": 0.038,
+                                # "AutoRegressiveOrder": 12,
+                                "AutoRegressiveOrderTime": 0.024,
                                 # "WindowMethod": "Hann",
                                 # "WelchWinLength": 0.25,
                                 # "WelchWinOverlap": 50,
-                                "FftSize": 256,
+                                "PsdSize": 256,
                                 "FreqRes": 1,
+                                "ChannelSubset": "C1;C3;C5;CP1;CP3;CP5;Cz;CPz;C2;C4;C6;CP2;CP4;CP6",
                                 }
 
                            }
@@ -120,5 +121,6 @@ paramIdText = {"TrialNb": "Nb Trials per class",
                "WindowMethod": "Welch sliding window (Hann or Hamming)",
                "WelchWinLength": "Welch sliding window length (s)",
                "WelchWinOverlap": "Welch sliding window overlap (%)",
-               "ConnectFftSize": "Connectivity: FFT Size"
+               "ConnectFftSize": "Connectivity: FFT Size",
+               "ChannelSubset": "Subset of sensors to use"
                }

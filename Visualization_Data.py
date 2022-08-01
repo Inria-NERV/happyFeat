@@ -702,3 +702,103 @@ def time_frequency_map_between_cond(time_freq, time, freqs, channel, fmin, fmax,
     plt.xlabel(' Time (s)', fontdict=font)
     plt.ylabel('Frequency (Hz)', fontdict=font)
     plt.title('Sensor ' + channel_array[channel], fontdict=font)
+
+
+def plot_connect_spectrum(connect1, connect2, chan1idx, chan2idx, electrodeList, each_point, fres, class1label, class2label):
+    font = {'family': 'serif',
+            'color': 'black',
+            'weight': 'normal',
+            'size': 14,
+            }
+
+    fig, ax = plt.subplots()
+    frequence = []
+    avg_class1 = connect1[:, :, chan1idx, chan2idx].mean(axis=0)
+    avg_class2 = connect2[:, :, chan1idx, chan2idx].mean(axis=0)
+
+    # Only plot half of the spectrum, since it's mirrored
+    sizeSpectrum = int(np.floor((len(avg_class1)+1) / 2))
+
+    plt.plot(avg_class1[0:sizeSpectrum], label=class1label, color='blue')
+    plt.plot(avg_class2[0:sizeSpectrum], label=class2label, color='red')
+    ax.tick_params(axis='both', which='both', length=0)
+
+    plt.title('Connectivity btw. ' + electrodeList[chan1idx] + ' and ' + electrodeList[chan2idx], fontsize='large')
+    # plt.xticks(range(len(freqs[index_fmin:(index_fmax + 1)])), frequence, fontsize=12)
+    plt.xlabel(' Frequency (Hz)', fontdict=font)
+    plt.ylabel('MSC', fontdict=font)
+    plt.margins(x=0)
+    # ax.set_xticks(np.arange(fmin, fmax, sizing))
+    ax.grid(axis='x')
+    # plt.axis('square')
+
+    plt.legend()
+    # plt.show()
+
+
+def plot_connect_matrices(connect1, connect2, fmin, fmax, channel_array, class1label, class2label):
+    fig, axes = plt.subplots(ncols=2)
+    ax1, ax2 = axes
+
+    font = {'family': 'serif',
+            'color': 'black',
+            'weight': 'normal',
+            'size': 14}
+
+    connect1disp = connect1[:, fmin:fmax, :, :].mean(axis=0).mean(axis=0)
+    connect2disp = connect2[:, fmin:fmax, :, :].mean(axis=0).mean(axis=0)
+
+    top = cm.get_cmap('YlOrRd_r', 128)  # r means reversed version
+    bottom = cm.get_cmap('YlGnBu_r', 128)
+    newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)), top(np.linspace(1, 0, 128))))
+    cm.get_cmap('jet')
+
+    # Display matrices...
+    im1 = ax1.imshow(connect1disp, cmap='jet', aspect='auto', vmin=0, vmax=1)
+    im2 = ax2.imshow(connect2disp, cmap='jet', aspect='auto', vmin=0, vmax=1)
+
+    # Set labels for both graphs...
+    plt.setp(axes,
+             xticks=range(0, len(channel_array)),
+             xticklabels=channel_array,
+             yticks=range(0, len(channel_array)),
+             yticklabels=channel_array)
+
+    # Put labels on top...
+    ax1.xaxis.tick_top()
+    ax2.xaxis.tick_top()
+    
+    # Set left/right titles...
+    ax1.title.set_text(class1label)
+    ax2.title.set_text(class2label)
+
+    # Enable color bars...
+    cbar1 = plt.colorbar(im1, ax=ax1)
+    cbar2 = plt.colorbar(im2, ax=ax2)
+
+    fig.suptitle("MSC for frequency band " + str(fmin) + " to " + str(fmax) + "Hz")
+
+def plot_strongestConnectome(connect1, connect2, percentStrong, fmin, fmax, electrodeList, class1label, class2label):
+    f, axes = plt.subplots(num=2, facecolor='black')
+    connect1disp = connect1[:, fmin:fmax, :, :].mean(axis=0).mean(axis=0)
+    sortedVec = np.sort(connect1disp, axis=None)
+    idxPercent = int(np.floor(len(sortedVec) * (100 - percentStrong) / 100))
+    connect1disp = (connect1disp >= sortedVec[idxPercent]) * connect1disp
+
+    connect2disp = connect2[:, fmin:fmax, :, :].mean(axis=0).mean(axis=0)
+    sortedVec = np.sort(connect2disp, axis=None)
+    idxPercent = int(np.floor(len(sortedVec) * (100 - percentStrong) / 100))
+    connect2disp = (connect2disp >= sortedVec[idxPercent]) * connect2disp
+
+    plt.cla()
+    mne.viz.plot_connectivity_circle(connect1disp, electrodeList, fig=f, subplot=(1, 2, 1),
+                                       facecolor='black', textcolor='white', node_edgecolor='black',
+                                       linewidth=1.5, colormap='hot', vmin=0, vmax=1, show=False,
+                                       title=class1label)
+
+    f, ax = mne.viz.plot_connectivity_circle(connect2disp, electrodeList, fig=f, subplot=(1, 2, 2),
+                                       facecolor='black', textcolor='white', node_edgecolor='black',
+                                       linewidth=1.5, colormap='hot', vmin=0, vmax=1, show=False,
+                                       title=class2label)
+
+    f.suptitle("Strongest " + str(percentStrong) + "% of links for MSC, [" + str(fmin) + ":" + str(fmax) + "]Hz", color='white')
