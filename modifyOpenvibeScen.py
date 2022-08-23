@@ -130,7 +130,9 @@ def modifyTrainScenario(chanFreqPairs, scenXml):
                 print("-- FREQ SELECTION BOX ")
                 for settings in box.findall('Settings'):
                     for setting in settings.findall('Setting'):
-                        if setting.find('Name').text == "Frequencies to select":
+                        # POWER SPECTRUM PIPELINE: actual "freq band selector" box
+                        # CONNECTIVITY PIPELINE: channel selector rebranded as freq band selector
+                        if setting.find('Name').text == "Frequencies to select" or setting.find('Name').text == "Channel List":
                             xmlVal = setting.find('Value')
                             print("       replacing " + xmlVal.text)
                             xmlVal.text = chanFreqPairs[0][1]
@@ -142,21 +144,21 @@ def modifyTrainScenario(chanFreqPairs, scenXml):
         # BRANCHES WITH CHANNEL SELECTOR, TIME EPOCH, AR COEFFS,
         # FREQ BAND SELECTOR AND SPECTRUM AVERAGE
 
-        # FIRST STEP : GET THE TWO STIM BASED EPOCHING BOXES.
-        stimBasedEpochingBoxes = []
-        stimBasedIdx = 0
+        # FIRST STEP : GET THE TWO "SPLIT" IDENTITY BOXES
+        splitBoxes = []
+        splitIdx = 0
         for boxes in root.findall('Boxes'):
             for box in boxes.findall('Box'):
-                if box.find('Name').text == 'Stimulation based epoching':
-                    print("-- STIM BASED EPOCHING " + str(stimBasedIdx))
-                    stimBasedEpochingBoxes.append(box)
-                    stimBasedIdx += 1
+                if box.find('Name').text == 'SPLIT':
+                    print("-- SPLIT " + str(splitIdx))
+                    splitBoxes.append(box)
+                    splitIdx += 1
                     continue
 
         # Find Ids of Stimulation based epoching box and Classifier trainer box
         boxLast = findBox(root, "Classifier trainer")
         boxLastId = boxLast.find("Identifier").text
-        for box in stimBasedEpochingBoxes:
+        for box in splitBoxes:
             boxId = box.find("Identifier").text
             featAggInputIdx = 0
             locOffset = 120
@@ -257,7 +259,9 @@ def modifyOnlineScenario(chanFreqPairs, scenXml):
                 print("-- FREQ SELECTION BOX ")
                 for settings in box.findall('Settings'):
                     for setting in settings.findall('Setting'):
-                        if setting.find('Name').text == "Frequencies to select":
+                        # POWER SPECTRUM PIPELINE: actual "freq band selector" box
+                        # CONNECTIVITY PIPELINE: channel selector rebranded as freq band selector
+                        if setting.find('Name').text == "Frequencies to select" or setting.find('Name').text == "Channel List":
                             xmlVal = setting.find('Value')
                             print("       replacing " + xmlVal.text)
                             xmlVal.text = chanFreqPairs[0][1]
@@ -439,7 +443,9 @@ def copyBoxList(root, boxIdList, locOffset, chanFreqPair):
                 elif newBox.find('Name').text == "Frequency Band Selector":
                     for settings in box.findall('Settings'):
                         for setting in settings.findall('Setting'):
-                            if setting.find('Name').text == "Frequencies to select":
+                            # POWER SPECTRUM PIPELINE: actual "freq band selector" box
+                            # CONNECTIVITY PIPELINE: channel selector rebranded as freq band selector
+                            if setting.find('Name').text == "Frequencies to select" or setting.find('Name').text == "Channel List":
                                 xmlVal = setting.find('Value')
                                 print("       replacing " + xmlVal.text)
                                 xmlVal.text = chanFreqPair[1]

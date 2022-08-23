@@ -239,84 +239,6 @@
 			</Attributes>
 		</Box>
 		<Box>
-			<Identifier>(0x00001951, 0x00006529)</Identifier>
-			<Name>Matrix Transpose</Name>
-			<AlgorithmClassIdentifier>(0x5e0f04b5, 0x5b5005cf)</AlgorithmClassIdentifier>
-			<Inputs>
-				<Input>
-					<TypeIdentifier>(0x544a003e, 0x6dcba5f6)</TypeIdentifier>
-					<Name>Input matrix</Name>
-				</Input>
-			</Inputs>
-			<Outputs>
-				<Output>
-					<TypeIdentifier>(0x544a003e, 0x6dcba5f6)</TypeIdentifier>
-					<Name>Output matrix</Name>
-				</Output>
-			</Outputs>
-			<Attributes>
-				<Attribute>
-					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
-					<Value>656</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
-					<Value>640</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
-					<Value>(0xabffc20a, 0xffabac64)</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xc80ce8af, 0xf699f813)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xcfad85b0, 0x7c6d841c)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-			</Attributes>
-		</Box>
-		<Box>
-			<Identifier>(0x00001951, 0x0000652a)</Identifier>
-			<Name>Matrix Transpose</Name>
-			<AlgorithmClassIdentifier>(0x5e0f04b5, 0x5b5005cf)</AlgorithmClassIdentifier>
-			<Inputs>
-				<Input>
-					<TypeIdentifier>(0x544a003e, 0x6dcba5f6)</TypeIdentifier>
-					<Name>Input matrix</Name>
-				</Input>
-			</Inputs>
-			<Outputs>
-				<Output>
-					<TypeIdentifier>(0x544a003e, 0x6dcba5f6)</TypeIdentifier>
-					<Name>Output matrix</Name>
-				</Output>
-			</Outputs>
-			<Attributes>
-				<Attribute>
-					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
-					<Value>656</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
-					<Value>448</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
-					<Value>(0xabffc20a, 0xffabac64)</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xc80ce8af, 0xf699f813)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xcfad85b0, 0x7c6d841c)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-			</Attributes>
-		</Box>
-		<Box>
 			<Identifier>(0x00002a3c, 0x00005df9)</Identifier>
 			<Name>CSV File Writer</Name>
 			<AlgorithmClassIdentifier>(0x428375e8, 0x325f2db9)</AlgorithmClassIdentifier>
@@ -363,7 +285,7 @@
 			<Attributes>
 				<Attribute>
 					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
-					<Value>704</Value>
+					<Value>672</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
@@ -505,7 +427,7 @@
 			<Attributes>
 				<Attribute>
 					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
-					<Value>704</Value>
+					<Value>672</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
@@ -1459,17 +1381,6 @@
 	</Boxes>
 	<Links>
 		<Link>
-			<Identifier>(0x000001e6, 0x00003c7a)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x000006a3, 0x00005db8)</BoxIdentifier>
-				<BoxOutputIndex>0</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x00001951, 0x0000652a)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
 			<Identifier>(0x00000200, 0x00000488)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x000065af, 0x0000612c)</BoxIdentifier>
@@ -1492,6 +1403,17 @@
 			</Target>
 		</Link>
 		<Link>
+			<Identifier>(0x0000142f, 0x00001d20)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x000006a3, 0x00005db9)</BoxIdentifier>
+				<BoxOutputIndex>0</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x00002a3c, 0x00005dfc)</BoxIdentifier>
+				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
 			<Identifier>(0x00001554, 0x00006fb8)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x0000664e, 0x00007cee)</BoxIdentifier>
@@ -1499,17 +1421,6 @@
 			</Source>
 			<Target>
 				<BoxIdentifier>(0x000006a3, 0x00005db8)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
-			<Identifier>(0x00001dc8, 0x000011ac)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x000006a3, 0x00005db9)</BoxIdentifier>
-				<BoxOutputIndex>0</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x00001951, 0x00006529)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>
@@ -1555,17 +1466,6 @@
 			<Target>
 				<BoxIdentifier>(0x1f046833, 0x21a8a876)</BoxIdentifier>
 				<BoxInputIndex>1</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
-			<Identifier>(0x00002d2b, 0x00006e65)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x00001951, 0x00006529)</BoxIdentifier>
-				<BoxOutputIndex>0</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x00002a3c, 0x00005dfc)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>
 		<Link>
@@ -1690,17 +1590,6 @@
 			</Target>
 		</Link>
 		<Link>
-			<Identifier>(0x00007390, 0x000069ea)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x00001951, 0x0000652a)</BoxIdentifier>
-				<BoxOutputIndex>0</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x00002a3c, 0x00005df9)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
 			<Identifier>(0x00007457, 0x00001d35)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x00006c51, 0x000077b6)</BoxIdentifier>
@@ -1708,6 +1597,17 @@
 			</Source>
 			<Target>
 				<BoxIdentifier>(0x1f046833, 0x21a8a876)</BoxIdentifier>
+				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
+			<Identifier>(0x00007ac1, 0x000010d2)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x000006a3, 0x00005db8)</BoxIdentifier>
+				<BoxOutputIndex>0</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x00002a3c, 0x00005df9)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>
@@ -1753,7 +1653,7 @@ Class 1 &amp; 2</Text>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x7234b86b, 0x2b8651a5)</Identifier>
-					<Value>784</Value>
+					<Value>752</Value>
 				</Attribute>
 			</Attributes>
 		</Comment>
@@ -1795,11 +1695,7 @@ frequencies x channels x channels
 
 Matrix 3D to 2D : average over last "channel" dimension :
 frequencies x channels
-(ex: 500 x 64)
-
-Matrix Transpose : 
-channels x frequencies (more practical for post-processing)
-(ex: 64 x 500)</Text>
+(ex: 500 x 64)</Text>
 			<Attributes>
 				<Attribute>
 					<Identifier>(0x473d9a43, 0x97fc0a97)</Identifier>

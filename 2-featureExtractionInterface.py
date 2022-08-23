@@ -224,26 +224,22 @@ class Dialog(QDialog):
             self.formLayoutViz.addRow('Frequency for Topography (Hz)', self.freqTopo)
 
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
-            # Param : channel 1 for connectivity "spectrum" visualization
-            self.userChan1 = QLineEdit()
-            self.userChan1.setText('C1')
-            self.formLayoutViz.addRow('Connect. channel 1', self.userChan1)
-            # Param : channel 2 for connectivity "spectrum" visualization
-            self.userChan2 = QLineEdit()
-            self.userChan2.setText('C3')
-            self.formLayoutViz.addRow('Connect. channel 2', self.userChan2)
             # Param : fmin for frequency based viz
             self.userFmin = QLineEdit()
-            self.userFmin.setText('8')
+            self.userFmin.setText('0')
             self.formLayoutViz.addRow('Frequency min', self.userFmin)
             # Param : fmax for frequency based viz
             self.userFmax = QLineEdit()
-            self.userFmax.setText('16')
+            self.userFmax.setText('40')
             self.formLayoutViz.addRow('Frequency max', self.userFmax)
-            # Param : percent of strongest nodes to use for connectome
-            self.percentStrong = QLineEdit()
-            self.percentStrong.setText('5')
-            self.formLayoutViz.addRow('% of strongest nodes', self.percentStrong)
+            # Param : Electrode to use for Node Strength display
+            self.electrodePsd = QLineEdit()
+            self.electrodePsd.setText('C3')
+            self.formLayoutViz.addRow('Sensor for Node Strength viz', self.electrodePsd)
+            # Param : Frequency to use for Topography
+            self.freqTopo = QLineEdit()
+            self.freqTopo.setText('12')
+            self.formLayoutViz.addRow('Frequency for Topography (Hz)', self.freqTopo)
 
         self.layoutViz.addLayout(self.formLayoutViz)
 
@@ -278,19 +274,28 @@ class Dialog(QDialog):
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             # Viz options for "Connectivity" pipeline...
             self.btn_loadFilesForViz = QPushButton("Load connectivity file(s) for analysis")
-            self.btn_connectSpect = QPushButton("Display connectivity \"spectrum\" for given channel pair")
-            self.btn_connectMatrices = QPushButton("Display connectivity matrices for freq band")
-            self.btn_connectome = QPushButton("Display connectome using threshold & freq band")
+            # self.btn_connectSpect = QPushButton("Display connectivity \"spectrum\" for given channel pair")
+            # self.btn_connectMatrices = QPushButton("Display connectivity matrices for freq band")
+            # self.btn_connectome = QPushButton("Display connectome using threshold & freq band")
+            self.btn_r2map = QPushButton("Display Frequency-channel R² map (NODE STRENGTH)")
+            self.btn_metric = QPushButton("Display NODE STRENGTH comparison between classes")
+            self.btn_topo = QPushButton("Display NODE STRENGTH Brain Topography")
 
             self.btn_loadFilesForViz.clicked.connect(lambda: self.loadFilesForViz())
-            self.btn_connectSpect.clicked.connect(lambda: self.btnConnectSpect())
-            self.btn_connectMatrices.clicked.connect(lambda: self.btnConnectMatrices())
-            self.btn_connectome.clicked.connect(lambda: self.btnConnectome())
+            # self.btn_connectSpect.clicked.connect(lambda: self.btnConnectSpect())
+            # self.btn_connectMatrices.clicked.connect(lambda: self.btnConnectMatrices())
+            # self.btn_connectome.clicked.connect(lambda: self.btnConnectome())
+            self.btn_r2map.clicked.connect(lambda: self.btnR2())
+            self.btn_metric.clicked.connect(lambda: self.btnMetric())
+            self.btn_topo.clicked.connect(lambda: self.btnTopo())
 
             self.layoutVizButtons.addWidget(self.btn_loadFilesForViz)
-            self.layoutVizButtons.addWidget(self.btn_connectSpect)
-            self.layoutVizButtons.addWidget(self.btn_connectMatrices)
-            self.layoutVizButtons.addWidget(self.btn_connectome)
+            # self.layoutVizButtons.addWidget(self.btn_connectSpect)
+            # self.layoutVizButtons.addWidget(self.btn_connectMatrices)
+            # self.layoutVizButtons.addWidget(self.btn_connectome)
+            self.layoutVizButtons.addWidget(self.btn_r2map)
+            self.layoutVizButtons.addWidget(self.btn_metric)
+            self.layoutVizButtons.addWidget(self.btn_topo)
 
         self.layoutViz.addLayout(self.layoutVizButtons)
 
@@ -387,9 +392,12 @@ class Dialog(QDialog):
             # self.btn_w2map.setEnabled(True)
             # self.btn_psd_r2.setEnabled(True)
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
-            self.btn_connectSpect.setEnabled(myBool)
-            self.btn_connectMatrices.setEnabled(myBool)
-            self.btn_connectome.setEnabled(myBool)
+            # self.btn_connectSpect.setEnabled(myBool)
+            # self.btn_connectMatrices.setEnabled(myBool)
+            # self.btn_connectome.setEnabled(myBool)
+            self.btn_r2map.setEnabled(myBool)
+            self.btn_metric.setEnabled(myBool)
+            self.btn_topo.setEnabled(myBool)
 
         self.show()
 
@@ -742,11 +750,10 @@ class Dialog(QDialog):
             self.electrodePsd.setEnabled(myBool)
             self.freqTopo.setEnabled(myBool)
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
-            self.userChan1.setEnabled(myBool)
-            self.userChan2.setEnabled(myBool)
             self.userFmin.setEnabled(myBool)
             self.userFmax.setEnabled(myBool)
-            self.percentStrong.setEnabled(myBool)
+            self.electrodePsd.setEnabled(myBool)
+            self.freqTopo.setEnabled(myBool)
 
         self.btn_loadFilesForViz.setEnabled(myBool)
         if myBool and self.plotBtnsEnabled:
@@ -816,13 +823,26 @@ class Dialog(QDialog):
                        self.Features.electrodes_final,
                        fmin, fmax, tmin, tmax, class1, class2)
 
+    def btnMetric(self):
+        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
+            fmin = int(self.userFmin.text())
+            fmax = int(self.userFmax.text())
+            class1 = self.parameterDict["Class1"]
+            class2 = self.parameterDict["Class2"]
+            # TODO : change
+            metricLabel = "Average Node Strength"
+            qt_plot_metric(self.Features.power_cond1, self.Features.power_cond2,
+                           self.Features.freqs_array, self.Features.electrodes_final,
+                           self.electrodePsd.text(),
+                           self.Features.fres, fmin, fmax, class1, class2, metricLabel)
+
     def btnPsd(self):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             fmin = int(self.userFmin.text())
             fmax = int(self.userFmax.text())
             class1 = self.parameterDict["Class1"]
             class2 = self.parameterDict["Class2"]
-            qt_plot_psd(self.Features.power_cond2, self.Features.power_cond1,
+            qt_plot_psd(self.Features.power_cond1, self.Features.power_cond2,
                         self.Features.freqs_array, self.Features.electrodes_final,
                         self.electrodePsd.text(),
                         self.Features.fres, fmin, fmax, class1, class2)
@@ -931,7 +951,7 @@ def plot_stats(Rsigned, freqs_array, electrodes, fres, fmin, fmax):
     plot_Rsquare_calcul_welch(Rsigned, np.array(electrodes)[:], freqs_array, smoothing, fres, 10, fmin, fmax)
     plt.show()
 
-def qt_plot_psd(power_cond2, power_cond1, freqs_array, electrodesList, electrodeToDisp, fres, fmin, fmax, class1label, class2label):
+def qt_plot_psd(power_cond1, power_cond2, freqs_array, electrodesList, electrodeToDisp, fres, fmin, fmax, class1label, class2label):
     electrodeExists = False
     electrodeIdx = 0
     for idx, elec in enumerate(electrodesList):
@@ -943,16 +963,33 @@ def qt_plot_psd(power_cond2, power_cond1, freqs_array, electrodesList, electrode
     if not electrodeExists:
         myMsgBox("No sensor with this name found")
     else:
-        plot_psd(power_cond2, power_cond1, freqs_array, electrodeIdx, electrodesList,
+        plot_psd(power_cond1, power_cond2, freqs_array, electrodeIdx, electrodesList,
                  10, fmin, fmax, fres, class1label, class2label)
         plt.show()
 
+def qt_plot_metric(power_cond1, power_cond2, freqs_array, electrodesList, electrodeToDisp, fres, fmin, fmax, class1label, class2label, metricLabel):
+    electrodeExists = False
+    electrodeIdx = 0
+    for idx, elec in enumerate(electrodesList):
+        if elec == electrodeToDisp:
+            electrodeIdx = idx
+            electrodeExists = True
+            break
 
+    if not electrodeExists:
+        myMsgBox("No sensor with this name found")
+    else:
+        plot_metric(power_cond1, power_cond2, freqs_array, electrodeIdx, electrodesList,
+                    10, fmin, fmax, fres, class1label, class2label, metricLabel)
+        plt.show()
+
+# Plot "Brain topography", using either Power Spectrum (in same pipeline)
+# or Node Strength (or similar metric) (in Connectivity pipeline)
 def qt_plot_topo(Rsigned, electrodes, frequency, fres, fs):
     topo_plot(Rsigned, round(frequency/fres), electrodes, fres, fs, 'Signed R square')
     plt.show()
 
-
+# Plot "time-frequency analysis", in the POWER SPECTRUM pipeline ONLY.
 def qt_plot_tf(timefreq_cond1, timefreq_cond2, time_array, freqs_array, electrode, fres, average_baseline_cond1, average_baseline_cond2, std_baseline_cond1, std_baseline_cond2, electrodes, f_min_var, f_max_var, tmin, tmax, class1label, class2label):
     font = {'family': 'serif',
             'color':  'black',
@@ -988,6 +1025,7 @@ def qt_plot_tf(timefreq_cond1, timefreq_cond2, time_array, freqs_array, electrod
         plt.title('(' + class2label + ') Sensor ' + electrodes[Index_electrode], fontdict=font)
         plt.show()
 
+# Plot "connectivity spectrum" from a RAW connectivity matrix. UNUSED
 def qt_plot_connectSpectrum(connect1, connect2, chan1, chan2, electrodeList, fres, class1label, class2label):
     chan1ok = False
     chan2ok = False
@@ -1017,10 +1055,12 @@ def qt_plot_connectSpectrum(connect1, connect2, chan1, chan2, electrodeList, fre
         plot_connect_spectrum(connect1, connect2, chan1idx, chan2idx, electrodeList, 10, fres, class1label, class2label)
         plt.show()
 
+# Plot full RAW connectivity matrix for a given [fmin;fmax] range. UNUSED
 def qt_plot_connectMatrices(connect1, connect2, fmin, fmax, electrodeList, class1label, class2label):
     plot_connect_matrices(connect1, connect2, fmin, fmax, electrodeList, class1label, class2label)
     plt.show()
 
+# Plot % of strongest nodes, from a RAW connectivity matrix, in range [fmin;fmax]. UNUSED
 def qt_plot_strongestConnectome(connect1, connect2, percentStrong, fmin, fmax, electrodeList, class1label, class2label):
     plot_strongestConnectome(connect1, connect2, percentStrong, fmin, fmax, electrodeList, class1label, class2label)
     plt.show()

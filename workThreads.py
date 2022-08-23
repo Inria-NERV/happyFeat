@@ -69,9 +69,13 @@ class Extraction(QtCore.QThread):
                 timeToSamples(float(self.parameterDict["AutoRegressiveOrderTime"]), sampFreq))
             self.parameterDict["PsdSize"] = str(freqResToPsdSize(float(self.parameterDict["FreqRes"]), sampFreq))
 
-            if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
-                if self.parameterDict["ChannelSubset"] == "":
-                    self.parameterDict["ChannelSubset"] = self.parameterDict["ChannelNames"];
+            # Special case : "subset of electrodes" for connectivity
+            # DISABLED FOR NOW
+            # if field is empty, use all electrodes
+            # if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+            #     if self.parameterDict["ChannelSubset"] == "":
+            #         self.parameterDict["ChannelSubset"] = self.parameterDict["ChannelNames"];
+            self.parameterDict["ChannelSubset"] = self.parameterDict["ChannelNames"];
 
             modifyScenarioGeneralSettings(self.scenFile, self.parameterDict)
 
@@ -157,13 +161,9 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
                                          str(selectedBasename + "-" + pipelineLabel + "-" + class2label + "-BASELINE.csv"))
 
             self.info2.emit(str("Loading Data for file " + str(idxFile)))
-            # data1 = load_csv_cond(path1)
-            # data2 = load_csv_cond(path2)
             [header1, data1] = load_csv_np(path1)
             [header2, data2] = load_csv_np(path2)
             self.info2.emit(str("Loading Baselines for file " + str(idxFile)))
-            # data1baseline = load_csv_cond(path1baseline)
-            # data2baseline = load_csv_cond(path2baseline)
             [header1baseline, data1baseline] = load_csv_np(path1baseline)
             [header2baseline, data2baseline] = load_csv_np(path2baseline)
 
@@ -171,10 +171,6 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
             # Infos in the columns header of the CSVs in format "Time:32x251:500"
             # (Column zero contains starting time of the row)
             # 32 is channels, 251 is freq bins, 500 is sampling frequency)
-            # sampFreq1 = int(data1.columns.values[0].split(":")[-1])
-            # sampFreq2 = int(data2.columns.values[0].split(":")[-1])
-            # freqBins1 = int(data1.columns.values[0].split(":")[1].split("x")[1])
-            # freqBins2 = int(data2.columns.values[0].split(":")[1].split("x")[1])
             sampFreq1 = int(header1[0].split(":")[-1])
             sampFreq2 = int(header2[0].split(":")[-1])
             freqBins1 = int(header1[0].split(":")[1].split("x")[1])
@@ -206,10 +202,6 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
 
             listElectrodeList.append(electrodeList1)
 
-            # self.dataNp1.append(data1.to_numpy())
-            # self.dataNp2.append(data2.to_numpy())
-            # self.dataNp1baseline.append(data1baseline.to_numpy())
-            # self.dataNp2baseline.append(data2baseline.to_numpy())
             self.dataNp1.append(data1)
             self.dataNp2.append(data2)
             self.dataNp1baseline.append(data1baseline)
@@ -328,14 +320,14 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         # Statistical Analysis
         freqs_array = np.arange(0, n_bins, fres)
 
-        Rsigned = Compute_Rsquare_Map_Welch(power_cond2_final[:, :, :(n_bins - 1)],
-                                            power_cond1_final[:, :, :(n_bins - 1)])
+        Rsigned = Compute_Rsquare_Map(power_cond2_final[:, :, :(n_bins - 1)],
+                                      power_cond1_final[:, :, :(n_bins - 1)])
         Wsquare, Wpvalues = Compute_Wilcoxon_Map(power_cond2_final[:, :, :(n_bins - 1)],
                                                  power_cond1_final[:, :, :(n_bins - 1)])
 
         Rsigned_2, Wsquare_2, Wpvalues_2, electrodes_final, power_cond1_2, power_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
-            = Reorder_Rsquare(Rsigned, Wsquare, Wpvalues, electrodes_orig, power_cond1_final, power_cond2_final,
-                              timefreq_cond1_final, timefreq_cond2_final)
+            = Reorder_plusplus(Rsigned, Wsquare, Wpvalues, electrodes_orig, power_cond1_final, power_cond2_final,
+                               timefreq_cond1_final, timefreq_cond2_final)
 
         self.Features.electrodes_orig = electrodes_orig
         self.Features.power_cond2 = power_cond2_2
@@ -363,7 +355,9 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
     def stopThread(self):
         self.stop = True
 
-
+# Class for loading extracted data in the "Connectivity Pipeline"
+# data are NODE STRENGTH (not raw connectivity matrices), we manage them
+# almost like power spectra...
 class LoadFilesForVizConnectivity(QtCore.QThread):
     info = pyqtSignal(bool)
     info2 = pyqtSignal(str)
@@ -414,9 +408,9 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
             [header2, data2] = load_csv_np(path2)
 
             # Check that files match...!
-            # Infos in the columns header of the CSVs in format "Time:500x64x64"
+            # Infos in the columns header of the CSVs in format "Time:500x64"
             # (Column zero contains starting time of the row)
-            # 500 is nb of freq bins, 64 is channels, 64 is channels)
+            # 500 is nb of freq bins, 64 is channels)
             freqBins1 = int(header1[0].split(":")[-1].split("x")[0])
             freqBins2 = int(header2[0].split(":")[-1].split("x")[0])
             if freqBins1 != freqBins2:
@@ -436,8 +430,8 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
             electrodeList1 = []
             electrodeList2 = []
             for i in range(0, len(elecTemp1)):
-                electrodeList1.append(elecTemp1[i].split(":")[2])
-                electrodeList2.append(elecTemp2[i].split(":")[2])
+                electrodeList1.append(elecTemp1[i].split(":")[1])
+                electrodeList2.append(elecTemp2[i].split(":")[1])
 
             if electrodeList1 != electrodeList2:
                 errMsg = str("Error when loading " + path1 + "\n" + " and " + path2)
@@ -491,12 +485,11 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
 
         # TODO : later (pb with subset...)
         # Replace "ground" and "ref" electrodes (eg TP9/TP10) with new grounds and ref (eg AFz and FCz)
-        # electrodes_orig = elecGroundRef(electrodeList, 'TP9', 'TP10')
-        # if not electrodes_orig:
-        #     errMsg = str("Problem with the list of electrodes...")
-        #     self.over.emit(False, errMsg)
-        #     return
-
+        electrodes_orig = elecGroundRef(electrodeList, 'TP9', 'TP10')
+        if not electrodes_orig:
+            errMsg = str("Problem with the list of electrodes...")
+            self.over.emit(False, errMsg)
+            return
 
         # For multiple runs (ie. multiple selected CSV files), we just concatenate
         # the trials from all files. Then the displayed spectral features (R²map, PSD, topography)
@@ -507,10 +500,10 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         for run in range(len(self.dataNp1)):
             idxFile += 1
             self.info2.emit(str("Processing data for file " + str(idxFile)))
-            connect_cond1 = Extract_Connect_CSV_Data(self.dataNp1[0], trialLength, nbElectrodes, n_bins,
-                                                     connectLength, connectOverlap)
-            connect_cond2 = Extract_Connect_CSV_Data(self.dataNp2[0], trialLength, nbElectrodes, n_bins,
-                                                     connectLength, connectOverlap)
+            connect_cond1 = Extract_Connect_NodeStrength_CSV_Data(self.dataNp1[0], trialLength, nbElectrodes, n_bins,
+                                                                  connectLength, connectOverlap)
+            connect_cond2 = Extract_Connect_NodeStrength_CSV_Data(self.dataNp2[0], trialLength, nbElectrodes, n_bins,
+                                                                  connectLength, connectOverlap)
             if connect_cond1_final is None:
                 connect_cond1_final = connect_cond1
                 connect_cond2_final = connect_cond2
@@ -524,19 +517,27 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         totalTrials = len(self.dataNp1) * trials
         fres = float(self.parameterDict["FreqRes"])
 
-        # Actual Analysis...
+        # Statistical Analysis...
+        freqs_array = np.arange(0, n_bins, fres)
+        Rsigned = Compute_Rsquare_Map(connect_cond2_final[:, :, :(n_bins - 1)],
+                                      connect_cond1_final[:, :, :(n_bins - 1)])
 
-        # TODO
-        # TODO
-        # TODO
+        Rsigned_2, electrodes_final, connect_cond1_2, connect_cond2_2, \
+            = Reorder_Rsquare(Rsigned, electrodes_orig, connect_cond1_final, connect_cond2_final)
 
         # Fill Features struct...
-        # self.Features.electrodes_orig = electrodes_orig
-        self.Features.electrodes_orig = electrodeList
-        self.Features.connect_cond1 = connect_cond1_final
-        self.Features.connect_cond2 = connect_cond2_final
+        self.Features.electrodes_orig = electrodes_orig
+        # self.Features.electrodes_orig = electrodeList
+        self.Features.electrodes_final = electrodes_final
+        # self.Features.connect_cond1 = connect_cond1_2
+        # self.Features.connect_cond2 = connect_cond2_2
+        self.Features.power_cond1 = connect_cond1_2
+        self.Features.power_cond2 = connect_cond2_2
         self.Features.fres = fres
         self.Features.samplingFreq = sampFreq
+        self.Features.freqs_array = freqs_array
+
+        self.Features.Rsigned = Rsigned_2
 
         self.stop = True
         self.over.emit(True, "")
@@ -653,7 +654,7 @@ class TrainClassifier(QtCore.QThread):
             # PREPARE GOODBYE MESSAGE...
             textFeats = str("Using spectral features:\n")
             for i in range(len(selectedFeats)):
-                textFeats += str("  Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz")
+                textFeats += str("  Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
 
             textGoodbye = str("Results written in file:\t generated/classifier-weights.xml\n")
             textGoodbye += str(
