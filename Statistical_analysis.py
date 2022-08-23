@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import stats
 
-def Compute_Rsquare_Map_Welch_optimization(Power_of_trials_1,Power_of_trials_2):
+def Compute_Rsquare_Map_optimization(Power_of_trials_1,Power_of_trials_2):
     b = Power_of_trials_1.shape
     a = Power_of_trials_2.shape
     #print(a)
@@ -31,7 +31,7 @@ def Compute_Rsquare_Map_Welch_optimization(Power_of_trials_1,Power_of_trials_2):
     return Rsquare_tab
 
 
-def Compute_Rsquare_Map_Welch(Power_of_trials_1,Power_of_trials_2):
+def Compute_Rsquare_Map(Power_of_trials_1,Power_of_trials_2):
     b = Power_of_trials_1.shape
     a = Power_of_trials_2.shape
     #print(a)
