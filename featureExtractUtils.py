@@ -119,10 +119,10 @@ def Extract_Connect_NodeStrength_CSV_Data(data_cond, trialLength, nbElectrodes, 
     length = int(np.floor(trialLength / shift))
     nbTrials = int(np.shape(data)[0] / length)
 
-    connectivityMatrix = np.zeros([nbTrials, bins, nbElectrodes])
+    connectivityMatrix = np.zeros([nbTrials, nbElectrodes, bins])
     for i in range(connectivityMatrix.shape[0]):
-        for j in range(connectivityMatrix.shape[1]):
-            connectivityMatrix[i, j, :] = data[(i * length):(i * length + length),
+        for j in range(connectivityMatrix.shape[2]):
+            connectivityMatrix[i, :, j] = data[(i * length):(i * length + length),
                                                (j*nbElectrodes):(j*nbElectrodes + nbElectrodes)].mean(axis=0)
 
     return connectivityMatrix
