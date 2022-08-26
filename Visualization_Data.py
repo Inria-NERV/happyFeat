@@ -456,7 +456,7 @@ def plot_metric(Power_class1, Power_class2, freqs, channel, channel_array, each_
     plt.legend()
     # plt.show()
 
-def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, each_point, fmin, fmax):
+def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, each_point, fmin, fmax, colormapScale):
     fig, ax = plt.subplots()
     font = {'family': 'serif',
             'color': 'black',
@@ -478,11 +478,15 @@ def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, eac
     newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)), top(np.linspace(1, 0, 128))))
     double = ListedColormap(newcolors2, name='double')
 
-    if np.amin(Rsquare_reshape) < 0:
-        plt.imshow(Rsquare_reshape, cmap='jet', aspect='auto', vmin=-np.amax(abs(Rsquare_reshape)),
-                   vmax=np.max(abs(Rsquare_reshape)))
-    else:
-        plt.imshow(Rsquare_reshape, cmap='jet', aspect='auto')
+    vmin = 0
+    vmax = 1
+    if colormapScale:
+        vmax = np.max(abs(Rsquare_reshape))
+        if np.amin(Rsquare_reshape) < 0:
+            vmin = -np.amax(abs(Rsquare_reshape))
+
+    plt.imshow(Rsquare_reshape, cmap='jet', aspect='auto', vmin=vmin, vmax=vmax)
+
     cm.get_cmap('jet')
     # plt.jet()
     cbar = plt.colorbar()
@@ -572,10 +576,13 @@ def Reorder_Rsquare(Rsquare, electrodes_orig, powerLeft, powerRight):
     if len(electrodes_orig) >= 64:
         electrodes_target = ['FP1','AF7','AF3','F7','F5','F3','F1','FT9','FT7','FC5','FC3','FC1','T7','C5','C3','C1','TP7','CP5','CP3','CP1','P7','P5','P3','P1','PO9','PO7','PO3','O1','AFz','Fz','FCz','Cz','CPz','Pz','POz','Oz','FP2','AF8','AF4','F8','F6','F4','F2','FT10','FT8','FC6','FC4','FC2','T8','C6','C4','C2','TP8','CP6','CP4','CP2','P8','P6','P4','P2','PO10','PO8','PO4','O2']
 
-    else:
+    elif len(electrodes_orig) == 32:
         electrodes_target = ['Fp1', 'F7', 'F3', 'FC5', 'FC1', 'T7', 'C3', 'CP5', 'CP1', 'P7', 'P3', 'PO9', 'O1', 'AFz',
                              'Fz', 'FCz', 'Cz', 'Pz', 'Oz', 'Fp2', 'F8', 'F4', 'FC6', 'FC2', 'T8', 'C4', 'CP6', 'CP2',
                              'P8', 'P4', 'PO10', 'O2']
+    elif len(electrodes_orig) == 11:
+        electrodes_target = ['FC4', 'C2', 'C4', 'C6', 'CP4', 'Nz', 'CP3', 'C1', 'C3', 'C5', 'FC3']
+
     index_elec = []
 
     for k in range(len(electrodes_target)):
@@ -601,8 +608,13 @@ def Reorder_Rsquare(Rsquare, electrodes_orig, powerLeft, powerRight):
 
     return Rsquare_final, electrodes_target, powerLeft_final, powerRight_final
 
-def topo_plot(Rsquare, freq, electrodes, fres, fs, Stat_method):
+def topo_plot(Rsquare, freqMin, freqMax, electrodes, fres, fs, scaleColormap, Stat_method):
     fig, ax = plt.subplots()
+
+    useRange = False
+    if freqMax > 0:
+        useRange = True
+
     size_dim = mne.channels.make_standard_montage('standard_1020')
     if len(electrodes) > 32:
         biosemi_montage = mne.channels.make_standard_montage('standard_1020')
@@ -646,19 +658,34 @@ def topo_plot(Rsquare, freq, electrodes, fres, fs, Stat_method):
     print(x)
     print(y)
     print(z)
-    for i in range(n_channels):
-        for j in range(len(electrodes)):
-            if biosemi_montage.ch_names[i] == electrodes[j]:
-                sizer[i] = Rsquare[:, freq][j]
-    freq = str(freq)
+
+    if not useRange:
+        freq = str(freqMin)
+        for i in range(n_channels):
+            for j in range(len(electrodes)):
+                if biosemi_montage.ch_names[i] == electrodes[j]:
+                    sizer[i] = Rsquare[:, freqMin][j]
+    else:
+        freq = str(freqMin) + ":" + str(freqMax)
+        for i in range(n_channels):
+            for j in range(len(electrodes)):
+                if biosemi_montage.ch_names[i] == electrodes[j]:
+                    sizer[i] = Rsquare[:, freqMin:freqMax][j].mean()
+
     top = cm.get_cmap('YlOrRd_r', 128)  # r means reversed version
     bottom = cm.get_cmap('YlGnBu_r', 128)
     newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)), top(np.linspace(1, 0, 128))))
     double = ListedColormap(newcolors2, name='double')
+
+    vmin = None
+    vmax = 1
+    if scaleColormap:
+        vmax = None
+
     plot_topomap_data_viz(sizer, fake_evoked.info, sensors=False, names=biosemi_montage.ch_names, show_names=True,
                           res=256, mask_params=dict(marker='', markerfacecolor='w', markeredgecolor='k', linewidth=0,
                                                     markersize=0), contours=0, image_interp='gaussian', show=True,
-                          extrapolate='head', cmap='jet', freq=freq, Stat_method=Stat_method)
+                          extrapolate='head', cmap='jet', freq=freq, vmin=vmin, vmax=vmax, Stat_method=Stat_method)
 
 
 def plot_Wsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, each_point, fmin, fmax):
@@ -853,7 +880,7 @@ def plot_connect_matrices(connect1, connect2, fmin, fmax, channel_array, class1l
     # Put labels on top...
     ax1.xaxis.tick_top()
     ax2.xaxis.tick_top()
-    
+
     # Set left/right titles...
     ax1.title.set_text(class1label)
     ax2.title.set_text(class2label)

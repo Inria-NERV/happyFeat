@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import QHBoxLayout
 from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtWidgets import QPushButton
+from PyQt5.QtWidgets import QCheckBox
 from PyQt5.QtWidgets import QFormLayout
 from PyQt5.QtWidgets import QLineEdit
 from PyQt5.QtWidgets import QListWidget
@@ -221,7 +222,12 @@ class Dialog(QDialog):
             # Param : Frequency to use for Topography
             self.freqTopo = QLineEdit()
             self.freqTopo.setText('12')
-            self.formLayoutViz.addRow('Frequency for Topography (Hz)', self.freqTopo)
+            self.formLayoutViz.addRow('Topography Freq (Hz), use \":\" for freq band', self.freqTopo)
+            # Param : checkbox for colormap scaling
+            self.colormapScale = QCheckBox()
+            self.colormapScale.setTristate(False)
+            self.colormapScale.setChecked(True)
+            self.formLayoutViz.addRow('Scale Colormap (R²map and Topography)', self.colormapScale)
 
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             # Param : fmin for frequency based viz
@@ -238,8 +244,13 @@ class Dialog(QDialog):
             self.formLayoutViz.addRow('Sensor for Node Strength viz', self.electrodePsd)
             # Param : Frequency to use for Topography
             self.freqTopo = QLineEdit()
-            self.freqTopo.setText('12')
-            self.formLayoutViz.addRow('Frequency for Topography (Hz)', self.freqTopo)
+            self.freqTopo.setText('8:35')
+            self.formLayoutViz.addRow('Topography Freq (Hz), use \":\" for freq band', self.freqTopo)
+            # Param : checkbox for colormap scaling
+            self.colormapScale = QCheckBox()
+            self.colormapScale.setTristate(False)
+            self.colormapScale.setChecked(True)
+            self.formLayoutViz.addRow('Scale Colormap (R²map and Topography)', self.colormapScale)
 
         self.layoutViz.addLayout(self.formLayoutViz)
 
@@ -749,11 +760,13 @@ class Dialog(QDialog):
             self.userFmax.setEnabled(myBool)
             self.electrodePsd.setEnabled(myBool)
             self.freqTopo.setEnabled(myBool)
+            self.colormapScale.setEnabled(myBool)
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             self.userFmin.setEnabled(myBool)
             self.userFmax.setEnabled(myBool)
             self.electrodePsd.setEnabled(myBool)
             self.freqTopo.setEnabled(myBool)
+            self.colormapScale.setEnabled(myBool)
 
         self.btn_loadFilesForViz.setEnabled(myBool)
         if myBool and self.plotBtnsEnabled:
@@ -795,14 +808,16 @@ class Dialog(QDialog):
             plot_stats(self.Features.Rsigned,
                        self.Features.freqs_array,
                        self.Features.electrodes_final,
-                       self.Features.fres, int(self.userFmin.text()), int(self.userFmax.text()))
+                       self.Features.fres, int(self.userFmin.text()), int(self.userFmax.text()),
+                       self.colormapScale.isChecked())
 
     def btnW2(self):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             plot_stats(self.Features.Wsigned,
                        self.Features.freqs_array,
                        self.Features.electrodes_final,
-                       self.Features.fres, int(self.userFmin.text()), int(self.userFmax.text()))
+                       self.Features.fres, int(self.userFmin.text()), int(self.userFmax.text()),
+                       self.colormapScale.isChecked())
 
     def btnTimeFreq(self):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
@@ -848,12 +863,28 @@ class Dialog(QDialog):
                         self.Features.fres, fmin, fmax, class1, class2)
 
     def btnTopo(self):
+        error = True
         if self.freqTopo.text().isdigit() \
                 and 0 < int(self.freqTopo.text()) < (self.samplingFreq / 2):
             print("Freq Topo: " + self.freqTopo.text())
+            error = False
+            freqMax = -1
             qt_plot_topo(self.Features.Rsigned, self.Features.electrodes_final,
-                         int(self.freqTopo.text()), self.Features.fres, self.samplingFreq)
-        else:
+                         int(self.freqTopo.text()), freqMax, self.Features.fres, self.samplingFreq,
+                         self.colormapScale.isChecked())
+        elif ":" in self.freqTopo.text() \
+                and len(self.freqTopo.text().split(":")) == 2:
+                    if self.freqTopo.text().split(":")[0].isdigit() \
+                            and self.freqTopo.text().split(":")[1].isdigit():
+                        freqMin = int(self.freqTopo.text().split(":")[0])
+                        freqMax = int(self.freqTopo.text().split(":")[1])
+                        if 0 < freqMin < freqMax < (self.samplingFreq / 2):
+                            error = False
+                            qt_plot_topo(self.Features.Rsigned, self.Features.electrodes_final,
+                                         freqMin, freqMax, self.Features.fres, self.samplingFreq,
+                                         self.colormapScale.isChecked())
+
+        if error:
             myMsgBox("Invalid frequency for topography")
 
     def btnConnectSpect(self):
@@ -946,9 +977,9 @@ def checkFreqsMinMax(fmin, fmax, fs):
 
     return ok
 
-def plot_stats(Rsigned, freqs_array, electrodes, fres, fmin, fmax):
+def plot_stats(Rsigned, freqs_array, electrodes, fres, fmin, fmax, colormapScale):
     smoothing = False
-    plot_Rsquare_calcul_welch(Rsigned, np.array(electrodes)[:], freqs_array, smoothing, fres, 10, fmin, fmax)
+    plot_Rsquare_calcul_welch(Rsigned, np.array(electrodes)[:], freqs_array, smoothing, fres, 10, fmin, fmax, colormapScale)
     plt.show()
 
 def qt_plot_psd(power_cond1, power_cond2, freqs_array, electrodesList, electrodeToDisp, fres, fmin, fmax, class1label, class2label):
@@ -985,8 +1016,9 @@ def qt_plot_metric(power_cond1, power_cond2, freqs_array, electrodesList, electr
 
 # Plot "Brain topography", using either Power Spectrum (in same pipeline)
 # or Node Strength (or similar metric) (in Connectivity pipeline)
-def qt_plot_topo(Rsigned, electrodes, frequency, fres, fs):
-    topo_plot(Rsigned, round(frequency/fres), electrodes, fres, fs, 'Signed R square')
+def qt_plot_topo(Rsigned, electrodes, freqMin, freqMax, fres, fs, scaleColormap):
+    topo_plot(Rsigned, round(freqMin/fres), round(freqMax/fres), electrodes,
+              fres, fs, scaleColormap, 'Signed R square')
     plt.show()
 
 # Plot "time-frequency analysis", in the POWER SPECTRUM pipeline ONLY.
