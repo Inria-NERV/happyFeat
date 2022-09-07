@@ -1376,8 +1376,8 @@
 				<Setting>
 					<TypeIdentifier>(0x2cdb2f0b, 0x12f231ea)</TypeIdentifier>
 					<Name>DC removal</Name>
-					<DefaultValue>false</DefaultValue>
-					<Value>false</Value>
+					<DefaultValue>true</DefaultValue>
+					<Value>true</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -1474,8 +1474,8 @@
 				<Setting>
 					<TypeIdentifier>(0x2cdb2f0b, 0x12f231ea)</TypeIdentifier>
 					<Name>DC removal</Name>
-					<DefaultValue>false</DefaultValue>
-					<Value>false</Value>
+					<DefaultValue>true</DefaultValue>
+					<Value>true</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
