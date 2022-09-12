@@ -246,7 +246,12 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         winShift = float(self.parameterDict["TimeWindowShift"])
 
         # electrodes_orig = channel_generator(nbElectrodes, 'TP9', 'TP10')
-        electrodes_orig = elecGroundRef(electrodeList, 'TP9', 'TP10')
+        # Replace "ground" and "ref" electrodes (eg TP9/TP10) with new grounds and ref (eg AFz and FCz)
+        ground = 'TP9'
+        newGround = 'FPz'
+        ref = 'TP10'
+        newRef = 'FCz'
+        electrodes_orig = elecGroundRef(electrodeList, ground, newGround, ref, newRef)
         if not electrodes_orig:
             errMsg = str("Problem with the list of electrodes...")
             self.over.emit(False, errMsg)
@@ -485,7 +490,11 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
 
         # TODO : later (pb with subset...)
         # Replace "ground" and "ref" electrodes (eg TP9/TP10) with new grounds and ref (eg AFz and FCz)
-        electrodes_orig = elecGroundRef(electrodeList, 'TP9', 'TP10')
+        ground = 'TP9'
+        newGround = 'FPz'
+        ref = 'TP10'
+        newRef = 'FCz'
+        electrodes_orig = elecGroundRef(electrodeList, ground, newGround, ref, newRef)
         if not electrodes_orig:
             errMsg = str("Problem with the list of electrodes...")
             self.over.emit(False, errMsg)

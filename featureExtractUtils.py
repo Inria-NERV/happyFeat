@@ -32,14 +32,12 @@ def channel_generator(number_of_channel, Ground, Ref):
 
     return electrodes
 
-def elecGroundRef(electrodeList, ground, ref):
+def elecGroundRef(electrodeList, ground, newGround, ref, newRef):
     # Replace "ground" and "ref" electrodes (eg TP9/TP10) with new grounds and ref (eg AFz and FCz)
     # If newground or newref alreayd present, all good!
     # if old ground or old ref not present, then return empty list
 
     newElecList = electrodeList.copy()
-    newGround = 'AFz'
-    newRef = 'FCz'
     if ground in newElecList:
         idx = newElecList.index(ground)
         newElecList[idx] = newGround

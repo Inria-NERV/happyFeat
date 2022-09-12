@@ -76,14 +76,14 @@ pipelineExtractSettings = {optionKeys[0]: None,
 
                            # CONNECTIVITY
                            optionKeys[2]:
-                               {"StimulationEpoch": 1.5,
-                                "StimulationDelay": 0,
+                               {"StimulationEpoch": 3,
+                                "StimulationDelay": 1,
                                 "ConnectivityMetric": "MSC",
                                 "ConnectivityLength": 1,
-                                "ConnectivityOverlap": 50,
+                                "ConnectivityOverlap": 0,
                                 # "ConnectivityMethod" : "Burg"
                                 # "AutoRegressiveOrder": 12,
-                                "AutoRegressiveOrderTime": 0.024,
+                                "AutoRegressiveOrderTime": 0.038,
                                 # "WindowMethod": "Hann",
                                 # "WelchWinLength": 0.25,
                                 # "WelchWinOverlap": 50,
