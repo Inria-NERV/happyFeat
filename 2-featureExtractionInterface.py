@@ -217,7 +217,7 @@ class Dialog(QDialog):
 
             # Param : Electrode to use for PSD display
             self.electrodePsd = QLineEdit()
-            self.electrodePsd.setText('C3')
+            self.electrodePsd.setText('CP3')
             self.formLayoutViz.addRow('Sensor for PSD visualization', self.electrodePsd)
             # Param : Frequency to use for Topography
             self.freqTopo = QLineEdit()
@@ -240,7 +240,7 @@ class Dialog(QDialog):
             self.formLayoutViz.addRow('Frequency max', self.userFmax)
             # Param : Electrode to use for Node Strength display
             self.electrodePsd = QLineEdit()
-            self.electrodePsd.setText('C3')
+            self.electrodePsd.setText('CP3')
             self.formLayoutViz.addRow('Sensor for Node Strength viz', self.electrodePsd)
             # Param : Frequency to use for Topography
             self.freqTopo = QLineEdit()
@@ -343,7 +343,7 @@ class Dialog(QDialog):
         # Parameter for feat selection/training : First selected pair of Channels / Electrodes
         # We'll add more with a button
         self.selectedFeats.append(QLineEdit())
-        self.selectedFeats[0].setText('C4;22')
+        self.selectedFeats[0].setText('CP3;22')
         pairText = "Feature"
         self.qvBoxLayouts[0].addRow(pairText, self.selectedFeats[0])
 
@@ -932,7 +932,7 @@ class Dialog(QDialog):
 
     def btnAddPair(self):
         self.selectedFeats.append(QLineEdit())
-        self.selectedFeats[-1].setText('C4;22')
+        self.selectedFeats[-1].setText('CP3;22')
         self.qvBoxLayouts[0].addRow("Feature", self.selectedFeats[-1])
 
     def btnRemovePair(self):

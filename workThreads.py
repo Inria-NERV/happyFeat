@@ -613,6 +613,14 @@ class TrainClassifier(QtCore.QThread):
             self.over.emit(False, errMsg)
             return
 
+        epochCount = 0
+        epochAvg = False
+        if self.parameterDict["pipelineType"] == "PowSpectrumGraz":
+            stimEpochLength = self.parameterDict["StimulationEpoch"]
+            winShift = self.parameterDict["TimeWindowShift"]
+            epochCount = np.floor(float(stimEpochLength) / float(winShift))
+            epochAvg = True
+
         # RE-COPY sc2 & sc3 FROM TEMPLATE, SO THE USER CAN DO THIS MULTIPLE TIMES...
         for i in [2, 3]:
             scenName = settings.templateScenFilenames[i]
@@ -622,7 +630,7 @@ class TrainClassifier(QtCore.QThread):
             copyfile(srcFile, destFile)
             modifyScenarioGeneralSettings(destFile, self.parameterDict)
             if i == 2:
-                modifyTrainScenario(selectedFeats, destFile)
+                modifyTrainScenario(selectedFeats, epochAvg, epochCount, destFile)
             elif i == 3:
                 modifyAcqScenario(destFile, self.parameterDict, True)
                 modifyOnlineScenario(selectedFeats, destFile)
@@ -653,27 +661,30 @@ class TrainClassifier(QtCore.QThread):
             self.info2.emit("Running Training Scenario")
 
             # RUN THE CLASSIFIER TRAINING SCENARIO
-            classifierScoreStr, accuracy = self.runClassifierScenario()
+            success, classifierScoreStr, accuracy = self.runClassifierScenario()
 
-            # Copy weights file to generated/classifier-weights.xml
-            newWeights = os.path.join(self.signalFolder, "training", "classifier-weights.xml")
-            origFilename = os.path.join(self.scriptFolder, "generated", "classifier-weights.xml")
-            copyfile(newWeights, origFilename)
+            if not success:
+                self.errorMessageTrainer()
+            else:
+                # Copy weights file to generated/classifier-weights.xml
+                newWeights = os.path.join(self.signalFolder, "training", "classifier-weights.xml")
+                origFilename = os.path.join(self.scriptFolder, "generated", "classifier-weights.xml")
+                copyfile(newWeights, origFilename)
 
-            # PREPARE GOODBYE MESSAGE...
-            textFeats = str("Using spectral features:\n")
-            for i in range(len(selectedFeats)):
-                textFeats += str("  Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+                # PREPARE GOODBYE MESSAGE...
+                textFeats = str("Using spectral features:\n")
+                for i in range(len(selectedFeats)):
+                    textFeats += str("  Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
 
-            textGoodbye = str("Results written in file:\t generated/classifier-weights.xml\n")
-            textGoodbye += str(
-                "If those results are satisfying, you can now open generated/sc3-online.xml in the Designer")
+                textGoodbye = str("Results written in file:\t generated/classifier-weights.xml\n")
+                textGoodbye += str(
+                    "If those results are satisfying, you can now open generated/sc3-online.xml in the Designer")
 
-            textDisplay = textFeats
-            textDisplay += str("\n\n" + classifierScoreStr)
-            textDisplay += str("\n\n" + textGoodbye)
+                textDisplay = textFeats
+                textDisplay += str("\n\n" + classifierScoreStr)
+                textDisplay += str("\n\n" + textGoodbye)
 
-            self.exitText = textDisplay
+                self.exitText = textDisplay
 
         else:
             # Create list of files from selected items
@@ -683,6 +694,7 @@ class TrainClassifier(QtCore.QThread):
             scores = [0 for x in range(len(combIdx))]
             classifierScoreStrList = ["" for x in range(len(combIdx))]
 
+            successGlobal = True
             for idxcomb, comb in enumerate(combinationsList):
                 newLabel = str("Combination " + str(combIdx[idxcomb]))
                 self.info2.emit(newLabel)
@@ -702,55 +714,67 @@ class TrainClassifier(QtCore.QThread):
                 modifyTrainIO(compositeCsvBasename, newWeightsName, scenFile)
 
                 # RUN THE CLASSIFIER TRAINING SCENARIO
-                classifierScoreStrList[idxcomb], scores[idxcomb] = self.runClassifierScenario()
+                success, classifierScoreStrList[idxcomb], scores[idxcomb] = self.runClassifierScenario()
+                if not success:
+                    successGlobal = False
+                    self.errorMessageTrainer()
+                    break
 
                 self.info.emit(True)
 
-            # Find max score
-            maxIdx = scores.index(max(scores))
-            # Copy weights file to generated/classifier-weights.xml
-            maxFilename = os.path.join(self.scriptFolder, "generated", "signals", "training", "classifier-weights-")
-            maxFilename += str(str(maxIdx) + ".xml")
-            origFilename = os.path.join(self.scriptFolder, "generated", "classifier-weights.xml")
-            copyfile(maxFilename, origFilename)
+            if not successGlobal:
+                self.errorMessageTrainer()
+            else:
+                # Find max score
+                maxIdx = scores.index(max(scores))
+                # Copy weights file to generated/classifier-weights.xml
+                maxFilename = os.path.join(self.scriptFolder, "generated", "signals", "training", "classifier-weights-")
+                maxFilename += str(str(maxIdx) + ".xml")
+                origFilename = os.path.join(self.scriptFolder, "generated", "classifier-weights.xml")
+                copyfile(maxFilename, origFilename)
 
-            # ==========================
-            # PREPARE GOODBYE MESSAGE...
-            textFeats = str("Using spectral features:\n")
-            for i in range(len(selectedFeats)):
-                textFeats += str("\tChannel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
-            textFeats += str("\n... and experiment runs:")
-            for i in range(len(compositeSigList)):
-                textFeats += str("\n\t[" + str(i) + "]: " + os.path.basename(compositeSigList[i]))
+                # ==========================
+                # PREPARE GOODBYE MESSAGE...
+                textFeats = str("Using spectral features:\n")
+                for i in range(len(selectedFeats)):
+                    textFeats += str("\tChannel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+                textFeats += str("\n... and experiment runs:")
+                for i in range(len(compositeSigList)):
+                    textFeats += str("\n\t[" + str(i) + "]: " + os.path.basename(compositeSigList[i]))
 
-            textScore = str("Training Cross-Validation Test Accuracies per combination:\n")
-            for i in range(len(combIdx)):
-                combIdxStr = []
-                for j in combIdx[i]:
-                    combIdxStr.append(str(j))
-                textScore += str("\t[" + ",".join(combIdxStr) + "]: " + str(scores[i]) + "%\n")
-            maxIdxStr = []
-            for j in combIdx[maxIdx]:
-                maxIdxStr.append(str(j))
-            textScore += str("\nMax is combination [" + ','.join(maxIdxStr) + "] with " + str(max(scores)) + "%\n")
-            textScore += classifierScoreStrList[maxIdx]
+                textScore = str("Training Cross-Validation Test Accuracies per combination:\n")
+                for i in range(len(combIdx)):
+                    combIdxStr = []
+                    for j in combIdx[i]:
+                        combIdxStr.append(str(j))
+                    textScore += str("\t[" + ",".join(combIdxStr) + "]: " + str(scores[i]) + "%\n")
+                maxIdxStr = []
+                for j in combIdx[maxIdx]:
+                    maxIdxStr.append(str(j))
+                textScore += str("\nMax is combination [" + ','.join(maxIdxStr) + "] with " + str(max(scores)) + "%\n")
+                textScore += classifierScoreStrList[maxIdx]
 
-            textGoodbye = str("The weights for this combination have been written to:\n")
-            textGoodbye += str("\tgenerated/classifier-weights.xml\n")
-            textGoodbye += str("If those results are satisfying, you can now open this scenario in the Designer:\n")
-            textGoodbye += str("\tgenerated/sc3-online.xml")
+                textGoodbye = str("The weights for this combination have been written to:\n")
+                textGoodbye += str("\tgenerated/classifier-weights.xml\n")
+                textGoodbye += str("If those results are satisfying, you can now open this scenario in the Designer:\n")
+                textGoodbye += str("\tgenerated/sc3-online.xml")
 
-            textDisplay = textFeats
-            textDisplay = str(textDisplay + "\n\n" + textScore)
-            textDisplay = str(textDisplay + "\n\n" + textGoodbye)
+                textDisplay = textFeats
+                textDisplay = str(textDisplay + "\n\n" + textScore)
+                textDisplay = str(textDisplay + "\n\n" + textGoodbye)
 
-            self.exitText = textDisplay
+                self.exitText = textDisplay
 
         self.stop = True
         self.over.emit(True, self.exitText)
 
     def stopThread(self):
         self.stop = True
+
+    def errorMessageTrainer(self):
+        textError = str("Error running \"Training\" scenario\n")
+        textError += str("Please try again with a lower number of partitions for k-fold test\n")
+        self.exitText = textError
 
     def checkSelectedFeats(self, sampFreq, electrodeList):
         selectedFeats = []
@@ -819,6 +843,7 @@ class TrainClassifier(QtCore.QThread):
 
         # Read console output to detect end of process
         # and prompt user with classification score. Quite artisanal but works
+        success = True
         classifierScoreStr = ""
         activateScoreMsgBox = False
         while True:
@@ -827,6 +852,9 @@ class TrainClassifier(QtCore.QThread):
                 break
             if output:
                 print(str(output))
+                if "Invalid indexes: stopIdx - trainIndex = 1" in str(output):
+                    success = False
+                    return success, None, None
                 if "Application terminated" in str(output):
                     classifierScoreStr = str(classifierScoreStr + "\n")
                     break
@@ -867,4 +895,4 @@ class TrainClassifier(QtCore.QThread):
             sensitivity_Class_2)
         messageClassif += " | F_1 Score : " + str(F_1_Score_Class_2)
 
-        return messageClassif, accuracy
+        return success, messageClassif, accuracy

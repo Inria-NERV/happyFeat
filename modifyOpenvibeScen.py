@@ -105,13 +105,13 @@ def modifyAcqScenario(scenXml, parameterDict, boolOnline):
     tree.write(scenXml)
     return
 
-def modifyTrainScenario(chanFreqPairs, scenXml):
+def modifyTrainScenario(chanFreqPairs, epochAvg, epochCount, scenXml):
     print("---Modifying " + scenXml + " with Selected Features")
     tree = ET.parse(scenXml)
     root = tree.getroot()
 
     # FIRST STEP AND
-    # SIMPLEST CASE : just modify existing branches in the scenario.
+    # SIMPLEST CASE : modify existing branches in the scenario.
     for boxes in root.findall('Boxes'):
         for box in boxes.findall('Box'):
 
@@ -138,6 +138,17 @@ def modifyTrainScenario(chanFreqPairs, scenXml):
                             xmlVal.text = chanFreqPairs[0][1]
                             print("            with " + xmlVal.text)
                             break
+            if epochAvg:
+                if box.find('Name').text == 'Epoch average':
+                    print("-- EPOCH AVERAGE BOX ")
+                    for settings in box.findall('Settings'):
+                        for setting in settings.findall('Setting'):
+                            if setting.find('Name').text == "Epoch count":
+                                xmlVal = setting.find('Value')
+                                print("       replacing " + xmlVal.text)
+                                xmlVal.text = str(epochCount)
+                                print("            with " + xmlVal.text)
+                                break
 
     if len(chanFreqPairs) > 1:
         # TOUGHEST CASE : NEED TO COPY/PASTE MULTIPLE PROCESSING
@@ -236,9 +247,16 @@ def modifyOnlineScenario(chanFreqPairs, scenXml):
     tree = ET.parse(scenXml)
     root = tree.getroot()
 
+    # Assuming Power Spectrum pipeline...
+    # There are two distinct scenario branches to modify here :
+    # - Direct feedback branch : take the *first* electrode/freq pair
+    # - Online Classification : behave exactly as for the training part (clone branches)
+
     channelSelectorBox = None
     # FIRST STEP AND
     # SIMPLEST CASE : just modify existing branches in the scenario.
+    # (this takes care of the "direct feedback branch" + the first feature pair
+    # of the "online classification" branch")
     for boxes in root.findall('Boxes'):
         for box in boxes.findall('Box'):
 
@@ -273,9 +291,17 @@ def modifyOnlineScenario(chanFreqPairs, scenXml):
         # BRANCHES WITH CHANNEL SELECTOR, TIME EPOCH, AR COEFFS,
         # FREQ BAND SELECTOR AND SPECTRUM AVERAGE
 
-        # first box in the chain : box preceding Channel Selector
-        firstBox = findPreviousBox(root, channelSelectorBoxIdx)
-        firstboxId = firstBox.find("Identifier").text
+        # First box in the chain: "SPLIT" IDENTITY BOX
+        splitBox = None
+        splitBoxId = None
+        for boxes in root.findall('Boxes'):
+            for box in boxes.findall('Box'):
+                if box.find('Name').text == 'SPLIT':
+                    print("-- SPLIT BOX")
+                    splitBox = box
+                    splitBoxId = splitBox.find("Identifier").text
+                    continue
+
         # Last box in the chain: Classifier processor
         boxLast = findBox(root, "Classifier processor")
         boxLastId = boxLast.find("Identifier").text
@@ -284,8 +310,8 @@ def modifyOnlineScenario(chanFreqPairs, scenXml):
         locOffset = 120
 
         # Find all chained box btw those two
-        if firstboxId is not None and boxLastId is not None:
-            boxList = findChainedBoxes(root, firstboxId, boxLastId)
+        if splitBoxId is not None and boxLastId is not None:
+            boxList = findChainedBoxes(root, splitBoxId, boxLastId)
 
             for idxPair, [chan, freq] in enumerate(chanFreqPairs):
                 # Don't do it for the first pair, it was done earlier in the function
@@ -294,7 +320,7 @@ def modifyOnlineScenario(chanFreqPairs, scenXml):
 
                 pair = [chan, freq]
                 # Copy list of chained boxes (except first (identity)
-                # and 2 last (feature aggreg, classifier trainer) and chain them.
+                # and 2 last (feature aggreg, classifier trainer)) and chain them.
                 listofBoxesToChain, nbOfOutputs = copyBoxList(root, boxList, locOffset, pair)
                 locOffset += locOffset
 
