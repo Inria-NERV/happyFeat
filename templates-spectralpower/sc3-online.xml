@@ -11,6 +11,20 @@
 			<Value>classifier-weights.xml</Value>
 		</Setting>
 		<Setting>
+			<Identifier>(0x1f322045, 0xbe397a4f)</Identifier>
+			<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
+			<Name>SignalsPath</Name>
+			<DefaultValue>signals</DefaultValue>
+			<Value>signals</Value>
+		</Setting>
+		<Setting>
+			<Identifier>(0xe1b1e6eb, 0x40278302)</Identifier>
+			<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
+			<Name>TrainingPath</Name>
+			<DefaultValue>training</DefaultValue>
+			<Value>training</Value>
+		</Setting>
+		<Setting>
 			<Identifier>(0xa86c08f6, 0x47af854f)</Identifier>
 			<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 			<Name>MI_Stimulations</Name>
@@ -874,7 +888,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename to load configuration from</Name>
 					<DefaultValue></DefaultValue>
-					<Value>C:/openvibe-automated-pipeline/generated/signals/training/classifier-weights.xml</Value>
+					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{TrainingPath}/$var{ClassifWeights}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
