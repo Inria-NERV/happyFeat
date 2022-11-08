@@ -62,7 +62,7 @@ class Extraction(QtCore.QThread):
                 self.over.emit(False, errMsg)
                 return
 
-            # Modify the extraction scenario with entered parameters
+            ## MODIFY THE EXTRACTION SCENARIO with entered parameters
             # /!\ after updating ARburg order and FFT size using sampfreq
             self.parameterDict["ChannelNames"] = ";".join(electrodeList)
             self.parameterDict["AutoRegressiveOrder"] = str(
@@ -74,10 +74,18 @@ class Extraction(QtCore.QThread):
             # if field is empty, use all electrodes
             # if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             #     if self.parameterDict["ChannelSubset"] == "":
-            #         self.parameterDict["ChannelSubset"] = self.parameterDict["ChannelNames"];
-            self.parameterDict["ChannelSubset"] = self.parameterDict["ChannelNames"];
+            #         self.parameterDict["ChannelSubset"] = self.parameterDict["ChannelNames"]
+            self.parameterDict["ChannelSubset"] = self.parameterDict["ChannelNames"]
 
+            # Modify the scenario
             modifyScenarioGeneralSettings(self.scenFile, self.parameterDict)
+
+            # Special case: "connectivity metric"
+            if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+                if self.parameterDict["ConnectivityMetric"] == "MSC":
+                    modifyConnectivityMetric("MagnitudeSquaredCoherence", self.scenFile)
+                elif self.parameterDict["ConnectivityMetric"] == "IMCOH":
+                    modifyConnectivityMetric("AbsImaginaryCoherence", self.scenFile)
 
             # Modify extraction scenario to use provided signal file, and rename outputs accordingly
             filename = signalFile.removesuffix(".ov")
@@ -93,7 +101,7 @@ class Extraction(QtCore.QThread):
             modifyExtractionIO(self.scenFile, signalFile, outputSpect1, outputSpect2,
                                outputBaseline1, outputBaseline2, outputTrials)
 
-            p = subprocess.Popen([command, "--no-gui", "--play-fast", self.scenFile],
+            p = subprocess.Popen([command, "--invisible", "--play-fast", self.scenFile],
                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
             # Print console output, and detect end of process...
@@ -509,9 +517,9 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         for run in range(len(self.dataNp1)):
             idxFile += 1
             self.info2.emit(str("Processing data for file " + str(idxFile)))
-            connect_cond1 = Extract_Connect_NodeStrength_CSV_Data(self.dataNp1[0], trialLength, nbElectrodes, n_bins,
+            connect_cond1 = Extract_Connect_NodeStrength_CSV_Data(self.dataNp1[run], trialLength, nbElectrodes, n_bins,
                                                                   connectLength, connectOverlap)
-            connect_cond2 = Extract_Connect_NodeStrength_CSV_Data(self.dataNp2[0], trialLength, nbElectrodes, n_bins,
+            connect_cond2 = Extract_Connect_NodeStrength_CSV_Data(self.dataNp2[run], trialLength, nbElectrodes, n_bins,
                                                                   connectLength, connectOverlap)
             if connect_cond1_final is None:
                 connect_cond1_final = connect_cond1
@@ -631,9 +639,21 @@ class TrainClassifier(QtCore.QThread):
             modifyScenarioGeneralSettings(destFile, self.parameterDict)
             if i == 2:
                 modifyTrainScenario(selectedFeats, epochAvg, epochCount, destFile)
+                # Special case: "connectivity metric"
+                if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+                    if self.parameterDict["ConnectivityMetric"] == "MSC":
+                        modifyConnectivityMetric("MagnitudeSquaredCoherence", destFile)
+                    elif self.parameterDict["ConnectivityMetric"] == "IMCOH":
+                        modifyConnectivityMetric("AbsImaginaryCoherence", destFile)
             elif i == 3:
                 modifyAcqScenario(destFile, self.parameterDict, True)
                 modifyOnlineScenario(selectedFeats, destFile)
+                # Special case: "connectivity metric"
+                if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+                    if self.parameterDict["ConnectivityMetric"] == "MSC":
+                        modifyConnectivityMetric("MagnitudeSquaredCoherence", destFile)
+                    elif self.parameterDict["ConnectivityMetric"] == "IMCOH":
+                        modifyConnectivityMetric("AbsImaginaryCoherence", destFile)
 
         scenFile = os.path.join(self.scriptFolder, "generated", settings.templateScenFilenames[2])
         modifyTrainPartitions(self.trainingSize, scenFile)
@@ -838,7 +858,7 @@ class TrainClassifier(QtCore.QThread):
             command = command.replace("/", "\\")
 
         # Run actual command (openvibe-designer.cmd --no-gui --play-fast <scen.xml>)
-        p = subprocess.Popen([command, "--no-gui", "--play-fast", scenFile],
+        p = subprocess.Popen([command, "--invisible", "--play-fast", scenFile],
                              stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
         # Read console output to detect end of process

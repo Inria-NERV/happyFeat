@@ -333,6 +333,28 @@ def modifyOnlineScenario(chanFreqPairs, scenXml):
     tree.write(scenXml)
     return
 
+def modifyConnectivityMetric(metric, scenXml):
+    print("---Modifying " + scenXml + " with connectivity Metric: " + str(metric))
+    tree = ET.parse(scenXml)
+    root = tree.getroot()
+
+    for boxes in root.findall('Boxes'):
+        for box in boxes.findall('Box'):
+            if box.find('Name').text == 'Connectivity Measure : Burg' or box.find('Name').text == 'Connectivity Measure':
+                print("-- CONNECTIVITY BOX ")
+                for settings in box.findall('Settings'):
+                    for setting in settings.findall('Setting'):
+                        if setting.find('Name').text == "Metric":
+                            xmlVal = setting.find('Value')
+                            print("       replacing " + xmlVal.text)
+                            xmlVal.text = str(metric)
+                            print("            with " + xmlVal.text)
+                            break
+
+    # WRITE NEW XML
+    tree.write(scenXml)
+    return
+
 def findPreviousBox(root, boxIdx):
     for links in root.findall('Links'):
         for link in links.findall('Link'):
