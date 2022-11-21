@@ -643,19 +643,23 @@ class TrainClassifier(QtCore.QThread):
                 modifyTrainScenario(selectedFeats, epochAvg, epochCount, destFile)
                 # Special case: "connectivity metric"
                 if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
-                    if self.parameterDict["ConnectivityMetric"] == "MSC":
-                        modifyConnectivityMetric("MagnitudeSquaredCoherence", destFile)
-                    elif self.parameterDict["ConnectivityMetric"] == "IMCOH":
-                        modifyConnectivityMetric("AbsImaginaryCoherence", destFile)
+                    if self.parameterDict["ConnectivityMetric"] in settings.connectMetrics:
+                        modifyConnectivityMetric(self.parameterDict["ConnectivityMetric"], destFile)
+                    else:
+                        errMsg = str("Error: wrong connectivity metric")
+                        self.over.emit(False, errMsg)
+                        return
             elif i == 3:
                 modifyAcqScenario(destFile, self.parameterDict, True)
                 modifyOnlineScenario(selectedFeats, destFile)
                 # Special case: "connectivity metric"
                 if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
-                    if self.parameterDict["ConnectivityMetric"] == "MSC":
-                        modifyConnectivityMetric("MagnitudeSquaredCoherence", destFile)
-                    elif self.parameterDict["ConnectivityMetric"] == "IMCOH":
-                        modifyConnectivityMetric("AbsImaginaryCoherence", destFile)
+                    if self.parameterDict["ConnectivityMetric"] in settings.connectMetrics:
+                        modifyConnectivityMetric(self.parameterDict["ConnectivityMetric"], destFile)
+                    else:
+                        errMsg = str("Error: wrong connectivity metric")
+                        self.over.emit(False, errMsg)
+                        return
 
         scenFile = os.path.join(self.scriptFolder, "generated", settings.templateScenFilenames[2])
         modifyTrainPartitions(self.trainingSize, scenFile)
