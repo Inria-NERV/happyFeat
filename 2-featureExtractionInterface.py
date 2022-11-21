@@ -985,8 +985,9 @@ class Dialog(QDialog):
                                     self.parameterDict["Class1"], self.parameterDict["Class2"])
 
     def btnAddPair(self):
+        txtToCopy = self.selectedFeats[-1].text()
         self.selectedFeats.append(QLineEdit())
-        self.selectedFeats[-1].setText('CP3;22')
+        self.selectedFeats[-1].setText(txtToCopy)
         self.qvBoxLayouts[0].addRow("Feature", self.selectedFeats[-1])
 
     def btnRemovePair(self):
