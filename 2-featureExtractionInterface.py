@@ -73,7 +73,9 @@ class Dialog(QDialog):
         self.dataNp1baseline = []
         self.dataNp2baseline = []
         self.Features = Features()
-        self.progressBar = None
+        self.progressBarExtract = None
+        self.progressBarViz = None
+        self.progressBarTrain = None
 
         self.extractThread = None
         self.loadFilesForVizThread = None
@@ -376,11 +378,11 @@ class Dialog(QDialog):
         self.refreshLists(os.path.join(self.scriptPath, "generated", "signals"))
 
         # Timing loop every 2s to get files in working folder
-        self.timer = QtCore.QTimer(self)
-        self.timer.setSingleShot(False)
-        self.timer.setInterval(4000)  # in milliseconds
-        self.timer.timeout.connect(lambda: self.refreshLists(os.path.join(self.scriptPath, "generated", "signals")))
-        self.timer.start()
+        self.filesRefreshTimer = QtCore.QTimer(self)
+        self.filesRefreshTimer.setSingleShot(False)
+        self.filesRefreshTimer.setInterval(4000)  # in milliseconds
+        self.filesRefreshTimer.timeout.connect(lambda: self.refreshLists(os.path.join(self.scriptPath, "generated", "signals")))
+        self.filesRefreshTimer.start()
 
     # -----------------------------------------------------------------------
     # CLASS METHODS
@@ -576,7 +578,7 @@ class Dialog(QDialog):
             self.deleteWorkFiles()
 
         # create progress bar window...
-        self.progressBar = ProgressBar("Extraction", len(self.fileListWidget.selectedItems()) )
+        self.progressBarExtract = ProgressBar("Feature extraction", "Extracting...", len(self.fileListWidget.selectedItems()))
 
         signalFiles = []
         for selectedItem in self.fileListWidget.selectedItems():
@@ -584,19 +586,33 @@ class Dialog(QDialog):
         signalFolder = os.path.join(self.scriptPath, "generated", "signals")
         scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[1])
 
-        self.enableGui(False)
+        # deactivate this part of the GUI
+        self.enableExtractionGui(False)
 
+        # deactivate automatic file refresh, or else we might get .csv files in
+        # the viz and train lists before they're ready to be used
+        self.filesRefreshTimer.stop()
+
+        # Instantiate the thread...
         self.extractThread = Extraction(self.ovScript, scenFile, signalFiles, signalFolder, self.parameterDict)
-        self.extractThread.info.connect(self.progressBar.increment)
+        # Signal: Extraction work thread finished one file of the selected list.
+        # Refresh the viz&train file lists to make it available + increment progress bar
+        self.extractThread.info.connect(self.progressBarExtract.increment)
+        self.extractThread.info.connect(lambda : self.refreshLists(os.path.join(self.scriptPath, "generated", "signals")))
+        # Signal: Extraction work thread finished
         self.extractThread.over.connect(self.extraction_over)
+        # Launch the work thread
         self.extractThread.start()
 
     def extraction_over(self, success, text):
-        self.progressBar.finish()
+        # Extraction work thread is over, so we kill the progress bar,
+        # display a msg if an error occurred, restart the timer and
+        # make the extraction Gui available again
+        self.progressBarExtract.finish()
         if not success:
             myMsgBox(text)
-
-        self.enableGui(True)
+        self.filesRefreshTimer.start()
+        self.enableExtractionGui(True)
 
     def loadFilesForViz(self):
         # ----------
@@ -608,27 +624,36 @@ class Dialog(QDialog):
             return
 
         # create progress bar window...
-        self.progressBar = ProgressBar("Loading Spectrum data", len(self.availableFilesForVizList.selectedItems()))
+        self.progressBarViz = ProgressBar("Feature Visualization", "Loading data from Csv files...", len(self.availableFilesForVizList.selectedItems()))
 
         analysisFiles = []
         for selectedItem in self.availableFilesForVizList.selectedItems():
             analysisFiles.append(selectedItem.text())
         signalFolder = os.path.join(self.scriptPath, "generated", "signals")
 
-        self.enableGui(False)
+        # deactivate this part of the GUI + the extraction (or else we might have sync issues)
+        self.enableExtractionGui(False)
+        self.enableVizGui(False)
 
+        # Instantiate the thread...
         if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
             self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, signalFolder, self.parameterDict, self.Features, self.samplingFreq)
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             self.loadFilesForVizThread = LoadFilesForVizConnectivity(analysisFiles, signalFolder, self.parameterDict, self.Features, self.samplingFreq)
 
-        self.loadFilesForVizThread.info.connect(self.progressBar.increment)
-        self.loadFilesForVizThread.info2.connect(self.progressBar.changeLabel)
+        # Signal: Viz work thread finished one file of the selected list.
+        # Increment progress bar + its label
+        self.loadFilesForVizThread.info.connect(self.progressBarViz.increment)
+        self.loadFilesForVizThread.info2.connect(self.progressBarViz.changeLabel)
+        # Signal: Extraction work thread finished
         self.loadFilesForVizThread.over.connect(self.loadFilesForViz_over)
+        # Launch the work thread
         self.loadFilesForVizThread.start()
 
     def loadFilesForViz_over(self, success, text):
-        self.progressBar.finish()
+        # Viz work thread is over, so we kill the progress bar,
+        # and make the viz Gui available again
+        self.progressBarViz.finish()
         if not success:
             myMsgBox(text)
             self.plotBtnsEnabled = False
@@ -660,7 +685,7 @@ class Dialog(QDialog):
             return
 
         # create progress bar window...
-        self.progressBar = ProgressBar("Creating composite file", 2)
+        self.progressBarTrain = ProgressBar("Classifier training", "Creating composite file", 2)
 
         trainingFiles = []
         for selectedItem in self.fileListWidgetTrain.selectedItems():
@@ -670,15 +695,23 @@ class Dialog(QDialog):
         templateFolder = os.path.join(self.scriptPath, settings.optionsTemplatesDir[pipelineType])
         scriptsFolder = self.scriptPath
 
-        self.enableGui(False)
+        # deactivate this part of the GUI (+ the extraction part)
+        self.enableExtractionGui(False)
+        self.enableTrainGui(False)
 
+        # Instantiate the thread...
         self.trainClassThread = TrainClassifier(False, trainingFiles,
                                                 signalFolder, templateFolder, scriptsFolder, self.ovScript,
                                                 trainingSize, self.selectedFeats,
                                                 self.parameterDict, self.samplingFreq)
-        self.trainClassThread.info.connect(self.progressBar.increment)
-        self.trainClassThread.info2.connect(self.progressBar.changeLabel)
+
+        # Signal: Training work thread finished one step
+        # Increment progress bar + change its label
+        self.trainClassThread.info.connect(self.progressBarTrain.increment)
+        self.trainClassThread.info2.connect(self.progressBarTrain.changeLabel)
+        # Signal: Training work thread finished
         self.trainClassThread.over.connect(self.training_over)
+        # Launch the work thread
         self.trainClassThread.start()
 
     def btnAllCombinations(self):
@@ -711,7 +744,7 @@ class Dialog(QDialog):
         for item in self.fileListWidgetTrain.selectedItems():
             i.append("a")
         nbCombinations = len(list(myPowerset(i)))
-        self.progressBar = ProgressBar("First combination", nbCombinations)
+        self.progressBarTrain = ProgressBar("Classifier Training", "First combination", nbCombinations)
 
         trainingFiles = []
         for selectedItem in self.fileListWidgetTrain.selectedItems():
@@ -721,19 +754,28 @@ class Dialog(QDialog):
         templateFolder = os.path.join(self.scriptPath, settings.optionsTemplatesDir[pipelineType])
         scriptsFolder = self.scriptPath
 
-        self.enableGui(False)
+        # deactivate this part of the GUI + the extraction part
+        self.enableExtractionGui(False)
+        self.enableTrainGui(False)
 
+        # Instantiate the thread...
         self.trainClassThread = TrainClassifier(True, trainingFiles,
                                                 signalFolder, templateFolder, scriptsFolder, self.ovScript,
                                                 trainingSize, self.selectedFeats,
                                                 self.parameterDict, self.samplingFreq)
-        self.trainClassThread.info.connect(self.progressBar.increment)
-        self.trainClassThread.info2.connect(self.progressBar.changeLabel)
+        # Signal: Extraction work thread finished one file of the selected list.
+        # Refresh the viz&train file lists to make it available + increment progress bar
+        self.trainClassThread.info.connect(self.progressBarTrain.increment)
+        self.trainClassThread.info2.connect(self.progressBarTrain.changeLabel)
+        # Signal: Extraction work thread finished
         self.trainClassThread.over.connect(self.training_over)
+        # Launch the work thread
         self.trainClassThread.start()
 
     def training_over(self, success, text):
-        self.progressBar.finish()
+        # Training work thread is over, so we kill the progress bar,
+        # display a msg with results, and make the training Gui available again
+        self.progressBarTrain.finish()
         if success:
             msg = QMessageBox()
             msg.setText(text)
@@ -742,10 +784,9 @@ class Dialog(QDialog):
             msg.exec_()
         else:
             myMsgBox(text)
-
         self.enableGui(True)
 
-    def enableGui(self, myBool):
+    def enableExtractionGui(self, myBool):
         # Extraction part...
         for idx in range(self.layoutExtractLabels.count()):
             self.layoutExtractLineEdits.itemAt(idx).widget().setEnabled(myBool)
@@ -753,23 +794,16 @@ class Dialog(QDialog):
         self.fileListWidget.setEnabled(myBool)
         self.btn_browseOvScript.setEnabled(myBool)
 
+    def enableVizGui(self, myBool):
         # Viz part...
         self.btn_loadFilesForViz.setEnabled(myBool)
         self.availableFilesForVizList.setEnabled(myBool)
 
-        # TODO : make better or more flexible...
-        if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
-            self.userFmin.setEnabled(myBool)
-            self.userFmax.setEnabled(myBool)
-            self.electrodePsd.setEnabled(myBool)
-            self.freqTopo.setEnabled(myBool)
-            self.colormapScale.setEnabled(myBool)
-        elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
-            self.userFmin.setEnabled(myBool)
-            self.userFmax.setEnabled(myBool)
-            self.electrodePsd.setEnabled(myBool)
-            self.freqTopo.setEnabled(myBool)
-            self.colormapScale.setEnabled(myBool)
+        self.userFmin.setEnabled(myBool)
+        self.userFmax.setEnabled(myBool)
+        self.electrodePsd.setEnabled(myBool)
+        self.freqTopo.setEnabled(myBool)
+        self.colormapScale.setEnabled(myBool)
 
         self.btn_loadFilesForViz.setEnabled(myBool)
         if myBool and self.plotBtnsEnabled:
@@ -777,6 +811,7 @@ class Dialog(QDialog):
         if not myBool:
             self.enablePlotBtns(False)
 
+    def enableTrainGui(self, myBool):
         # Training part...
         self.btn_addPair.setEnabled(myBool)
         self.btn_removePair.setEnabled(myBool)
@@ -786,6 +821,12 @@ class Dialog(QDialog):
             item.setEnabled(myBool)
         self.trainingPartitions.setEnabled(myBool)
         self.fileListWidgetTrain.setEnabled(myBool)
+
+    def enableGui(self, myBool):
+        # Enable/Disable ALL PARTS of the GUI
+        self.enableExtractionGui(myBool)
+        self.enableVizGui(myBool)
+        self.enableTrainGui(myBool)
 
     def getExperimentalParameters(self):
         # ----------

@@ -9,25 +9,28 @@ import sys
 
 class ProgressBar(QDialog):
 
-    def __init__(self, label, nbIncrements, parent=None):
+    def __init__(self, title, label, nbIncrements, parent=None):
 
         super().__init__(parent)
 
         self.nbIncrements = nbIncrements
-        self.label = label
         self.resize(800, 150)
-        self.setWindowTitle("Processing...")
-
+        self.setWindowTitle(title)
         self.currentProgress = 0
+
+        self.label = QLabel(self)
+        self.label.setText(label)
+        self.label.setAlignment(Qt.AlignCenter)
 
         self.featProgressBar = QProgressBar(self)
         self.featProgressBar.setTextVisible(True)
         self.featProgressBar.setMinimum(0)
         self.featProgressBar.setMaximum(nbIncrements)
         self.featProgressBar.setValue(0)
-        self.featProgressBar.setFormat(self.label + " : " + str(self.currentProgress) + "/" + str(self.nbIncrements))
+        self.featProgressBar.setFormat(str(self.currentProgress) + "/" + str(self.nbIncrements))
 
         layout = QVBoxLayout()
+        layout.addWidget(self.label)
         layout.addWidget(self.featProgressBar)
         self.setLayout(layout)
         self.show()
@@ -35,11 +38,10 @@ class ProgressBar(QDialog):
     def increment(self):
         self.currentProgress += 1
         self.featProgressBar.setValue(self.currentProgress)
-        self.featProgressBar.setFormat(self.label + " : " + str(self.currentProgress) + "/" + str(self.nbIncrements))
+        self.featProgressBar.setFormat(str(self.currentProgress) + "/" + str(self.nbIncrements))
 
     def changeLabel(self, newLabel):
-        self.label = newLabel
-        self.featProgressBar.setFormat(self.label + " : " + str(self.currentProgress) + "/" + str(self.nbIncrements))
+        self.label.setText(newLabel)
 
     def finish(self):
         self.close()
