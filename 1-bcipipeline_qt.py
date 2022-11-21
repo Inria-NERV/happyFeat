@@ -32,7 +32,7 @@ class Dialog(QDialog):
         self.jsonfilename = "params.json"
         self.generatedFolder = "generated"
         self.templateFolder = None
-        self.ovScript = None
+        self.ovScript = "C:\\openvibeDevelop_update\\dist\\x64\\Release\\openvibe-designer.cmd"  # TODO : set to None in release version
 
         # SCENARIO PARAMETERS...
         self.parameterDict = {}
@@ -69,7 +69,7 @@ class Dialog(QDialog):
         # layout_h.addWidget(self.btn_browse)
 
         # Generate button
-        self.btn_generateLaunch = QPushButton("Generate scenarios, launch OpenViBE and Analysis/Train GUI")
+        self.btn_generateLaunch = QPushButton("Generate scenarios, launch OpenViBE and HappyFeat")
         self.btn_generateLaunch.clicked.connect(lambda: self.generate(True))
         self.btn_generate = QPushButton("Generate scenarios, let me handle things!")
         self.btn_generate.clicked.connect(lambda: self.generate(False))
@@ -147,7 +147,7 @@ class Dialog(QDialog):
             self.designerWidget = QWidget()
             layout_h = QHBoxLayout(self.designerWidget)
             self.designerTextBox = QLineEdit()
-            self.designerTextBox.setText("")
+            self.designerTextBox.setText("C:\\openvibeDevelop_update\\dist\\x64\\Release\\openvibe-designer.cmd")  # TODO set to "" in release
             self.designerTextBox.setEnabled(False)
             layout_h.addWidget(self.designerTextBox)
             layout_h.addWidget(self.btn_browseOV)
