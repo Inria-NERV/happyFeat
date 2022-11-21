@@ -29,6 +29,18 @@ templateScenFilenames = ["sc1-monitor-acq.xml",
                          "sc3-online.xml",
                          "mi-stimulations.lua"]
 
+global connectMetrics
+connectMetrics = ["MagnitudeSquaredCoherence",
+                  "ImaginaryCoherence",
+                  "Coherence",
+                  "AbsImaginaryCoherence"]
+
+global connectMetricsComboText
+connectMetricsComboText = { connectMetrics[0]: "Magnitude Squared Coh.",
+                            connectMetrics[1]: "Imag(Coh.)",
+                            connectMetrics[2]: "abs(Coh.)",
+                            connectMetrics[3]: "abs(Imag(Coh.))"}
+
 global pipelineAcqSettings
 pipelineAcqSettings = {optionKeys[0]: None,
 
@@ -78,7 +90,7 @@ pipelineExtractSettings = {optionKeys[0]: None,
                            optionKeys[2]:
                                {"StimulationEpoch": 3,
                                 "StimulationDelay": 1,
-                                "ConnectivityMetric": "MSC",
+                                "ConnectivityMetric": connectMetrics[0],
                                 "ConnectivityLength": 0.25,
                                 "ConnectivityOverlap": 36,
                                 # "ConnectivityMethod" : "Burg"
@@ -112,7 +124,7 @@ paramIdText = {"TrialNb": "Nb Trials per class",
                "AutoRegressiveOrderTime": "Auto-regressive estim. length (s)",
                "PsdSize": "FFT Size",
                "FreqRes": "Frequency resolution (ratio)",
-               "ConnectivityMetric": "Connectivity Metric (MSC or IMCOH)",
+               "ConnectivityMetric": "Connectivity Metric",
                "ConnectivityLength": "Length of a connectivity measure (s)",
                "ConnectivityOverlap": "Overlap between connectivity measures (%)",
                "ConnectivityMethod": "Method used for connectivity (Burg or Welch)",

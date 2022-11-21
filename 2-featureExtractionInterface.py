@@ -23,6 +23,7 @@ from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtWidgets import QFrame
 from PyQt5.QtWidgets import QSizePolicy
+from PyQt5.QtWidgets import QComboBox
 from PyQt5.QtCore import QTimer
 
 from Visualization_Data import *
@@ -146,9 +147,16 @@ class Dialog(QDialog):
             labelTemp = QLabel()
             labelTemp.setText(settings.paramIdText[paramId])
             self.layoutExtractLabels.addWidget(labelTemp)
-            lineEditExtractTemp = QLineEdit()
-            lineEditExtractTemp.setText(self.parameterDict[paramId])
-            self.layoutExtractLineEdits.addWidget(lineEditExtractTemp)
+            # special case : combobox for connectivity metric
+            if paramId == "ConnectivityMetric":
+                metricCombo = QComboBox(self)
+                for idxMetric, key in enumerate(settings.connectMetricsComboText):
+                    metricCombo.addItem(settings.connectMetricsComboText[key], idxMetric)
+                self.layoutExtractLineEdits.addWidget(metricCombo)
+            else:
+                lineEditExtractTemp = QLineEdit()
+                lineEditExtractTemp.setText(self.parameterDict[paramId])
+                self.layoutExtractLineEdits.addWidget(lineEditExtractTemp)
 
         # Label + un-editable list of parameters for reminder
         labelReminder = str("--- Experiment parameters (set in Generator GUI) ---")
@@ -264,46 +272,32 @@ class Dialog(QDialog):
             self.btn_timefreq = QPushButton("Display Time-Frequency ERD/ERS analysis")
             self.btn_psd = QPushButton("Display PSD comparison between classes")
             self.btn_topo = QPushButton("Display Brain Topography")
-            # self.btn_w2map = QPushButton("Plot Wilcoxon Map")
-            # self.btn_psd_r2 = QPushButton("Plot PSD comparison between classes")
+
             self.btn_loadFilesForViz.clicked.connect(lambda: self.loadFilesForViz())
             self.btn_r2map.clicked.connect(lambda: self.btnR2())
             self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq())
             self.btn_psd.clicked.connect(lambda: self.btnPsd())
             self.btn_topo.clicked.connect(lambda: self.btnTopo())
-            # self.btn_w2map.clicked.connect(lambda: self.btnW2())
-            # self.btn_psd_r2.clicked.connect(lambda: self.btnpsdR2())
 
             self.layoutVizButtons.addWidget(self.btn_loadFilesForViz)
             self.layoutVizButtons.addWidget(self.btn_r2map)
             self.layoutVizButtons.addWidget(self.btn_psd)
             self.layoutVizButtons.addWidget(self.btn_timefreq)
             self.layoutVizButtons.addWidget(self.btn_topo)
-            # self.layoutVizButtons.addWidget(self.btn_w2map)
-            # self.layoutVizButtons.addWidget(self.btn_psd_r2)
 
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             # Viz options for "Connectivity" pipeline...
             self.btn_loadFilesForViz = QPushButton("Load connectivity file(s) for analysis")
-            # self.btn_connectSpect = QPushButton("Display connectivity \"spectrum\" for given channel pair")
-            # self.btn_connectMatrices = QPushButton("Display connectivity matrices for freq band")
-            # self.btn_connectome = QPushButton("Display connectome using threshold & freq band")
             self.btn_r2map = QPushButton("Display Frequency-channel R² map (NODE STRENGTH)")
             self.btn_metric = QPushButton("Display NODE STRENGTH comparison between classes")
             self.btn_topo = QPushButton("Display NODE STRENGTH Brain Topography")
 
             self.btn_loadFilesForViz.clicked.connect(lambda: self.loadFilesForViz())
-            # self.btn_connectSpect.clicked.connect(lambda: self.btnConnectSpect())
-            # self.btn_connectMatrices.clicked.connect(lambda: self.btnConnectMatrices())
-            # self.btn_connectome.clicked.connect(lambda: self.btnConnectome())
             self.btn_r2map.clicked.connect(lambda: self.btnR2())
             self.btn_metric.clicked.connect(lambda: self.btnMetric())
             self.btn_topo.clicked.connect(lambda: self.btnTopo())
 
             self.layoutVizButtons.addWidget(self.btn_loadFilesForViz)
-            # self.layoutVizButtons.addWidget(self.btn_connectSpect)
-            # self.layoutVizButtons.addWidget(self.btn_connectMatrices)
-            # self.layoutVizButtons.addWidget(self.btn_connectome)
             self.layoutVizButtons.addWidget(self.btn_r2map)
             self.layoutVizButtons.addWidget(self.btn_metric)
             self.layoutVizButtons.addWidget(self.btn_topo)
@@ -525,8 +519,17 @@ class Dialog(QDialog):
         # Retrieve param id from label...
         for idx in range(self.layoutExtractLabels.count()):
             paramLabel = self.layoutExtractLabels.itemAt(idx).widget().text()
-            paramValue = self.layoutExtractLineEdits.itemAt(idx).widget().text()
-            paramId = list(settings.paramIdText.keys())[list(settings.paramIdText.values()).index(paramLabel)]
+            # special case : combobox for connectivity metric
+            if paramLabel == "Connectivity Metric":
+                paramValue = None
+                for k, v in settings.connectMetricsComboText.items():
+                    if v == self.layoutExtractLineEdits.itemAt(idx).widget().currentText():
+                        paramValue = k
+                paramId = list(settings.paramIdText.keys())[list(settings.paramIdText.values()).index(paramLabel)]
+            else:
+                paramValue = self.layoutExtractLineEdits.itemAt(idx).widget().text()
+                paramId = list(settings.paramIdText.keys())[list(settings.paramIdText.values()).index(paramLabel)]
+
             if paramId in self.parameterDict:
                 if self.parameterDict[paramId] != paramValue:
                     changed = True

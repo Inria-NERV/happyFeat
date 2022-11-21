@@ -82,10 +82,12 @@ class Extraction(QtCore.QThread):
 
             # Special case: "connectivity metric"
             if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
-                if self.parameterDict["ConnectivityMetric"] == "MSC":
-                    modifyConnectivityMetric("MagnitudeSquaredCoherence", self.scenFile)
-                elif self.parameterDict["ConnectivityMetric"] == "IMCOH":
-                    modifyConnectivityMetric("AbsImaginaryCoherence", self.scenFile)
+                if self.parameterDict["ConnectivityMetric"] in settings.connectMetrics:
+                    modifyConnectivityMetric(self.parameterDict["ConnectivityMetric"], self.scenFile)
+                else:
+                    errMsg = str("Error: wrong connectivity metric")
+                    self.over.emit(False, errMsg)
+                    return
 
             # Modify extraction scenario to use provided signal file, and rename outputs accordingly
             filename = signalFile.removesuffix(".ov")
