@@ -698,17 +698,16 @@ class TrainClassifier(QtCore.QThread):
                 copyfile(newWeights, origFilename)
 
                 # PREPARE GOODBYE MESSAGE...
-                textFeats = str("Using spectral features:\n")
-                for i in range(len(selectedFeats)):
-                    textFeats += str("  Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+                textFeats = str("")
+                for i in range(len(compositeSigList)):
+                    textFeats += str(os.path.basename(compositeSigList[i]) + "\n")
 
-                textGoodbye = str("Results written in file:\t generated/classifier-weights.xml\n")
-                textGoodbye += str(
-                    "If those results are satisfying, you can now open generated/sc3-online.xml in the Designer")
+                textFeats += str("\nFeature(s):\n")
+                for i in range(len(selectedFeats)):
+                    textFeats += str("\t"+"Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
 
                 textDisplay = textFeats
-                textDisplay += str("\n\n" + classifierScoreStr)
-                textDisplay += str("\n\n" + textGoodbye)
+                textDisplay += str("\n" + classifierScoreStr)
 
                 self.exitText = textDisplay
 
@@ -761,10 +760,10 @@ class TrainClassifier(QtCore.QThread):
 
                 # ==========================
                 # PREPARE GOODBYE MESSAGE...
-                textFeats = str("Using spectral features:\n")
+                textFeats = str("Features:\n")
                 for i in range(len(selectedFeats)):
                     textFeats += str("\tChannel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
-                textFeats += str("\n... and experiment runs:")
+                textFeats += str("\nExperiment runs:")
                 for i in range(len(compositeSigList)):
                     textFeats += str("\n\t[" + str(i) + "]: " + os.path.basename(compositeSigList[i]))
 
@@ -780,14 +779,8 @@ class TrainClassifier(QtCore.QThread):
                 textScore += str("\nMax is combination [" + ','.join(maxIdxStr) + "] with " + str(max(scores)) + "%\n")
                 textScore += classifierScoreStrList[maxIdx]
 
-                textGoodbye = str("The weights for this combination have been written to:\n")
-                textGoodbye += str("\tgenerated/classifier-weights.xml\n")
-                textGoodbye += str("If those results are satisfying, you can now open this scenario in the Designer:\n")
-                textGoodbye += str("\tgenerated/sc3-online.xml")
-
                 textDisplay = textFeats
-                textDisplay = str(textDisplay + "\n\n" + textScore)
-                textDisplay = str(textDisplay + "\n\n" + textGoodbye)
+                textDisplay = str(textDisplay + "\n" + textScore)
 
                 self.exitText = textDisplay
 

@@ -24,6 +24,8 @@ from PyQt5.QtWidgets import QWidget
 from PyQt5.QtWidgets import QFrame
 from PyQt5.QtWidgets import QSizePolicy
 from PyQt5.QtWidgets import QComboBox
+from PyQt5.QtWidgets import QPlainTextEdit
+from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QTimer
 
 from Visualization_Data import *
@@ -86,6 +88,8 @@ class Dialog(QDialog):
         # Sampling Freq: to be loaded later, in CSV files
         self.samplingFreq = None
 
+        self.trainingFiles = []
+
         # GET PARAMS FROM JSON FILE
         self.scriptPath = os.path.dirname(os.path.realpath(sys.argv[0]))
         if "params.json" in os.listdir(os.path.join(self.scriptPath, "generated")):
@@ -126,9 +130,11 @@ class Dialog(QDialog):
 
         # FILE LOADING (from .ov file(s)) 
         # AND RUNNING SCENARIO FOR DATA EXTRACTION
-        labelSignal = str("===== FEATURE EXTRACTION FROM SIGNAL FILES =====")
-        self.labelSignal = QLabel(labelSignal)
-        self.labelSignal.setAlignment(QtCore.Qt.AlignCenter)
+        labelFeatExtract = str("== FEATURE EXTRACTION ==")
+        self.labelFeatExtract = QLabel(labelFeatExtract)
+        self.labelFeatExtract.setAlignment(QtCore.Qt.AlignCenter)
+        self.labelFeatExtract.setFont(QFont("system-ui", 14))
+        self.labelFeatExtract.setStyleSheet("font-weight: bold")
 
         self.fileListWidget = QListWidget()
         self.fileListWidget.setSelectionMode(QListWidget.MultiSelection)
@@ -165,14 +171,14 @@ class Dialog(QDialog):
         self.labelReminder = QLabel(labelReminder)
         self.labelReminder.setAlignment(QtCore.Qt.AlignCenter)
 
-        self.expParamListWidget = QListWidget()
-        self.expParamListWidget.setEnabled(False)
+        self.expParamListWidget = QPlainTextEdit()
+        self.expParamListWidget.setReadOnly(True)
+        self.expParamListWidget.setStyleSheet("background-color: rgb(200,200,200)")
         self.experimentParamsDict = self.getExperimentalParameters()
         minHeight = 0
         for idx, (paramId, paramVal) in enumerate(self.experimentParamsDict.items()):
-            self.expParamListWidget.addItem(settings.paramIdText[paramId] + ": \t" + str(paramVal))
-            minHeight += 30
-
+            self.expParamListWidget.insertPlainText(settings.paramIdText[paramId] + ": \t" + str(paramVal) + "\n")
+            minHeight += 16
         self.expParamListWidget.setMinimumHeight(minHeight)
 
         # Extraction button
@@ -180,7 +186,7 @@ class Dialog(QDialog):
         self.btn_runExtractionScenario.clicked.connect(lambda: self.runExtractionScenario())
 
         # Arrange all widgets in the layout
-        self.layoutExtract.addWidget(self.labelSignal)
+        self.layoutExtract.addWidget(self.labelFeatExtract)
         self.layoutExtract.addWidget(self.fileListWidget)
         self.layoutExtract.addWidget(self.labelExtractParams)
         self.layoutExtract.addLayout(extractParametersLayout)
@@ -202,9 +208,11 @@ class Dialog(QDialog):
         # FEATURE VISUALIZATION PART
         self.layoutViz = QVBoxLayout()
         self.layoutViz.setAlignment(QtCore.Qt.AlignTop)
-        self.label = QLabel('===== VISUALIZE FEATURES =====')
-        self.label.setAlignment(QtCore.Qt.AlignCenter)
-        self.layoutViz.addWidget(self.label)
+        self.labelViz = QLabel('== VISUALIZE FEATURES ==')
+        self.labelViz.setFont(QFont("system-ui", 14))
+        self.labelViz.setStyleSheet("font-weight: bold")
+        self.labelViz.setAlignment(QtCore.Qt.AlignCenter)
+        self.layoutViz.addWidget(self.labelViz)
 
         self.formLayoutViz = QFormLayout()
 
@@ -319,28 +327,32 @@ class Dialog(QDialog):
         # FEATURE SELECTION + TRAINING PART
         self.layoutTrain = QVBoxLayout()
         self.layoutTrain.setAlignment(QtCore.Qt.AlignTop)
+
+        self.labelTrain = QLabel('== CLASSIFIER TRAINING ==')
+        self.labelTrain.setAlignment(QtCore.Qt.AlignCenter)
+        self.labelTrain.setFont(QFont("system-ui", 14))
+        self.labelTrain.setStyleSheet("font-weight: bold")
+
+        textFeatureSelect = "Ex:\tFCz;14"
+        textFeatureSelect = str(textFeatureSelect + "\n\tFCz;14:22 (for freq range)")
+        self.labelSelect = QLabel(textFeatureSelect)
+        self.labelSelect.setAlignment(QtCore.Qt.AlignCenter)
+
+        self.layoutTrain.addWidget(self.labelTrain)
+        self.layoutTrain.addWidget(self.labelSelect)
+
         self.qvBoxLayouts = [None, None]
         self.qvBoxLayouts[0] = QFormLayout()
         self.qvBoxLayouts[1] = QVBoxLayout()
         self.layoutTrain.addLayout(self.qvBoxLayouts[0])
         self.layoutTrain.addLayout(self.qvBoxLayouts[1])
 
-        self.label2 = QLabel('===== SELECT FEATURES FOR TRAINING =====')
-        self.label2.setAlignment(QtCore.Qt.AlignCenter)
-        textFeatureSelect = "Ex:\tFCz;14"
-        textFeatureSelect = str(textFeatureSelect + "\n\tFCz;14:22 (for freq range)")
-        self.label3 = QLabel(textFeatureSelect)
-        self.label3.setAlignment(QtCore.Qt.AlignCenter)
-
-        self.qvBoxLayouts[0].addWidget(self.label2)
-        self.qvBoxLayouts[0].addWidget(self.label3)
-
         self.selectedFeats = []
         # Parameter for feat selection/training : First selected pair of Channels / Electrodes
         # We'll add more with a button
         self.selectedFeats.append(QLineEdit())
         self.selectedFeats[0].setText('CP3;22')
-        pairText = "Feature"
+        pairText = "Feature 1"
         self.qvBoxLayouts[0].addRow(pairText, self.selectedFeats[0])
 
         # Param for training
@@ -352,6 +364,18 @@ class Dialog(QDialog):
 
         self.fileListWidgetTrain = QListWidget()
         self.fileListWidgetTrain.setSelectionMode(QListWidget.MultiSelection)
+
+        # Label + un-editable plain text for last results
+        labelLastResults = str("--- Last Training Results ---")
+        self.labelLastResults = QLabel(labelLastResults)
+        self.labelLastResults.setAlignment(QtCore.Qt.AlignCenter)
+
+        self.lastTrainingResults = QPlainTextEdit()
+        self.lastTrainingResults.setReadOnly(True)
+        self.lastTrainingResults.setStyleSheet("background-color: rgb(200,200,200)")
+        minHeightTrainResults = 30
+        self.lastTrainingResults.setMinimumHeight(minHeightTrainResults)
+        self.lastTrainingResults.insertPlainText("No training attempts yet...")
 
         self.btn_addPair = QPushButton("Add feature")
         self.btn_removePair = QPushButton("Remove last feature in the list")
@@ -366,6 +390,8 @@ class Dialog(QDialog):
         self.qvBoxLayouts[1].addWidget(self.btn_removePair)
         self.qvBoxLayouts[1].addLayout(self.trainingLayout)
         self.qvBoxLayouts[1].addWidget(self.fileListWidgetTrain)
+        self.qvBoxLayouts[1].addWidget(self.labelLastResults)
+        self.qvBoxLayouts[1].addWidget(self.lastTrainingResults)
         self.qvBoxLayouts[1].addWidget(self.btn_selectFeatures)
         self.qvBoxLayouts[1].addWidget(self.btn_allCombinations)
         self.dlgLayout.addLayout(self.layoutTrain)
@@ -687,9 +713,9 @@ class Dialog(QDialog):
         # create progress bar window...
         self.progressBarTrain = ProgressBar("Classifier training", "Creating composite file", 2)
 
-        trainingFiles = []
+        self.trainingFiles = []
         for selectedItem in self.fileListWidgetTrain.selectedItems():
-            trainingFiles.append(selectedItem.text())
+            self.trainingFiles.append(selectedItem.text())
         signalFolder = os.path.join(self.scriptPath, "generated", "signals")
         pipelineType = self.parameterDict["pipelineType"]
         templateFolder = os.path.join(self.scriptPath, settings.optionsTemplatesDir[pipelineType])
@@ -700,7 +726,7 @@ class Dialog(QDialog):
         self.enableTrainGui(False)
 
         # Instantiate the thread...
-        self.trainClassThread = TrainClassifier(False, trainingFiles,
+        self.trainClassThread = TrainClassifier(False, self.trainingFiles,
                                                 signalFolder, templateFolder, scriptsFolder, self.ovScript,
                                                 trainingSize, self.selectedFeats,
                                                 self.parameterDict, self.samplingFreq)
@@ -746,9 +772,9 @@ class Dialog(QDialog):
         nbCombinations = len(list(myPowerset(i)))
         self.progressBarTrain = ProgressBar("Classifier Training", "First combination", nbCombinations)
 
-        trainingFiles = []
+        self.trainingFiles = []
         for selectedItem in self.fileListWidgetTrain.selectedItems():
-            trainingFiles.append(selectedItem.text())
+            self.trainingFiles.append(selectedItem.text())
         signalFolder = os.path.join(self.scriptPath, "generated", "signals")
         pipelineType = self.parameterDict["pipelineType"]
         templateFolder = os.path.join(self.scriptPath, settings.optionsTemplatesDir[pipelineType])
@@ -759,7 +785,7 @@ class Dialog(QDialog):
         self.enableTrainGui(False)
 
         # Instantiate the thread...
-        self.trainClassThread = TrainClassifier(True, trainingFiles,
+        self.trainClassThread = TrainClassifier(True, self.trainingFiles,
                                                 signalFolder, templateFolder, scriptsFolder, self.ovScript,
                                                 trainingSize, self.selectedFeats,
                                                 self.parameterDict, self.samplingFreq)
@@ -772,18 +798,25 @@ class Dialog(QDialog):
         # Launch the work thread
         self.trainClassThread.start()
 
-    def training_over(self, success, text):
+    def training_over(self, success, resultsText):
         # Training work thread is over, so we kill the progress bar,
         # display a msg with results, and make the training Gui available again
         self.progressBarTrain.finish()
         if success:
+            textGoodbye = str("Classifier weights were written in:\n\tgenerated/classifier-weights.xml\n")
+            textGoodbye += str("If those results are satisfying, you can now open in the OV Designer:"
+                               + "\n\tgenerated/sc3-online.xml in the Designer")
+
+            textDisplayed = str(resultsText + "\n\n" + textGoodbye)
             msg = QMessageBox()
-            msg.setText(text)
-            msg.setStyleSheet("QLabel{min-width: 1200px;}")
+            msg.setText(textDisplayed)
+            # msg.setStyleSheet("QLabel{min-width: 1200px;}")
             msg.setWindowTitle("Classifier Training Score")
             msg.exec_()
+            self.lastTrainingResults.clear()
+            self.lastTrainingResults.appendPlainText(resultsText)
         else:
-            myMsgBox(text)
+            myMsgBox(resultsText)
         self.enableGui(True)
 
     def enableExtractionGui(self, myBool):
@@ -988,7 +1021,8 @@ class Dialog(QDialog):
         txtToCopy = self.selectedFeats[-1].text()
         self.selectedFeats.append(QLineEdit())
         self.selectedFeats[-1].setText(txtToCopy)
-        self.qvBoxLayouts[0].addRow("Feature", self.selectedFeats[-1])
+        featTxt = str("Feature "+ str(len(self.selectedFeats)))
+        self.qvBoxLayouts[0].addRow(featTxt, self.selectedFeats[-1])
 
     def btnRemovePair(self):
         if len(self.selectedFeats) > 1:
