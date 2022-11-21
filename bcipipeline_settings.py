@@ -35,8 +35,8 @@ pipelineAcqSettings = {optionKeys[0]: None,
                        # POWER SPECTRUM
                        optionKeys[1]:
                            {"TrialNb": 20,
-                            "Class1": "LEFT",
-                            "Class2": "RIGHT",
+                            "Class1": "MI",  # OV : LEFT
+                            "Class2": "REST",  # OV : RIGHT
                             "Baseline": 20,
                             "TrialWait": 3,
                             "TrialLength": 3,
@@ -48,8 +48,8 @@ pipelineAcqSettings = {optionKeys[0]: None,
                        # CONNECTIVITY
                        optionKeys[2]:
                            {"TrialNb": 20,
-                            "Class1": "LEFT",
-                            "Class2": "RIGHT",
+                            "Class1": "MI",  # OV : LEFT
+                            "Class2": "REST",  # OV : RIGHT
                             "Baseline": 20,
                             "TrialWait": 3,
                             "TrialLength": 3,
@@ -65,7 +65,7 @@ pipelineExtractSettings = {optionKeys[0]: None,
                            # POWER SPECTRUM
                            optionKeys[1]:
                                {"StimulationEpoch": 3,
-                                "StimulationDelay": 0,
+                                "StimulationDelay": 1,
                                 "TimeWindowLength": 0.25,
                                 "TimeWindowShift": 0.161,
                                 # "AutoRegressiveOrder": 19,
@@ -79,8 +79,8 @@ pipelineExtractSettings = {optionKeys[0]: None,
                                {"StimulationEpoch": 3,
                                 "StimulationDelay": 1,
                                 "ConnectivityMetric": "MSC",
-                                "ConnectivityLength": 1,
-                                "ConnectivityOverlap": 0,
+                                "ConnectivityLength": 0.25,
+                                "ConnectivityOverlap": 36,
                                 # "ConnectivityMethod" : "Burg"
                                 # "AutoRegressiveOrder": 12,
                                 "AutoRegressiveOrderTime": 0.038,

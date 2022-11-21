@@ -401,6 +401,76 @@ def plot_psd(Power_class1, Power_class2, freqs, channel, channel_array, each_poi
     plt.legend()
     # plt.show()
 
+
+def plot_psd_r2(Power_class1, Power_class2, Rsquare, freqs, channel, channel_array, each_point, fmin, fmax, fres, class1label,
+             class2label):
+    font = {'family': 'serif',
+            'color': 'black',
+            'weight': 'normal',
+            'size': 14,
+            }
+
+    fig, ax = plt.subplots()
+    frequence = []
+    Aver_class2 = 10 * np.log10(Power_class2[:, channel, :])
+    Aver_class2 = Aver_class2.mean(0)
+    STD_class2 = 10 * np.log10(Power_class2[:, channel, :])
+    STD_class2 = STD_class2.std(0)
+
+    Aver_class1 = 10 * np.log10(Power_class1[:, channel, :])
+    Aver_class1 = Aver_class1.mean(0)
+    STD_class1 = 10 * np.log10(Power_class1[:, channel, :])
+    STD_class1 = STD_class1.std(0)
+    for i in range(len(freqs)):
+        if freqs[i] == fmin:
+            index_fmin = i
+
+    for i in range(len(freqs)):
+        if freqs[i] == fmax:
+            index_fmax = i
+    # plt.plot(Aver_class2,freqs,Aver_class1,freqs)
+    # index_fmin = np.where(np.abs(freqs-fmin)<0.00001)
+    # index_fmax = np.where(np.abs(freqs-fmax)<0.00001)
+    # print(index_fmin)
+    Selected_class2 = (Aver_class2[index_fmin:index_fmax])
+    Selected_class1 = (Aver_class1[index_fmin:index_fmax])
+
+    Selected_class2_STD = (STD_class2[index_fmin:index_fmax] / Power_class2.shape[0])
+    Selected_class1_STD = (STD_class1[index_fmin:index_fmax] / Power_class2.shape[0])
+
+    plt.plot(freqs[index_fmin:index_fmax], Selected_class2, label=class2label, color='blue')
+
+    plt.fill_between(freqs[index_fmin:index_fmax], Selected_class2 - Selected_class2_STD, Selected_class2 + Selected_class2_STD,
+                     color='blue', alpha=0.3)
+    plt.plot(freqs[index_fmin:index_fmax], Selected_class1, label=class1label, color='red')
+    plt.fill_between(freqs[index_fmin:index_fmax], Selected_class1 - Selected_class1_STD,
+                     Selected_class1 + Selected_class1_STD,
+                     color='red', alpha=0.3)
+
+    classes_max_value = max(max(Selected_class1), max(Selected_class2))
+    selected_Rsquare = Rsquare[channel, index_fmin:index_fmax] * classes_max_value
+    plt.plot(freqs[index_fmin:index_fmax], selected_Rsquare, label="r2", color='black')
+
+    sizing = round(len(freqs[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
+    for i in freqs[index_fmin:(index_fmax + 1)]:
+        if i % (round(sizing * 1 / fres)) == 0:
+            frequence.append(str(round(i)))
+        else:
+            frequence.append('')
+    ax.tick_params(axis='both', which='both', length=0)
+
+    plt.title('Sensor: ' + channel_array[channel], fontsize='large')
+    # plt.xticks(range(len(freqs[index_fmin:(index_fmax + 1)])), frequence, fontsize=12)
+    plt.xlabel(' Frequency (Hz)', fontdict=font)
+    plt.ylabel('Power spectrum (db)', fontdict=font)
+    plt.margins(x=0)
+    # ax.set_xticks(np.arange(fmin, fmax, sizing))
+    ax.grid(axis='x')
+    # plt.axis('square')
+
+    plt.legend()
+    # plt.show()
+
 def plot_metric(Power_class1, Power_class2, freqs, channel, channel_array, each_point, fmin, fmax, fres, class1label,
              class2label, metricLabel):
     font = {'family': 'serif',
@@ -436,6 +506,66 @@ def plot_metric(Power_class1, Power_class2, freqs, channel, channel_array, each_
     # plt.fill_between(freqs[index_fmin:index_fmax], Selected_class1 - Selected_class1_STD,
     #                  Selected_class1 + Selected_class1_STD,
     #                  color='red', alpha=0.3)
+
+    sizing = round(len(freqs[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
+    for i in freqs[index_fmin:(index_fmax + 1)]:
+        if i % (round(sizing * 1 / fres)) == 0:
+            frequence.append(str(round(i)))
+        else:
+            frequence.append('')
+    ax.tick_params(axis='both', which='both', length=0)
+
+    plt.title('Sensor: ' + channel_array[channel], fontsize='large')
+    # plt.xticks(range(len(freqs[index_fmin:(index_fmax + 1)])), frequence, fontsize=12)
+    plt.xlabel(' Frequency (Hz)', fontdict=font)
+    plt.ylabel(str(metricLabel + ' per frequency'), fontdict=font)
+    plt.margins(x=0)
+    # ax.set_xticks(np.arange(fmin, fmax, sizing))
+    ax.grid(axis='x')
+    # plt.axis('square')
+
+    plt.legend()
+    # plt.show()
+
+def plot_metric2(Power_class1, Power_class2, Rsquare, freqs, channel, channel_array, each_point, fmin, fmax, fres, class1label,
+             class2label, metricLabel):
+    font = {'family': 'serif',
+            'color': 'black',
+            'weight': 'normal',
+            'size': 14,
+            }
+
+    fig, ax = plt.subplots()
+    frequence = []
+    for i in range(len(freqs)):
+        if freqs[i] == fmin:
+            index_fmin = i
+
+    for i in range(len(freqs)):
+        if freqs[i] == fmax:
+            index_fmax = i
+
+    Aver_class1 = Power_class1[:, channel, :].mean(0)
+    STD_class1 = Power_class1[:, channel, :].mean(0)
+    Selected_class1 = (Aver_class1[index_fmin:index_fmax])
+    Selected_class1_STD = (STD_class1[index_fmin:index_fmax] / Power_class2.shape[0])
+    Aver_class2 = Power_class2[:, channel, :].mean(0)
+    STD_class2 = Power_class2[:, channel, :].mean(0)
+    Selected_class2 = (Aver_class2[index_fmin:index_fmax])
+    Selected_class2_STD = (STD_class2[index_fmin:index_fmax] / Power_class2.shape[0])
+
+    plt.plot(freqs[index_fmin:index_fmax], Selected_class2, label=class2label, color='blue')
+
+    # plt.fill_between(freqs[index_fmin:index_fmax], Selected_class2 - Selected_class2_STD, Selected_class2 + Selected_class2_STD,
+    #                  color='blue', alpha=0.3)
+    plt.plot(freqs[index_fmin:index_fmax], Selected_class1, label=class1label, color='red')
+    # plt.fill_between(freqs[index_fmin:index_fmax], Selected_class1 - Selected_class1_STD,
+    #                  Selected_class1 + Selected_class1_STD,
+    #                  color='red', alpha=0.3)
+
+    selected_Rsquare = Rsquare[channel, index_fmin:index_fmax]
+    plt.plot(freqs[index_fmin:index_fmax], selected_Rsquare, label="r2", color='black')
+
     sizing = round(len(freqs[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
     for i in freqs[index_fmin:(index_fmax + 1)]:
         if i % (round(sizing * 1 / fres)) == 0:
@@ -481,8 +611,8 @@ def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, eac
     vmin = 0
     vmax = 1
     if colormapScale:
-        vmax = np.max(abs(Rsquare_reshape))
-        if np.amin(Rsquare_reshape) < 0:
+        vmax = np.nanmax(abs(Rsquare_reshape))
+        if np.nanmin(Rsquare_reshape) < 0:
             vmin = -np.amax(abs(Rsquare_reshape))
 
     plt.imshow(Rsquare_reshape, cmap='jet', aspect='auto', vmin=vmin, vmax=vmax)

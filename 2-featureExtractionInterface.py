@@ -846,10 +846,15 @@ class Dialog(QDialog):
             class2 = self.parameterDict["Class2"]
             # TODO : change
             metricLabel = "Average Node Strength"
-            qt_plot_metric(self.Features.power_cond1, self.Features.power_cond2,
-                           self.Features.freqs_array, self.Features.electrodes_final,
-                           self.electrodePsd.text(),
-                           self.Features.fres, fmin, fmax, class1, class2, metricLabel)
+            #qt_plot_metric(self.Features.power_cond1, self.Features.power_cond2,
+            #               self.Features.freqs_array, self.Features.electrodes_final,
+            #               self.electrodePsd.text(),
+            #               self.Features.fres, fmin, fmax, class1, class2, metricLabel)
+            qt_plot_metric2(self.Features.power_cond1, self.Features.power_cond2,
+                            self.Features.Rsigned,
+                            self.Features.freqs_array, self.Features.electrodes_final,
+                            self.electrodePsd.text(),
+                            self.Features.fres, fmin, fmax, class1, class2, metricLabel)
 
     def btnPsd(self):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
@@ -857,10 +862,15 @@ class Dialog(QDialog):
             fmax = int(self.userFmax.text())
             class1 = self.parameterDict["Class1"]
             class2 = self.parameterDict["Class2"]
-            qt_plot_psd(self.Features.power_cond1, self.Features.power_cond2,
-                        self.Features.freqs_array, self.Features.electrodes_final,
-                        self.electrodePsd.text(),
-                        self.Features.fres, fmin, fmax, class1, class2)
+            # qt_plot_psd(self.Features.power_cond1, self.Features.power_cond2,
+            #            self.Features.freqs_array, self.Features.electrodes_final,
+            #            self.electrodePsd.text(),
+            #            self.Features.fres, fmin, fmax, class1, class2)
+            qt_plot_psd_r2(self.Features.power_cond1, self.Features.power_cond2,
+                           self.Features.Rsigned,
+                            self.Features.freqs_array, self.Features.electrodes_final,
+                            self.electrodePsd.text(),
+                            self.Features.fres, fmin, fmax, class1, class2)
 
     def btnTopo(self):
         error = True
@@ -998,6 +1008,22 @@ def qt_plot_psd(power_cond1, power_cond2, freqs_array, electrodesList, electrode
                  10, fmin, fmax, fres, class1label, class2label)
         plt.show()
 
+def qt_plot_psd_r2(power_cond1, power_cond2, rsquare, freqs_array, electrodesList, electrodeToDisp, fres, fmin, fmax, class1label, class2label):
+    electrodeExists = False
+    electrodeIdx = 0
+    for idx, elec in enumerate(electrodesList):
+        if elec == electrodeToDisp:
+            electrodeIdx = idx
+            electrodeExists = True
+            break
+
+    if not electrodeExists:
+        myMsgBox("No sensor with this name found")
+    else:
+        plot_psd_r2(power_cond1, power_cond2, rsquare, freqs_array, electrodeIdx, electrodesList,
+                 10, fmin, fmax, fres, class1label, class2label)
+        plt.show()
+
 def qt_plot_metric(power_cond1, power_cond2, freqs_array, electrodesList, electrodeToDisp, fres, fmin, fmax, class1label, class2label, metricLabel):
     electrodeExists = False
     electrodeIdx = 0
@@ -1011,6 +1037,22 @@ def qt_plot_metric(power_cond1, power_cond2, freqs_array, electrodesList, electr
         myMsgBox("No sensor with this name found")
     else:
         plot_metric(power_cond1, power_cond2, freqs_array, electrodeIdx, electrodesList,
+                    10, fmin, fmax, fres, class1label, class2label, metricLabel)
+        plt.show()
+
+def qt_plot_metric2(power_cond1, power_cond2, rsquare, freqs_array, electrodesList, electrodeToDisp, fres, fmin, fmax, class1label, class2label, metricLabel):
+    electrodeExists = False
+    electrodeIdx = 0
+    for idx, elec in enumerate(electrodesList):
+        if elec == electrodeToDisp:
+            electrodeIdx = idx
+            electrodeExists = True
+            break
+
+    if not electrodeExists:
+        myMsgBox("No sensor with this name found")
+    else:
+        plot_metric2(power_cond1, power_cond2, rsquare, freqs_array, electrodeIdx, electrodesList,
                     10, fmin, fmax, fres, class1label, class2label, metricLabel)
         plt.show()
 
