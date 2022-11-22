@@ -23,7 +23,7 @@ def modifyScenarioGeneralSettings(scenXml, parameterDict):
     tree.write(scenXml)
     return
 
-def modifyExtractionIO(scenXml, newFilename, newOutputSpect1, newOutputSpect2, newOutputBaseline1, newOutputBaseline2, newOutputTrials):
+def modifyExtractionIO(scenXml, newFilename, newOutputSpect1, newOutputSpect2, newOutputBaseline1, newOutputBaseline2, newOutputConnect1, newOutputConnect2, newOutputTrials):
     print("---Modifying " + scenXml + " input and output")
     tree = ET.parse(scenXml)
     root = tree.getroot()
@@ -41,6 +41,12 @@ def modifyExtractionIO(scenXml, newFilename, newOutputSpect1, newOutputSpect2, n
             elif setting.find('Name').text == "OutputSpect2":
                 xmlVal = setting.find('Value')
                 xmlVal.text = newOutputSpect2
+            elif setting.find('Name').text == "OutputConnect1":
+                xmlVal = setting.find('Value')
+                xmlVal.text = newOutputConnect1
+            elif setting.find('Name').text == "OutputConnect2":
+                xmlVal = setting.find('Value')
+                xmlVal.text = newOutputConnect2
             elif setting.find('Name').text == "OutputBaseline1":
                 xmlVal = setting.find('Value')
                 xmlVal.text = newOutputBaseline1
@@ -105,7 +111,7 @@ def modifyAcqScenario(scenXml, parameterDict, boolOnline):
     tree.write(scenXml)
     return
 
-def modifyTrainScenario(chanFreqPairs, epochAvg, epochCount, scenXml):
+def modifyTrainScenario(chanFreqPairs, epochCount, scenXml):
     print("---Modifying " + scenXml + " with Selected Features")
     tree = ET.parse(scenXml)
     root = tree.getroot()
@@ -138,17 +144,16 @@ def modifyTrainScenario(chanFreqPairs, epochAvg, epochCount, scenXml):
                             xmlVal.text = chanFreqPairs[0][1]
                             print("            with " + xmlVal.text)
                             break
-            if epochAvg:
-                if box.find('Name').text == 'Epoch average':
-                    print("-- EPOCH AVERAGE BOX ")
-                    for settings in box.findall('Settings'):
-                        for setting in settings.findall('Setting'):
-                            if setting.find('Name').text == "Epoch count":
-                                xmlVal = setting.find('Value')
-                                print("       replacing " + xmlVal.text)
-                                xmlVal.text = str(epochCount)
-                                print("            with " + xmlVal.text)
-                                break
+            if box.find('Name').text == 'Epoch average':
+                print("-- EPOCH AVERAGE BOX ")
+                for settings in box.findall('Settings'):
+                    for setting in settings.findall('Setting'):
+                        if setting.find('Name').text == "Epoch count":
+                            xmlVal = setting.find('Value')
+                            print("       replacing " + xmlVal.text)
+                            xmlVal.text = str(epochCount)
+                            print("            with " + xmlVal.text)
+                            break
 
     if len(chanFreqPairs) > 1:
         # TOUGHEST CASE : NEED TO COPY/PASTE MULTIPLE PROCESSING
@@ -174,6 +179,97 @@ def modifyTrainScenario(chanFreqPairs, epochAvg, epochCount, scenXml):
             locOffset = 120
 
             # Find all chained box btw those two
+            if boxId is not None and boxLastId is not None:
+                boxList = findChainedBoxes(root, boxId, boxLastId)
+
+                for idxPair, [chan, freq] in enumerate(chanFreqPairs):
+                    # Don't do it for the first pair, it was done earlier in the function
+                    if idxPair == 0:
+                        continue
+
+                    pair = [chan, freq]
+                    # Copy list of chained boxes (except the first (SPLIT) and
+                    # the 2 last ones (feature aggreg, classifier trainer) and chain them.
+                    listofBoxesToChain, nbOfOutputs = copyBoxList(root, boxList, locOffset, pair)
+                    locOffset += locOffset
+
+                    # Add an input to Feature Aggregator box in the current chain
+                    addInputToBox(root, listofBoxesToChain[-1])
+                    featAggInputIdx = countBoxInputs(root, listofBoxesToChain[-1]) - 1
+                    linkBoxes(root, listofBoxesToChain, nbOfOutputs, featAggInputIdx)
+
+    # WRITE NEW XML
+    tree.write(scenXml)
+    return
+
+def modifyTrainScenarioUsingSplit(splitStr, chanFreqPairs, epochCount, scenXml):
+    print("---Modifying " + scenXml + " with Selected Features")
+    tree = ET.parse(scenXml)
+    root = tree.getroot()
+
+    # FIRST STEP : GET THE "SPLIT" IDENTITY BOXES
+    splitBoxes = []
+    for boxes in root.findall('Boxes'):
+        for box in boxes.findall('Box'):
+            if box.find('Name').text == splitStr:
+                splitBoxes.append(box)
+                print("-- SPLIT POWSPECT " + str(len(splitBoxes)+1))
+                continue
+
+    # Find Id of Classifier trainer box
+    boxLast = findBox(root, "Classifier trainer")
+    boxLastId = boxLast.find("Identifier").text
+
+    # FIRST STEP : modify existing branches in the scenario, using the first pair of features
+    for splitbox in splitBoxes:
+        boxId = splitbox.find("Identifier").text
+        # Find all boxes chained btw this box and the last one (classifier trainer)
+        if boxId is not None and boxLastId is not None:
+            boxList = findChainedBoxes(root, boxId, boxLastId)
+
+        # Change parameters of particular boxes in this list of chained boxes
+        for boxid in boxList:
+            box = findBoxId(root, boxid)
+            if box.find('Name').text == 'Channel Selector':
+                print("-- CHANNEL SELECTOR BOX ")
+                for settings in box.findall('Settings'):
+                    for setting in settings.findall('Setting'):
+                        if setting.find('Name').text == "Channel List":
+                            xmlVal = setting.find('Value')
+                            print("       replacing " + xmlVal.text)
+                            xmlVal.text = chanFreqPairs[0][0]
+                            print("            with " + xmlVal.text)
+                            break
+
+            if box.find('Name').text == 'Frequency Band Selector':
+                print("-- FREQ SELECTION BOX ")
+                for settings in box.findall('Settings'):
+                    for setting in settings.findall('Setting'):
+                        # POWER SPECTRUM PIPELINE: actual "freq band selector" box
+                        # CONNECTIVITY PIPELINE: channel selector rebranded as freq band selector
+                        if setting.find('Name').text == "Frequencies to select" or setting.find('Name').text == "Channel List":
+                            xmlVal = setting.find('Value')
+                            print("       replacing " + xmlVal.text)
+                            xmlVal.text = chanFreqPairs[0][1]
+                            print("            with " + xmlVal.text)
+                            break
+            if box.find('Name').text == 'Epoch average':
+                print("-- EPOCH AVERAGE BOX ")
+                for settings in box.findall('Settings'):
+                    for setting in settings.findall('Setting'):
+                        if setting.find('Name').text == "Epoch count":
+                            xmlVal = setting.find('Value')
+                            print("       replacing " + xmlVal.text)
+                            xmlVal.text = str(epochCount)
+                            print("            with " + xmlVal.text)
+                            break
+
+    locOffset = 120
+    if len(chanFreqPairs) > 1:
+        # COPY/PASTE PROCESSING BRANCHES
+        for splitbox in splitBoxes:
+            boxId = splitbox.find("Identifier").text
+            # Find all boxes chained btw this split and the last (classifier trainer)
             if boxId is not None and boxLastId is not None:
                 boxList = findChainedBoxes(root, boxId, boxLastId)
 

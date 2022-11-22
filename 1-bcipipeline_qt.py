@@ -119,9 +119,9 @@ class Dialog(QDialog):
             self.parameterDict["pipelineType"] = pipelineKey
 
             # GET PARAMETER LIST FOR SELECTED BCI PIPELINE, AND DISPLAY THEM
-            for idx, param in enumerate(settings.pipelineAcqSettings[pipelineKey]):
+            for idx, param in enumerate(settings.pipelineAcqSettings):
                 # init params...
-                value = settings.pipelineAcqSettings[pipelineKey][param]
+                value = settings.pipelineAcqSettings[param]
                 self.parameterDict[param] = value
                 # create widgets...
                 paramWidget = QLineEdit()

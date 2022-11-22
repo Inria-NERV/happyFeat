@@ -5,22 +5,20 @@
 global optionKeys
 optionKeys = ["",
               "PowSpectrumGraz",
-              "Connectivity"]
+              "Connectivity",
+              "PowSpectrumConnect"]
 
 global optionsComboText
 optionsComboText = {optionKeys[0]: "",
                     optionKeys[1]: "GrazBCI - Power Spectrum Features (2 classes)",
-                    optionKeys[2]: "GrazBCI - Connectivity Features (2 classes)"}
-
-global optionsNbParams
-optionsNbParams = {optionKeys[0]: 0,
-                   optionKeys[1]: 1,
-                   optionKeys[2]: 2}
+                    optionKeys[2]: "GrazBCI - Connectivity Features (2 classes)",
+                    optionKeys[3]: "GrazBCI - Pow.Spect. + Connectivity Features (2 classes)"}
 
 global optionsTemplatesDir
 optionsTemplatesDir = {optionKeys[0]: None,
                        optionKeys[1]: "templates-spectralpower",
-                       optionKeys[2]: "templates-connectivity"}
+                       optionKeys[2]: "templates-connectivity",
+                       optionKeys[3]: "templates-mixed"}
 
 global templateScenFilenames
 templateScenFilenames = ["sc1-monitor-acq.xml",
@@ -42,33 +40,15 @@ connectMetricsComboText = { connectMetrics[0]: "Magnitude Squared Coh.",
                             connectMetrics[3]: "abs(Imag(Coh.))"}
 
 global pipelineAcqSettings
-pipelineAcqSettings = {optionKeys[0]: None,
-
-                       # POWER SPECTRUM
-                       optionKeys[1]:
-                           {"TrialNb": 20,
-                            "Class1": "MI",  # OV : LEFT
-                            "Class2": "REST",  # OV : RIGHT
-                            "Baseline": 20,
-                            "TrialWait": 3,
-                            "TrialLength": 3,
-                            "EndTrialMin": 2.5,
-                            "EndTrialMax": 3.5,
-                            "FeedbackLength": 3,
-                            },
-
-                       # CONNECTIVITY
-                       optionKeys[2]:
-                           {"TrialNb": 20,
-                            "Class1": "MI",  # OV : LEFT
-                            "Class2": "REST",  # OV : RIGHT
-                            "Baseline": 20,
-                            "TrialWait": 3,
-                            "TrialLength": 3,
-                            "EndTrialMin": 2.5,
-                            "EndTrialMax": 3.5,
-                            "FeedbackLength": 3,
-                            }
+pipelineAcqSettings = { "TrialNb": 20,
+                        "Class1": "MI",  # OV : LEFT
+                        "Class2": "REST",  # OV : RIGHT
+                        "Baseline": 20,
+                        "TrialWait": 3,
+                        "TrialLength": 3,
+                        "EndTrialMin": 2.5,
+                        "EndTrialMax": 3.5,
+                        "FeedbackLength": 3,
                        }
 
 global pipelineExtractSettings
@@ -93,15 +73,25 @@ pipelineExtractSettings = {optionKeys[0]: None,
                                 "ConnectivityMetric": connectMetrics[0],
                                 "ConnectivityLength": 0.25,
                                 "ConnectivityOverlap": 36,
-                                # "ConnectivityMethod" : "Burg"
                                 # "AutoRegressiveOrder": 12,
                                 "AutoRegressiveOrderTime": 0.038,
-                                # "WindowMethod": "Hann",
-                                # "WelchWinLength": 0.25,
-                                # "WelchWinOverlap": 50,
                                 # "PsdSize": 256,
                                 "FreqRes": 1,
-                                # "ChannelSubset": "",
+                                },
+
+                           # POWER SPECTRUM + CONNECTIVITY
+                           optionKeys[3]:
+                               {"StimulationEpoch": 3,
+                                "StimulationDelay": 1,
+                                "TimeWindowLength": 0.25,
+                                "TimeWindowShift": 0.161,
+                                "ConnectivityMetric": connectMetrics[0],
+                                "ConnectivityLength": 0.25,
+                                "ConnectivityOverlap": 36,
+                                # "AutoRegressiveOrder": 12,
+                                "AutoRegressiveOrderTime": 0.038,
+                                # "PsdSize": 256,
+                                "FreqRes": 1,
                                 }
 
                            }

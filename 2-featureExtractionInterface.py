@@ -25,6 +25,7 @@ from PyQt5.QtWidgets import QFrame
 from PyQt5.QtWidgets import QSizePolicy
 from PyQt5.QtWidgets import QComboBox
 from PyQt5.QtWidgets import QPlainTextEdit
+from PyQt5.QtWidgets import QSizePolicy
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QTimer
 
@@ -75,12 +76,15 @@ class Dialog(QDialog):
         self.dataNp1baseline = []
         self.dataNp2baseline = []
         self.Features = Features()
+        self.Features2 = Features()
         self.progressBarExtract = None
         self.progressBarViz = None
+        self.progressBarViz2 = None
         self.progressBarTrain = None
 
         self.extractThread = None
         self.loadFilesForVizThread = None
+        self.loadFilesForVizThread2 = None
         self.trainClassThread = None
 
         self.plotBtnsEnabled = False
@@ -184,6 +188,7 @@ class Dialog(QDialog):
         # Extraction button
         self.btn_runExtractionScenario = QPushButton("Extract Features and Trials")
         self.btn_runExtractionScenario.clicked.connect(lambda: self.runExtractionScenario())
+        self.btn_runExtractionScenario.setStyleSheet("font-weight: bold")
 
         # Arrange all widgets in the layout
         self.layoutExtract.addWidget(self.labelFeatExtract)
@@ -221,98 +226,120 @@ class Dialog(QDialog):
         self.availableFilesForVizList.setSelectionMode(QListWidget.MultiSelection)
         self.layoutViz.addWidget(self.availableFilesForVizList)
 
+        # Button to load files...
+        self.btn_loadFilesForViz = QPushButton("Load file(s) for analysis")
+        self.btn_loadFilesForViz.clicked.connect(lambda: self.loadFilesForViz())
+        self.btn_loadFilesForViz.setStyleSheet("font-weight: bold")
+        self.layoutViz.addWidget(self.btn_loadFilesForViz)
+
         # LIST OF PARAMETERS FOR VISUALIZATION
         # TODO : make it more flexible...
-        if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
-            # Param : fmin for frequency based viz
-            self.userFmin = QLineEdit()
-            self.userFmin.setText('0')
-            self.formLayoutViz.addRow('Frequency min', self.userFmin)
-            # Param : fmax for frequency based viz
-            self.userFmax = QLineEdit()
-            self.userFmax.setText('40')
-            self.formLayoutViz.addRow('Frequency max', self.userFmax)
-
-            # Param : Electrode to use for PSD display
-            self.electrodePsd = QLineEdit()
-            self.electrodePsd.setText('CP3')
-            self.formLayoutViz.addRow('Sensor for PSD visualization', self.electrodePsd)
-            # Param : Frequency to use for Topography
-            self.freqTopo = QLineEdit()
-            self.freqTopo.setText('12')
-            self.formLayoutViz.addRow('Topography Freq (Hz), use \":\" for freq band', self.freqTopo)
-            # Param : checkbox for colormap scaling
-            self.colormapScale = QCheckBox()
-            self.colormapScale.setTristate(False)
-            self.colormapScale.setChecked(True)
-            self.formLayoutViz.addRow('Scale Colormap (R²map and Topography)', self.colormapScale)
-
-        elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
-            # Param : fmin for frequency based viz
-            self.userFmin = QLineEdit()
-            self.userFmin.setText('0')
-            self.formLayoutViz.addRow('Frequency min', self.userFmin)
-            # Param : fmax for frequency based viz
-            self.userFmax = QLineEdit()
-            self.userFmax.setText('40')
-            self.formLayoutViz.addRow('Frequency max', self.userFmax)
-            # Param : Electrode to use for Node Strength display
-            self.electrodePsd = QLineEdit()
-            self.electrodePsd.setText('CP3')
-            self.formLayoutViz.addRow('Sensor for Node Strength viz', self.electrodePsd)
-            # Param : Frequency to use for Topography
-            self.freqTopo = QLineEdit()
-            self.freqTopo.setText('8:35')
-            self.formLayoutViz.addRow('Topography Freq (Hz), use \":\" for freq band', self.freqTopo)
-            # Param : checkbox for colormap scaling
-            self.colormapScale = QCheckBox()
-            self.colormapScale.setTristate(False)
-            self.colormapScale.setChecked(True)
-            self.formLayoutViz.addRow('Scale Colormap (R²map and Topography)', self.colormapScale)
+        # if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
+        # Param : fmin for frequency based viz
+        self.userFmin = QLineEdit()
+        self.userFmin.setText('0')
+        self.formLayoutViz.addRow('Frequency min', self.userFmin)
+        # Param : fmax for frequency based viz
+        self.userFmax = QLineEdit()
+        self.userFmax.setText('40')
+        self.formLayoutViz.addRow('Frequency max', self.userFmax)
+        # Param : Electrode to use for PSD display
+        self.electrodePsd = QLineEdit()
+        self.electrodePsd.setText('CP3')
+        self.formLayoutViz.addRow('Sensor for PSD visualization', self.electrodePsd)
+        # Param : Frequency to use for Topography
+        self.freqTopo = QLineEdit()
+        self.freqTopo.setText('12')
+        self.formLayoutViz.addRow('Topography Freq (Hz), use \":\" for freq band', self.freqTopo)
+        # Param : checkbox for colormap scaling
+        self.colormapScale = QCheckBox()
+        self.colormapScale.setTristate(False)
+        self.colormapScale.setChecked(True)
+        self.formLayoutViz.addRow('Scale Colormap (R²map and Topography)', self.colormapScale)
 
         self.layoutViz.addLayout(self.formLayoutViz)
 
-        self.layoutVizButtons = QVBoxLayout()
-
+        # Buttons for visualizations...
         # TODO : make it more flexible...
+        self.parallelVizLayouts = [None, None]
+        self.parallelVizLayouts[0] = QVBoxLayout()
+        self.parallelVizLayouts[1] = QVBoxLayout()
+
         if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
             # Viz options for "Spectral Power" pipeline...
-            self.btn_loadFilesForViz = QPushButton("Load spectrum file(s) for analysis")
             self.btn_r2map = QPushButton("Display Frequency-channel R² map")
             self.btn_timefreq = QPushButton("Display Time-Frequency ERD/ERS analysis")
             self.btn_psd = QPushButton("Display PSD comparison between classes")
             self.btn_topo = QPushButton("Display Brain Topography")
+            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features))
+            self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq(self.Features))
+            self.btn_psd.clicked.connect(lambda: self.btnPsd(self.Features))
+            self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features))
 
-            self.btn_loadFilesForViz.clicked.connect(lambda: self.loadFilesForViz())
-            self.btn_r2map.clicked.connect(lambda: self.btnR2())
-            self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq())
-            self.btn_psd.clicked.connect(lambda: self.btnPsd())
-            self.btn_topo.clicked.connect(lambda: self.btnTopo())
+            self.parallelVizLayouts[0].addWidget(self.btn_r2map)
+            self.parallelVizLayouts[0].addWidget(self.btn_psd)
+            self.parallelVizLayouts[0].addWidget(self.btn_timefreq)
+            self.parallelVizLayouts[0].addWidget(self.btn_topo)
 
-            self.layoutVizButtons.addWidget(self.btn_loadFilesForViz)
-            self.layoutVizButtons.addWidget(self.btn_r2map)
-            self.layoutVizButtons.addWidget(self.btn_psd)
-            self.layoutVizButtons.addWidget(self.btn_timefreq)
-            self.layoutVizButtons.addWidget(self.btn_topo)
+            self.layoutViz.addLayout(self.parallelVizLayouts[0])
 
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             # Viz options for "Connectivity" pipeline...
-            self.btn_loadFilesForViz = QPushButton("Load connectivity file(s) for analysis")
             self.btn_r2map = QPushButton("Display Frequency-channel R² map (NODE STRENGTH)")
+            # self.btn_timefreq = QPushButton("Display Time-Frequency ERD/ERS analysis")
             self.btn_metric = QPushButton("Display NODE STRENGTH comparison between classes")
             self.btn_topo = QPushButton("Display NODE STRENGTH Brain Topography")
+            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features))
+            self.btn_metric.clicked.connect(lambda: self.btnMetric(self.Features))
+            # self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq())
+            self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features))
 
-            self.btn_loadFilesForViz.clicked.connect(lambda: self.loadFilesForViz())
-            self.btn_r2map.clicked.connect(lambda: self.btnR2())
-            self.btn_metric.clicked.connect(lambda: self.btnMetric())
-            self.btn_topo.clicked.connect(lambda: self.btnTopo())
+            self.parallelVizLayouts[1].addWidget(self.btn_r2map)
+            self.parallelVizLayouts[1].addWidget(self.btn_metric)
+            # self.parallelVizLayouts[1].addWidget(self.btn_timefreq)
+            self.parallelVizLayouts[1].addWidget(self.btn_topo)
 
-            self.layoutVizButtons.addWidget(self.btn_loadFilesForViz)
-            self.layoutVizButtons.addWidget(self.btn_r2map)
-            self.layoutVizButtons.addWidget(self.btn_metric)
-            self.layoutVizButtons.addWidget(self.btn_topo)
+            self.layoutViz.addLayout(self.parallelVizLayouts[1])
 
-        self.layoutViz.addLayout(self.layoutVizButtons)
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+
+            labelPowSpectViz = QLabel("Power Spectrum")
+            labelPowSpectViz.setAlignment(QtCore.Qt.AlignCenter)
+            labelConnectViz = QLabel("Node Strength")
+            labelConnectViz.setAlignment(QtCore.Qt.AlignCenter)
+            self.labelLayoutH = QHBoxLayout()
+            self.labelLayoutH.addWidget(labelPowSpectViz)
+            self.labelLayoutH.addWidget(labelConnectViz)
+
+            # Viz options for "Spectral Power" pipeline...
+            self.btn_r2map = QPushButton("Freq.-chan. R² map")
+            self.btn_psd = QPushButton("PSD for the 2 classes")
+            self.btn_topo = QPushButton("Brain Topography")
+            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features))
+            self.btn_psd.clicked.connect(lambda: self.btnPsd(self.Features))
+            self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features))
+            self.parallelVizLayouts[0].addWidget(self.btn_r2map)
+            self.parallelVizLayouts[0].addWidget(self.btn_psd)
+            self.parallelVizLayouts[0].addWidget(self.btn_topo)
+
+            # Viz options for "Connectivity" pipeline...
+            self.btn_r2map2 = QPushButton("Freq.-chan. R² map")
+            self.btn_metric = QPushButton("NodeStr. for the 2 classes")
+            self.btn_topo2 = QPushButton("Brain Topography")
+            self.btn_r2map2.clicked.connect(lambda: self.btnR2(self.Features2))
+            self.btn_metric.clicked.connect(lambda: self.btnMetric(self.Features2))
+            self.btn_topo2.clicked.connect(lambda: self.btnTopo(self.Features2))
+            self.parallelVizLayouts[1].addWidget(self.btn_r2map2)
+            self.parallelVizLayouts[1].addWidget(self.btn_metric)
+            self.parallelVizLayouts[1].addWidget(self.btn_topo2)
+
+            # Setting up parallel layouts...
+            self.parallelVizLayoutH = QHBoxLayout()
+            self.parallelVizLayoutH.addLayout(self.parallelVizLayouts[0])
+            self.parallelVizLayoutH.addLayout(self.parallelVizLayouts[1])
+
+            self.layoutViz.addLayout(self.labelLayoutH)
+            self.layoutViz.addLayout(self.parallelVizLayoutH)
 
         # Add separator...
         separator2 = QFrame()
@@ -337,31 +364,70 @@ class Dialog(QDialog):
         textFeatureSelect = str(textFeatureSelect + "\n\tFCz;14:22 (for freq range)")
         self.labelSelect = QLabel(textFeatureSelect)
         self.labelSelect.setAlignment(QtCore.Qt.AlignCenter)
-
         self.layoutTrain.addWidget(self.labelTrain)
         self.layoutTrain.addWidget(self.labelSelect)
 
-        self.qvBoxLayouts = [None, None]
-        self.qvBoxLayouts[0] = QFormLayout()
-        self.qvBoxLayouts[1] = QVBoxLayout()
-        self.layoutTrain.addLayout(self.qvBoxLayouts[0])
-        self.layoutTrain.addLayout(self.qvBoxLayouts[1])
+        # Feature selection layouts. Usually only 1, but 2 parallel selections in "mixed" mode
+        self.qvFeatureLayouts = [None, None]
+        self.qvFeatureLayouts[0] = QFormLayout()
+        self.qvFeatureLayouts[1] = QFormLayout()
+        if self.parameterDict["pipelineType"] != settings.optionKeys[3]:
+            self.layoutTrain.addLayout(self.qvFeatureLayouts[0])
+        else:
+            labelFeat = [None, None]
+            labelFeat[0] = QLabel("Power Spectrum")
+            labelFeat[0].setAlignment(QtCore.Qt.AlignCenter)
+            labelFeat[0].setStyleSheet("font-weight: bold")
+            labelFeat[1] = QLabel("Connectivity")
+            labelFeat[1].setAlignment(QtCore.Qt.AlignCenter)
+            labelFeat[1].setStyleSheet("font-weight: bold")
+            self.qvFeatureLayouts[0].addWidget(labelFeat[0])
+            self.qvFeatureLayouts[1].addWidget(labelFeat[1])
+            qhBoxFeatLayout = QHBoxLayout()
+            qhBoxFeatLayout.addLayout(self.qvFeatureLayouts[0], 1)
+            qhBoxFeatLayout.addLayout(self.qvFeatureLayouts[1], 1)
+            self.layoutTrain.addLayout(qhBoxFeatLayout)
 
-        self.selectedFeats = []
         # Parameter for feat selection/training : First selected pair of Channels / Electrodes
         # We'll add more with a button
-        self.selectedFeats.append(QLineEdit())
-        self.selectedFeats[0].setText('CP3;22')
         pairText = "Feature 1"
-        self.qvBoxLayouts[0].addRow(pairText, self.selectedFeats[0])
+        self.selectedFeats = [[], []]
+
+        self.selectedFeats[0].append(QLineEdit())
+        self.selectedFeats[0][0].setText('CP3;22')
+
+        self.btn_addPair = QPushButton("Add feature")
+        self.btn_removePair = QPushButton("Remove feature")
+        self.btn_addPair.clicked.connect(lambda: self.btnAddPair(self.selectedFeats[0], self.qvFeatureLayouts[0]))
+        self.btn_removePair.clicked.connect(lambda: self.btnRemovePair(self.selectedFeats[0], self.qvFeatureLayouts[0]))
+        self.qvFeatureLayouts[0].addWidget(self.btn_addPair)
+        self.qvFeatureLayouts[0].addWidget(self.btn_removePair)
+        self.qvFeatureLayouts[0].addWidget(self.selectedFeats[0][0])
+
+        if self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+            self.selectedFeats[1].append(QLineEdit())
+            self.selectedFeats[1][0].setText('CP3;22')
+
+            self.btn_addPair2 = QPushButton("Add feature")
+            self.btn_removePair2 = QPushButton("Remove feature")
+            self.btn_addPair2.clicked.connect(lambda: self.btnAddPair(self.selectedFeats[1], self.qvFeatureLayouts[1]))
+            self.btn_removePair2.clicked.connect(lambda: self.btnRemovePair(self.selectedFeats[1], self.qvFeatureLayouts[1]))
+            self.qvFeatureLayouts[1].addWidget(self.btn_addPair2)
+            self.qvFeatureLayouts[1].addWidget(self.btn_removePair2)
+            self.qvFeatureLayouts[1].addWidget(self.selectedFeats[1][0])
+
+        # Training Layout
+        self.qvTrainingLayout = QVBoxLayout()
+        self.layoutTrain.addLayout(self.qvTrainingLayout)
 
         # Param for training
-        self.trainingLayout = QFormLayout()
+        self.trainingParamsLayout = QFormLayout()
         self.trainingPartitions = QLineEdit()
         self.trainingPartitions.setText(str(10))
         partitionsText = "Number of k-fold for classification"
-        self.trainingLayout.addRow(partitionsText, self.trainingPartitions)
+        self.trainingParamsLayout.addRow(partitionsText, self.trainingPartitions)
 
+        # List of files...
         self.fileListWidgetTrain = QListWidget()
         self.fileListWidgetTrain.setSelectionMode(QListWidget.MultiSelection)
 
@@ -377,23 +443,20 @@ class Dialog(QDialog):
         self.lastTrainingResults.setMinimumHeight(minHeightTrainResults)
         self.lastTrainingResults.insertPlainText("No training attempts yet...")
 
-        self.btn_addPair = QPushButton("Add feature")
-        self.btn_removePair = QPushButton("Remove last feature in the list")
+        # Select / all combinations buttons...
         self.btn_selectFeatures = QPushButton("TRAIN CLASSIFIER")
         self.btn_allCombinations = QPushButton("FIND BEST COMBINATION")
-        self.btn_addPair.clicked.connect(lambda: self.btnAddPair())
-        self.btn_removePair.clicked.connect(lambda: self.btnRemovePair())
         self.btn_selectFeatures.clicked.connect(lambda: self.btnSelectFeatures())
         self.btn_allCombinations.clicked.connect(lambda: self.btnAllCombinations())
+        self.btn_selectFeatures.setStyleSheet("font-weight: bold")
+        self.btn_allCombinations.setStyleSheet("font-weight: bold")
 
-        self.qvBoxLayouts[1].addWidget(self.btn_addPair)
-        self.qvBoxLayouts[1].addWidget(self.btn_removePair)
-        self.qvBoxLayouts[1].addLayout(self.trainingLayout)
-        self.qvBoxLayouts[1].addWidget(self.fileListWidgetTrain)
-        self.qvBoxLayouts[1].addWidget(self.labelLastResults)
-        self.qvBoxLayouts[1].addWidget(self.lastTrainingResults)
-        self.qvBoxLayouts[1].addWidget(self.btn_selectFeatures)
-        self.qvBoxLayouts[1].addWidget(self.btn_allCombinations)
+        self.qvTrainingLayout.addLayout(self.trainingParamsLayout)
+        self.qvTrainingLayout.addWidget(self.fileListWidgetTrain)
+        self.qvTrainingLayout.addWidget(self.labelLastResults)
+        self.qvTrainingLayout.addWidget(self.lastTrainingResults)
+        self.qvTrainingLayout.addWidget(self.btn_selectFeatures)
+        self.qvTrainingLayout.addWidget(self.btn_allCombinations)
         self.dlgLayout.addLayout(self.layoutTrain)
 
         # display initial layout
@@ -422,8 +485,6 @@ class Dialog(QDialog):
             self.btn_timefreq.setEnabled(myBool)
             self.btn_psd.setEnabled(myBool)
             self.btn_topo.setEnabled(myBool)
-            # self.btn_w2map.setEnabled(True)
-            # self.btn_psd_r2.setEnabled(True)
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             # self.btn_connectSpect.setEnabled(myBool)
             # self.btn_connectMatrices.setEnabled(myBool)
@@ -431,6 +492,13 @@ class Dialog(QDialog):
             self.btn_r2map.setEnabled(myBool)
             self.btn_metric.setEnabled(myBool)
             self.btn_topo.setEnabled(myBool)
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+            self.btn_r2map.setEnabled(myBool)
+            self.btn_psd.setEnabled(myBool)
+            self.btn_topo.setEnabled(myBool)
+            self.btn_r2map2.setEnabled(myBool)
+            self.btn_metric.setEnabled(myBool)
+            self.btn_topo2.setEnabled(myBool)
 
         self.show()
 
@@ -476,7 +544,19 @@ class Dialog(QDialog):
         # Only mention current class (set in parameters), and check that both classes are present
         # ----------
 
-        suffix = "-" + self.parameterDict["pipelineType"]
+        suffix1 = None
+        suffix2 = None
+        if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
+            suffix1 = "-SPECTRUM"
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+            suffix1 = "-CONNECT"
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+            suffix1 = "-SPECTRUM"
+            suffix2 = "-CONNECT"
+        suffixFinal = suffix1
+        if suffix2:
+            suffixFinal += suffix2
+
         workingFolder = os.path.join(signalFolder, "analysis")
         class1label = self.parameterDict["Class1"]
         class2label = self.parameterDict["Class2"]
@@ -484,16 +564,27 @@ class Dialog(QDialog):
         # first get a list of all csv files in workingfolder that match the condition
         availableCsvs = []
         for filename in os.listdir(workingFolder):
-            if filename.endswith(str(suffix + "-" + class1label + ".csv")):
-                basename = filename.removesuffix(str(suffix + "-" + class1label + ".csv"))
-                otherClass = str(basename + suffix + "-" + class2label + ".csv")
+            if filename.endswith(str(suffix1 + "-" + class1label + ".csv")):
+                basename = filename.removesuffix(str(suffix1 + "-" + class1label + ".csv"))
+                otherClass = str(basename + suffix1 + "-" + class2label + ".csv")
                 if otherClass in os.listdir(workingFolder):
-                    availableCsvs.append(basename)
+                    if not suffix2:
+                        # no need to check for additional files...
+                        availableCsvs.append(basename)
+                    else:
+                        # we need to check that files with suffix 2 are also present
+                        otherMetric1 = str(basename + suffix2 + "-" + class1label + ".csv")
+                        otherMetric2 = str(basename + suffix2 + "-" + class2label + ".csv")
+                        if otherMetric1 in os.listdir(workingFolder) and otherMetric2 in os.listdir(workingFolder):
+                            availableCsvs.append(basename)
 
+        suffixFinal = suffix1
+        if suffix2:
+            suffixFinal += suffix2
         # iterate over existing items in widget and delete those who don't exist anymore
         for x in range(self.availableFilesForVizList.count() - 1, -1, -1):
             tempitem = self.availableFilesForVizList.item(x).text()
-            if tempitem.removesuffix(suffix) not in availableCsvs:
+            if tempitem.removesuffix(suffixFinal) not in availableCsvs:
                 self.availableFilesForVizList.takeItem(x)
 
         # iterate over filelist and add new files to listwidget
@@ -502,7 +593,7 @@ class Dialog(QDialog):
         for x in range(self.availableFilesForVizList.count()):
             items.append(self.availableFilesForVizList.item(x).text())
         for basename in availableCsvs:
-            basenameSuffix = str(basename+suffix)
+            basenameSuffix = str(basename+suffixFinal)
             if basenameSuffix not in items:
                 self.availableFilesForVizList.addItem(basenameSuffix)
 
@@ -603,14 +694,17 @@ class Dialog(QDialog):
         if self.updateExtractParameters():
             self.deleteWorkFiles()
 
-        # create progress bar window...
-        self.progressBarExtract = ProgressBar("Feature extraction", "Extracting...", len(self.fileListWidget.selectedItems()))
-
+        # Populate list of selected signal files...
         signalFiles = []
         for selectedItem in self.fileListWidget.selectedItems():
             signalFiles.append(selectedItem.text() )
         signalFolder = os.path.join(self.scriptPath, "generated", "signals")
         scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[1])
+
+        # create progress bar window...
+        self.progressBarExtract = ProgressBar("Feature extraction",
+                                              str("Extracting data for file "+signalFiles[0]+"..."),
+                                              len(self.fileListWidget.selectedItems()))
 
         # deactivate this part of the GUI
         self.enableExtractionGui(False)
@@ -625,6 +719,7 @@ class Dialog(QDialog):
         # Refresh the viz&train file lists to make it available + increment progress bar
         self.extractThread.info.connect(self.progressBarExtract.increment)
         self.extractThread.info.connect(lambda : self.refreshLists(os.path.join(self.scriptPath, "generated", "signals")))
+        self.extractThread.info2.connect(self.progressBarExtract.changeLabel)
         # Signal: Extraction work thread finished
         self.extractThread.over.connect(self.extraction_over)
         # Launch the work thread
@@ -649,12 +744,17 @@ class Dialog(QDialog):
             myMsgBox("Please select a set of files for analysis")
             return
 
-        # create progress bar window...
-        self.progressBarViz = ProgressBar("Feature Visualization", "Loading data from Csv files...", len(self.availableFilesForVizList.selectedItems()))
+        suffix = ""
+        if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
+           suffix = "-SPECTRUM"
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+            suffix = "-CONNECT"
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+            suffix = "-SPECTRUM-CONNECT"
 
         analysisFiles = []
         for selectedItem in self.availableFilesForVizList.selectedItems():
-            analysisFiles.append(selectedItem.text())
+            analysisFiles.append(selectedItem.text().removesuffix(suffix))
         signalFolder = os.path.join(self.scriptPath, "generated", "signals")
 
         # deactivate this part of the GUI + the extraction (or else we might have sync issues)
@@ -666,15 +766,34 @@ class Dialog(QDialog):
             self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, signalFolder, self.parameterDict, self.Features, self.samplingFreq)
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             self.loadFilesForVizThread = LoadFilesForVizConnectivity(analysisFiles, signalFolder, self.parameterDict, self.Features, self.samplingFreq)
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+            self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, signalFolder, self.parameterDict, self.Features, self.samplingFreq)
+            self.loadFilesForVizThread2 = LoadFilesForVizConnectivity(analysisFiles, signalFolder, self.parameterDict, self.Features2, self.samplingFreq)
 
+        # create progress bar window...
+        self.progressBarViz = ProgressBar("Feature Visualization", "Loading data from Csv files...",
+                                          len(self.availableFilesForVizList.selectedItems()))
         # Signal: Viz work thread finished one file of the selected list.
         # Increment progress bar + its label
         self.loadFilesForVizThread.info.connect(self.progressBarViz.increment)
         self.loadFilesForVizThread.info2.connect(self.progressBarViz.changeLabel)
-        # Signal: Extraction work thread finished
+        # Signal: Viz work thread finished
         self.loadFilesForVizThread.over.connect(self.loadFilesForViz_over)
         # Launch the work thread
         self.loadFilesForVizThread.start()
+
+        if self.loadFilesForVizThread2:
+            # create progress bar window...
+            self.progressBarViz2 = ProgressBar("Feature Visualization", "Loading data from Csv files...",
+                                              len(self.availableFilesForVizList.selectedItems()))
+            # Signal: Viz work thread finished one file of the selected list.
+            # Increment progress bar + its label
+            self.loadFilesForVizThread2.info.connect(self.progressBarViz2.increment)
+            self.loadFilesForVizThread2.info2.connect(self.progressBarViz2.changeLabel)
+            # Signal: Viz work thread finished
+            self.loadFilesForVizThread2.over.connect(self.loadFilesForViz_kill_PB)
+            # Launch the work thread
+            self.loadFilesForVizThread2.start()
 
     def loadFilesForViz_over(self, success, text):
         # Viz work thread is over, so we kill the progress bar,
@@ -688,6 +807,10 @@ class Dialog(QDialog):
             self.plotBtnsEnabled = True
         self.enableGui(True)
 
+    def loadFilesForViz_kill_PB(self, success, text):
+        # Viz work thread2 is over, so we only kill the progress bar
+        self.progressBarViz2.finish()
+
     def btnSelectFeatures(self):
         # ----------
         # Callback from button :
@@ -698,6 +821,17 @@ class Dialog(QDialog):
         if not self.fileListWidgetTrain.selectedItems():
             myMsgBox("Please select a set of files for training")
             return
+
+        if not self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+            # case with 1 set of features...
+            if len(self.selectedFeats[0]) < 1:
+                myMsgBox("Please use at least one set of features!")
+                return
+        else:
+            # case with 2 sets of features : one of the two can be empty
+            if len(self.selectedFeats[0]) < 1 and len(self.selectedFeats[1]) < 1:
+                myMsgBox("Please use at least one set of features!")
+                return
 
         # Get training param from GUI and modify training scenario
         err = True
@@ -710,14 +844,30 @@ class Dialog(QDialog):
             myMsgBox("Nb of k-fold should be a positive number")
             return
 
-        # create progress bar window...
-        self.progressBarTrain = ProgressBar("Classifier training", "Creating composite file", 2)
-
+        # create list of files...
         self.trainingFiles = []
         for selectedItem in self.fileListWidgetTrain.selectedItems():
             self.trainingFiles.append(selectedItem.text())
+
+        # IMPORTANT !
+        # When using "mixed" pipeline, if one of the two feature lists is empty, we use
+        # the Training scenario template from the pipeline with the non-empty feature (got it?)
+        # ex: if feats(connectivity) is empty, then we use the "powerspectrum" template.
+        trainingParamDict = self.parameterDict.copy()
+        trainingFeats = self.selectedFeats
+        if self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+            trainingFeats = self.selectedFeats
+            if len(self.selectedFeats[0]) <1:
+                # no powspectum feature = use connectivity pipeline's training template
+                trainingParamDict["pipelineType"] = settings.optionKeys[2]
+                # copy the selected feats to the first list, for processing in the thread...
+                trainingFeats[0] = self.selectedFeats[1]
+            elif len(self.selectedFeats[1]) <1:
+                # no connectivity feature = use powspectrum pipeline's training template
+                trainingParamDict["pipelineType"] = settings.optionKeys[1]
+
         signalFolder = os.path.join(self.scriptPath, "generated", "signals")
-        pipelineType = self.parameterDict["pipelineType"]
+        pipelineType = trainingParamDict["pipelineType"]
         templateFolder = os.path.join(self.scriptPath, settings.optionsTemplatesDir[pipelineType])
         scriptsFolder = self.scriptPath
 
@@ -725,11 +875,14 @@ class Dialog(QDialog):
         self.enableExtractionGui(False)
         self.enableTrainGui(False)
 
+        # create progress bar window...
+        self.progressBarTrain = ProgressBar("Classifier training", "Creating composite file", 2)
+
         # Instantiate the thread...
         self.trainClassThread = TrainClassifier(False, self.trainingFiles,
                                                 signalFolder, templateFolder, scriptsFolder, self.ovScript,
-                                                trainingSize, self.selectedFeats,
-                                                self.parameterDict, self.samplingFreq)
+                                                trainingSize, trainingFeats,
+                                                trainingParamDict, self.samplingFreq)
 
         # Signal: Training work thread finished one step
         # Increment progress bar + change its label
@@ -754,6 +907,17 @@ class Dialog(QDialog):
             myMsgBox("Please select 5 runs maximum")
             return
 
+        if not self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+            # case with 1 set of features...
+            if len(self.selectedFeats[0]) < 1:
+                myMsgBox("Please use at least one set of features!")
+                return
+        else:
+            # case with 2 sets of features : one of the two can be empty
+            if len(self.selectedFeats[0]) < 1 and len(self.selectedFeats[1]) < 1:
+                myMsgBox("Please use at least one set of features!")
+                return
+
         # Get training param from GUI and modify training scenario
         err = True
         trainingSize = 0
@@ -765,13 +929,7 @@ class Dialog(QDialog):
             myMsgBox("Nb of k-fold should be a positive number")
             return
 
-        # create progress bar window...
-        i = []
-        for item in self.fileListWidgetTrain.selectedItems():
-            i.append("a")
-        nbCombinations = len(list(myPowerset(i)))
-        self.progressBarTrain = ProgressBar("Classifier Training", "First combination", nbCombinations)
-
+        # create list of files...
         self.trainingFiles = []
         for selectedItem in self.fileListWidgetTrain.selectedItems():
             self.trainingFiles.append(selectedItem.text())
@@ -780,15 +938,39 @@ class Dialog(QDialog):
         templateFolder = os.path.join(self.scriptPath, settings.optionsTemplatesDir[pipelineType])
         scriptsFolder = self.scriptPath
 
+        # IMPORTANT !
+        # When using "mixed" pipeline, if one of the two feature lists is empty, we use
+        # the Training scenario template from the pipeline with the non-empty feature (got it?)
+        # ex: if feats(connectivity) is empty, then we use the "powerspectrum" template.
+        trainingParamDict = self.parameterDict.copy()
+        trainingFeats = self.selectedFeats
+        if self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+            trainingFeats = self.selectedFeats
+            if len(self.selectedFeats[0]) < 1:
+                # no powspectum feature = use connectivity pipeline's training template
+                trainingParamDict["pipelineType"] = settings.optionKeys[2]
+                # copy the selected feats to the first list, for processing in the thread...
+                trainingFeats[0] = self.selectedFeats[1]
+            elif len(self.selectedFeats[1]) < 1:
+                # no connectivity feature = use powspectrum pipeline's training template
+                trainingParamDict["pipelineType"] = settings.optionKeys[1]
+
         # deactivate this part of the GUI + the extraction part
         self.enableExtractionGui(False)
         self.enableTrainGui(False)
 
+        # create progress bar window...
+        i = []
+        for item in self.fileListWidgetTrain.selectedItems():
+            i.append("a")
+        nbCombinations = len(list(myPowerset(i)))
+        self.progressBarTrain = ProgressBar("Classifier Training", "First combination", nbCombinations)
+
         # Instantiate the thread...
         self.trainClassThread = TrainClassifier(True, self.trainingFiles,
                                                 signalFolder, templateFolder, scriptsFolder, self.ovScript,
-                                                trainingSize, self.selectedFeats,
-                                                self.parameterDict, self.samplingFreq)
+                                                trainingSize, trainingFeats,
+                                                trainingParamDict, self.samplingFreq)
         # Signal: Extraction work thread finished one file of the selected list.
         # Refresh the viz&train file lists to make it available + increment progress bar
         self.trainClassThread.info.connect(self.progressBarTrain.increment)
@@ -810,7 +992,7 @@ class Dialog(QDialog):
             textDisplayed = str(resultsText + "\n\n" + textGoodbye)
             msg = QMessageBox()
             msg.setText(textDisplayed)
-            # msg.setStyleSheet("QLabel{min-width: 1200px;}")
+            msg.setStyleSheet("QLabel{min-width: 1200px;}")
             msg.setWindowTitle("Classifier Training Score")
             msg.exec_()
             self.lastTrainingResults.clear()
@@ -850,8 +1032,9 @@ class Dialog(QDialog):
         self.btn_removePair.setEnabled(myBool)
         self.btn_selectFeatures.setEnabled(myBool)
         self.btn_allCombinations.setEnabled(myBool)
-        for item in self.selectedFeats:
-            item.setEnabled(myBool)
+        for listOfFeatures in self.selectedFeats:
+            for item in listOfFeatures:
+                item.setEnabled(myBool)
         self.trainingPartitions.setEnabled(myBool)
         self.fileListWidgetTrain.setEnabled(myBool)
 
@@ -866,7 +1049,7 @@ class Dialog(QDialog):
         # Get experimental parameters from the JSON parameters
         # ----------
         pipelineKey = self.parameterDict['pipelineType']
-        newDict = settings.pipelineAcqSettings[pipelineKey].copy()
+        newDict = settings.pipelineAcqSettings.copy()
         print(newDict)
         return newDict
 
@@ -880,23 +1063,23 @@ class Dialog(QDialog):
         print(newDict)
         return newDict
 
-    def btnR2(self):
+    def btnR2(self, features):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
-            plot_stats(self.Features.Rsigned,
-                       self.Features.freqs_array,
-                       self.Features.electrodes_final,
-                       self.Features.fres, int(self.userFmin.text()), int(self.userFmax.text()),
+            plot_stats(features.Rsigned,
+                       features.freqs_array,
+                       features.electrodes_final,
+                       features.fres, int(self.userFmin.text()), int(self.userFmax.text()),
                        self.colormapScale.isChecked())
 
-    def btnW2(self):
+    def btnW2(self, features):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
-            plot_stats(self.Features.Wsigned,
-                       self.Features.freqs_array,
-                       self.Features.electrodes_final,
-                       self.Features.fres, int(self.userFmin.text()), int(self.userFmax.text()),
+            plot_stats(features.Wsigned,
+                       features.freqs_array,
+                       features.electrodes_final,
+                       features.fres, int(self.userFmin.text()), int(self.userFmax.text()),
                        self.colormapScale.isChecked())
 
-    def btnTimeFreq(self):
+    def btnTimeFreq(self, features):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             print("TimeFreq for sensor: " + self.electrodePsd.text())
 
@@ -907,15 +1090,15 @@ class Dialog(QDialog):
             class1 = self.parameterDict["Class1"]
             class2 = self.parameterDict["Class2"]
 
-            qt_plot_tf(self.Features.timefreq_cond1, self.Features.timefreq_cond2,
-                       self.Features.time_array, self.Features.freqs_array,
-                       self.electrodePsd.text(), self.Features.fres,
-                       self.Features.average_baseline_cond1, self.Features.average_baseline_cond2,
-                       self.Features.std_baseline_cond1, self.Features.std_baseline_cond2,
-                       self.Features.electrodes_final,
+            qt_plot_tf(features.timefreq_cond1, features.timefreq_cond2,
+                       features.time_array, features.freqs_array,
+                       self.electrodePsd.text(), features.fres,
+                       features.average_baseline_cond1, features.average_baseline_cond2,
+                       features.std_baseline_cond1, features.std_baseline_cond2,
+                       features.electrodes_final,
                        fmin, fmax, tmin, tmax, class1, class2)
 
-    def btnMetric(self):
+    def btnMetric(self, features):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             fmin = int(self.userFmin.text())
             fmax = int(self.userFmax.text())
@@ -923,41 +1106,41 @@ class Dialog(QDialog):
             class2 = self.parameterDict["Class2"]
             # TODO : change
             metricLabel = "Average Node Strength"
-            #qt_plot_metric(self.Features.power_cond1, self.Features.power_cond2,
-            #               self.Features.freqs_array, self.Features.electrodes_final,
+            #qt_plot_metric(features.power_cond1, features.power_cond2,
+            #               features.freqs_array, features.electrodes_final,
             #               self.electrodePsd.text(),
-            #               self.Features.fres, fmin, fmax, class1, class2, metricLabel)
-            qt_plot_metric2(self.Features.power_cond1, self.Features.power_cond2,
-                            self.Features.Rsigned,
-                            self.Features.freqs_array, self.Features.electrodes_final,
+            #               features.fres, fmin, fmax, class1, class2, metricLabel)
+            qt_plot_metric2(features.power_cond1, features.power_cond2,
+                            features.Rsigned,
+                            features.freqs_array, features.electrodes_final,
                             self.electrodePsd.text(),
-                            self.Features.fres, fmin, fmax, class1, class2, metricLabel)
+                            features.fres, fmin, fmax, class1, class2, metricLabel)
 
-    def btnPsd(self):
+    def btnPsd(self, features):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             fmin = int(self.userFmin.text())
             fmax = int(self.userFmax.text())
             class1 = self.parameterDict["Class1"]
             class2 = self.parameterDict["Class2"]
-            # qt_plot_psd(self.Features.power_cond1, self.Features.power_cond2,
-            #            self.Features.freqs_array, self.Features.electrodes_final,
+            # qt_plot_psd(features.power_cond1, features.power_cond2,
+            #            features.freqs_array, features.electrodes_final,
             #            self.electrodePsd.text(),
-            #            self.Features.fres, fmin, fmax, class1, class2)
-            qt_plot_psd_r2(self.Features.power_cond1, self.Features.power_cond2,
-                           self.Features.Rsigned,
-                            self.Features.freqs_array, self.Features.electrodes_final,
+            #            features.fres, fmin, fmax, class1, class2)
+            qt_plot_psd_r2(features.power_cond1, features.power_cond2,
+                           features.Rsigned,
+                            features.freqs_array, features.electrodes_final,
                             self.electrodePsd.text(),
-                            self.Features.fres, fmin, fmax, class1, class2)
+                            features.fres, fmin, fmax, class1, class2)
 
-    def btnTopo(self):
+    def btnTopo(self, features):
         error = True
         if self.freqTopo.text().isdigit() \
                 and 0 < int(self.freqTopo.text()) < (self.samplingFreq / 2):
             print("Freq Topo: " + self.freqTopo.text())
             error = False
             freqMax = -1
-            qt_plot_topo(self.Features.Rsigned, self.Features.electrodes_final,
-                         int(self.freqTopo.text()), freqMax, self.Features.fres, self.samplingFreq,
+            qt_plot_topo(features.Rsigned, features.electrodes_final,
+                         int(self.freqTopo.text()), freqMax, features.fres, self.samplingFreq,
                          self.colormapScale.isChecked())
         elif ":" in self.freqTopo.text() \
                 and len(self.freqTopo.text().split(":")) == 2:
@@ -967,19 +1150,19 @@ class Dialog(QDialog):
                         freqMax = int(self.freqTopo.text().split(":")[1])
                         if 0 < freqMin < freqMax < (self.samplingFreq / 2):
                             error = False
-                            qt_plot_topo(self.Features.Rsigned, self.Features.electrodes_final,
-                                         freqMin, freqMax, self.Features.fres, self.samplingFreq,
+                            qt_plot_topo(features.Rsigned, features.electrodes_final,
+                                         freqMin, freqMax, features.fres, self.samplingFreq,
                                          self.colormapScale.isChecked())
 
         if error:
             myMsgBox("Invalid frequency for topography")
 
-    def btnConnectSpect(self):
-        qt_plot_connectSpectrum(self.Features.connect_cond1, self.Features.connect_cond2,
-                                self.userChan1.text(), self.userChan2.text(), self.Features.electrodes_orig,
-                                self.Features.fres, self.parameterDict["Class1"], self.parameterDict["Class2"])
+    def btnConnectSpect(self, features):
+        qt_plot_connectSpectrum(features.connect_cond1, features.connect_cond2,
+                                self.userChan1.text(), self.userChan2.text(), features.electrodes_orig,
+                                features.fres, self.parameterDict["Class1"], self.parameterDict["Class2"])
 
-    def btnConnectMatrices(self):
+    def btnConnectMatrices(self, features):
         if self.userFmin.text().isdigit() \
                 and 0 < int(self.userFmin.text()) < (self.samplingFreq / 2) \
                 and self.userFmax.text().isdigit() \
@@ -989,12 +1172,12 @@ class Dialog(QDialog):
             myMsgBox("Error in frequency used for displaying connectivity matrices...")
             return
 
-        qt_plot_connectMatrices(self.Features.connect_cond1, self.Features.connect_cond2,
+        qt_plot_connectMatrices(features.connect_cond1, features.connect_cond2,
                                 int(self.userFmin.text()), int(self.userFmax.text()),
-                                self.Features.electrodes_orig,
+                                features.electrodes_orig,
                                 self.parameterDict["Class1"], self.parameterDict["Class2"])
 
-    def btnConnectome(self):
+    def btnConnectome(self, features):
         if self.percentStrong.text().isdigit() \
                 and 0 < int(self.percentStrong.text()) <= 100:
             print("Percentage of strongest links: " + self.percentStrong.text() + "%")
@@ -1011,24 +1194,37 @@ class Dialog(QDialog):
             myMsgBox("Error in frequency used for displaying connectivity matrices...")
             return
 
-        qt_plot_strongestConnectome(self.Features.connect_cond1, self.Features.connect_cond2,
+        qt_plot_strongestConnectome(features.connect_cond1, features.connect_cond2,
                                     int(self.percentStrong.text()),
                                     int(self.userFmin.text()), int(self.userFmax.text()),
-                                    self.Features.electrodes_orig,
+                                    features.electrodes_orig,
                                     self.parameterDict["Class1"], self.parameterDict["Class2"])
 
-    def btnAddPair(self):
-        txtToCopy = self.selectedFeats[-1].text()
-        self.selectedFeats.append(QLineEdit())
-        self.selectedFeats[-1].setText(txtToCopy)
-        featTxt = str("Feature "+ str(len(self.selectedFeats)))
-        self.qvBoxLayouts[0].addRow(featTxt, self.selectedFeats[-1])
+    def btnAddPair(self, selectedFeats, layout):
+        if len(selectedFeats) == 0:
+            # Remove "no feature" label
+            item = layout.itemAt(3)
+            widget = item.widget()
+            widget.deleteLater()
+        # default text
+        featText = "CP3;22"
+        if len(selectedFeats) >= 1:
+            # if a feature window already exists, copy its text
+            featText = selectedFeats[-1].text()
+        # add new qlineedit
+        selectedFeats.append(QLineEdit())
+        selectedFeats[-1].setText(featText)
+        layout.addWidget(selectedFeats[-1])
 
-    def btnRemovePair(self):
-        if len(self.selectedFeats) > 1:
-            result = self.qvBoxLayouts[0].getWidgetPosition(self.selectedFeats[-1])
-            self.qvBoxLayouts[0].removeRow(result[0])
-            self.selectedFeats.pop()
+    def btnRemovePair(self, selectedFeats, layout):
+        if len(selectedFeats) > 0:
+            result = layout.getWidgetPosition(selectedFeats[-1])
+            layout.removeRow(result[0])
+            selectedFeats.pop()
+            if len(selectedFeats) == 0:
+                noFeatLabel = QLabel("No feature")
+                noFeatLabel.setAlignment(QtCore.Qt.AlignCenter)
+                layout.addWidget(noFeatLabel)
 
     def browseForDesigner(self):
         # ----------
