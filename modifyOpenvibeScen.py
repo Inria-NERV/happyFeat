@@ -166,12 +166,11 @@ def modifyTrainScenario(chanFreqPairs, epochAvg, epochCount, scenXml):
                     splitIdx += 1
                     continue
 
-        # Find Ids of Stimulation based epoching box and Classifier trainer box
+        # Find Id of Classifier trainer box
         boxLast = findBox(root, "Classifier trainer")
         boxLastId = boxLast.find("Identifier").text
         for box in splitBoxes:
             boxId = box.find("Identifier").text
-            featAggInputIdx = 0
             locOffset = 120
 
             # Find all chained box btw those two
@@ -184,14 +183,14 @@ def modifyTrainScenario(chanFreqPairs, epochAvg, epochCount, scenXml):
                         continue
 
                     pair = [chan, freq]
-                    # Copy list of chained boxes (except first (stim based epoching)
-                    # and 2 last (feature aggreg, classifier trainer) and chain them.
+                    # Copy list of chained boxes (except the first (SPLIT) and
+                    # the 2 last ones (feature aggreg, classifier trainer) and chain them.
                     listofBoxesToChain, nbOfOutputs = copyBoxList(root, boxList, locOffset, pair)
                     locOffset += locOffset
 
                     # Add an input to Feature Aggregator box in the current chain
                     addInputToBox(root, listofBoxesToChain[-1])
-                    featAggInputIdx += 1
+                    featAggInputIdx = countBoxInputs(root, listofBoxesToChain[-1]) - 1
                     linkBoxes(root, listofBoxesToChain, nbOfOutputs, featAggInputIdx)
 
     # WRITE NEW XML
@@ -372,6 +371,12 @@ def addInputToBox(root, featAggBoxIdx):
     input = inputs.find('Input')
     newinput = copy.deepcopy(input)
     inputs.append(newinput)
+
+def countBoxInputs(root, boxIdx):
+    nbInputs = 0
+    box = findBoxId(root, boxIdx)
+    inputs = box.find('Inputs')
+    return len(inputs.findall('Input'))
 
 def linkBoxes(root, listofBoxesToChain, nbOfOutputs, featAggInputIdx):
     links = root.find("Links")
