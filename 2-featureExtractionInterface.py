@@ -73,30 +73,30 @@ class Dialog(QDialog):
 
         super().__init__(parent)
 
-        # -----------------------------------
+        # ---------------
+        # INITIALIZATIONS
+        # ---------------
         self.dataNp1 = []
         self.dataNp2 = []
         self.dataNp1baseline = []
         self.dataNp2baseline = []
         self.Features = Features()
         self.Features2 = Features()
-        self.progressBarExtract = None
-        self.progressBarViz = None
-        self.progressBarViz2 = None
-        self.progressBarTrain = None
+        self.plotBtnsEnabled = False
+        self.trainingFiles = []
+        # Sampling Freq: to be loaded later, in CSV files
+        self.samplingFreq = None
 
+        # Work Threads & Progress bars
         self.acquisitionThread = None
         self.extractThread = None
         self.loadFilesForVizThread = None
         self.loadFilesForVizThread2 = None
         self.trainClassThread = None
-
-        self.plotBtnsEnabled = False
-
-        # Sampling Freq: to be loaded later, in CSV files
-        self.samplingFreq = None
-
-        self.trainingFiles = []
+        self.progressBarExtract = None
+        self.progressBarViz = None
+        self.progressBarViz2 = None
+        self.progressBarTrain = None
 
         # GET PARAMS FROM JSON FILE
         self.scriptPath = os.path.dirname(os.path.realpath(sys.argv[0]))
@@ -117,8 +117,7 @@ class Dialog(QDialog):
         # Left-most: layoutExtract (for running sc2-extract)
         # Center: Visualization
         # Right-most: Feature Selection & classifier training
-        #self.setWindowTitle('goodViBEs - Feature Selection interface')
-        self.setWindowTitle('Feature Selection interface')
+        self.setWindowTitle('HappyFeat - Feature Selection interface')
         self.dlgLayout = QHBoxLayout()
 
         # Create menus...
@@ -134,6 +133,7 @@ class Dialog(QDialog):
         # NEW! LEFT-MOST PART: Signal acquisition & Online classification parts
 
         self.layoutAcqOnline = QVBoxLayout()
+        self.layoutAcqOnline.setAlignment(QtCore.Qt.AlignTop)
 
         # Top label...
         labelAcqOnline = str("== ACQUISITION ==")
@@ -157,6 +157,7 @@ class Dialog(QDialog):
         self.layoutAcqOnline.addWidget(self.labelAcqOnline)
         self.layoutAcqOnline.addWidget(self.btn_runAcquisitionScenario, alignment=QtCore.Qt.AlignVCenter)
 
+        # TODO : include that later in the interface...
         #self.dlgLayout.addLayout(self.layoutAcqOnline, 1)
         #self.dlgLayout.addWidget(separatorLeft)
 
@@ -166,6 +167,7 @@ class Dialog(QDialog):
         # AND RUNNING SCENARIO FOR DATA EXTRACTION
 
         self.layoutExtract = QVBoxLayout()
+        self.layoutExtract.setAlignment(QtCore.Qt.AlignTop)
 
         # Top label...
         labelFeatExtract = str("== FEATURE EXTRACTION ==")
@@ -251,11 +253,15 @@ class Dialog(QDialog):
         separator.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding)
         separator.setLineWidth(1)
 
-        self.dlgLayout.addLayout(self.layoutExtract,1)
+        # Add all this to the "general" Layout
+        self.dlgLayout.addLayout(self.layoutExtract, 1)
         self.dlgLayout.addWidget(separator)
 
         # -----------------------------------------------------------------------
-        # FEATURE VISUALIZATION PART
+        # CENTRAL PART : FEATURE VISUALIZATION PART
+        # SELECT DATA TO ANALYZE (from .csv file(s) generated through Extraction)
+        # PROVIDE PLOTTING OPTIONS
+
         self.layoutViz = QVBoxLayout()
         self.layoutViz.setAlignment(QtCore.Qt.AlignTop)
         self.labelViz = QLabel('== VISUALIZE FEATURES ==')
@@ -263,8 +269,6 @@ class Dialog(QDialog):
         self.labelViz.setStyleSheet("font-weight: bold")
         self.labelViz.setAlignment(QtCore.Qt.AlignCenter)
         self.layoutViz.addWidget(self.labelViz)
-
-        self.formLayoutViz = QFormLayout()
 
         # LIST OF AVAILABLE ANALYSIS FILES WITH CURRENT CLASS
         self.availableFilesForVizList = QListWidget()
@@ -278,8 +282,9 @@ class Dialog(QDialog):
         self.layoutViz.addWidget(self.btn_loadFilesForViz)
 
         # LIST OF PARAMETERS FOR VISUALIZATION
-        # TODO : make it more flexible...
-        # if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
+        self.formLayoutViz = QFormLayout()
+
+        # COMMON PARAMETERS... TODO : put those in dictionaries to make everything more flexible
         # Param : fmin for frequency based viz
         self.userFmin = QLineEdit()
         self.userFmin.setText('0')
@@ -354,7 +359,7 @@ class Dialog(QDialog):
             self.layoutViz.addLayout(self.parallelVizLayouts[1])
 
         elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
-
+            # Viz options in parallel
             labelPowSpectViz = QLabel("Power Spectrum")
             labelPowSpectViz.setAlignment(QtCore.Qt.AlignCenter)
             labelConnectViz = QLabel("Node Strength")
@@ -407,11 +412,15 @@ class Dialog(QDialog):
         separator2.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding)
         separator2.setLineWidth(1)
 
-        self.dlgLayout.addLayout(self.layoutViz,1)
+        # Add all this to the "general" Layout
+        self.dlgLayout.addLayout(self.layoutViz, 1)
         self.dlgLayout.addWidget(separator2)
 
         # -----------------------------------------------------------------------
-        # FEATURE SELECTION + TRAINING PART
+        # RIGHTMOST PART: FEATURE SELECTION + TRAINING
+        # SELECT FEATURES OF INTEREST, AND FILE(S) TO USE FOR TRAINING
+        # LAUNCH THE TRAINING SCENARIO/THREAD
+
         self.layoutTrain = QVBoxLayout()
         self.layoutTrain.setAlignment(QtCore.Qt.AlignTop)
 
@@ -419,12 +428,12 @@ class Dialog(QDialog):
         self.labelTrain.setAlignment(QtCore.Qt.AlignCenter)
         self.labelTrain.setFont(QFont("system-ui", 14))
         self.labelTrain.setStyleSheet("font-weight: bold")
+        self.layoutTrain.addWidget(self.labelTrain)
 
         textFeatureSelect = "Ex:\tFCz;14"
         textFeatureSelect = str(textFeatureSelect + "\n\tFCz;14:22 (for freq range)")
         self.labelSelect = QLabel(textFeatureSelect)
         self.labelSelect.setAlignment(QtCore.Qt.AlignCenter)
-        self.layoutTrain.addWidget(self.labelTrain)
         self.layoutTrain.addWidget(self.labelSelect)
 
         # Feature selection layouts. Usually only 1, but 2 parallel selections in "mixed" mode
@@ -524,9 +533,7 @@ class Dialog(QDialog):
         self.btn_loadFilesForViz.setEnabled(True)
         self.enablePlotBtns(False)
 
-        self.refreshLists(os.path.join(self.scriptPath, "generated", "signals"))
-
-        # Timing loop every 2s to get files in working folder
+        # Timing loop every 4s to get files in working folder
         self.filesRefreshTimer = QtCore.QTimer(self)
         self.filesRefreshTimer.setSingleShot(False)
         self.filesRefreshTimer.setInterval(4000)  # in milliseconds
@@ -661,8 +668,7 @@ class Dialog(QDialog):
 
     def refreshAvailableTrainSignalList(self, signalFolder):
         # ----------
-        # Refresh available EDF training files.
-        # Only mention current class (set in parameters), and check that both classes are present
+        # Refresh available training files.
         # ----------
 
         workingFolder = os.path.join(signalFolder, "training")
@@ -691,8 +697,10 @@ class Dialog(QDialog):
         return
 
     def updateExtractParameters(self):
+        # ----------
         # Get new extraction parameters
         # return True if params where changed from last known config
+        # ----------
         changed = False
 
         # Retrieve param id from label...
@@ -726,6 +734,9 @@ class Dialog(QDialog):
         return changed
 
     def deleteWorkFiles(self):
+        # ----------
+        # Remove work files in folders "signals", "signals/analysis" and "signal/training"
+        # ----------
         path1 = os.path.join(self.scriptPath, "generated", "signals", "analysis")
         path2 = os.path.join(self.scriptPath, "generated", "signals", "training")
         for file in os.listdir(path1):
@@ -1148,7 +1159,6 @@ class Dialog(QDialog):
         # ----------
         # Get experimental parameters from the JSON parameters
         # ----------
-        pipelineKey = self.parameterDict['pipelineType']
         newDict = settings.pipelineAcqSettings.copy()
         print(newDict)
         return newDict
