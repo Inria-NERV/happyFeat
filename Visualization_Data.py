@@ -22,7 +22,7 @@ def add_colorbar(ax, im, cmap, side="right", pad=.05, title=None,
     return cbar, cax
 
 
-def plot_topomap_data_viz(data, pos, vmin=None, vmax=None, cmap=None, sensors=True,
+def plot_topomap_data_viz(title, data, pos, vmin=None, vmax=None, cmap=None, sensors=True,
                           res=64, axes=None, names=None, show_names=False, mask=None,
                           mask_params=None, outlines='head',
                           contours=6, image_interp='bilinear', show=True,
@@ -103,14 +103,14 @@ def plot_topomap_data_viz(data, pos, vmin=None, vmax=None, cmap=None, sensors=Tr
         The fieldlines.
     """
     sphere = topomap._check_sphere(sphere)
-    return _plot_topomap_test(data, pos, vmin, vmax, cmap, sensors, res, axes,
+    return _plot_topomap_test(title, data, pos, vmin, vmax, cmap, sensors, res, axes,
                               names, show_names, mask, mask_params, outlines,
                               contours, image_interp, show,
                               onselect, extrapolate, sphere=sphere, border=border,
                               ch_type=ch_type, freq=freq, Stat_method=Stat_method)[:2]
 
 
-def _plot_topomap_test(data, pos, vmin=None, vmax=None, cmap=None, sensors=True, res=64, axes=None, names=None,
+def _plot_topomap_test(title, data, pos, vmin=None, vmax=None, cmap=None, sensors=True, res=64, axes=None, names=None,
                        show_names=False, mask=None, mask_params=None, outlines='head', contours=6,
                        image_interp='bilinear', show=True, onselect=None, extrapolate=_EXTRAPOLATE_DEFAULT, sphere=None,
                        border=_BORDER_DEFAULT, ch_type='eeg', freq='10', Stat_method='R square signed'):
@@ -203,7 +203,7 @@ def _plot_topomap_test(data, pos, vmin=None, vmax=None, cmap=None, sensors=True,
     cbar, cax = add_colorbar(ax, im, cmap, side="right", pad=.1, title=None,
                              format=None, size="5%")
     cbar.set_label('Signed R^2', rotation=270, labelpad=15)
-    ax.set_title(freq + '(Hz)', fontsize='large')
+    ax.set_title(title + freq + ' Hz', fontsize='large')
     # gh-1432 had a workaround for no contours here, but we'll remove it
     # because mpl has probably fixed it
     linewidth = mask_params['markeredgewidth']
@@ -263,6 +263,7 @@ def _plot_topomap_test(data, pos, vmin=None, vmax=None, cmap=None, sensors=True,
         x0, y0, width, height = lim.x0, lim.y0, lim.width, lim.height
         ax.RS = RectangleSelector(ax, onselect=onselect)
         ax.set(xlim=[x0, x0 + width], ylim=[y0, y0 + height])
+
     # topomap.plt_show(show)
     return im, cont, interp
 
@@ -334,11 +335,11 @@ def time_frequency_map(time_freq, time, freqs, channel, fmin, fmax, fres, each_p
     plt.xticks(range(len(time)), time_seres, fontsize=7)
     plt.xlabel(' Time (s)', fontdict=font)
     plt.ylabel('Frequency (Hz)', fontdict=font)
-    plt.title('Sensor ' + channel_array[channel], fontdict=font)
+
     # plt.show()
 
 def plot_psd(Power_class1, Power_class2, freqs, channel, channel_array, each_point, fmin, fmax, fres, class1label,
-             class2label):
+             class2label, title):
     font = {'family': 'serif',
             'color': 'black',
             'weight': 'normal',
@@ -389,7 +390,7 @@ def plot_psd(Power_class1, Power_class2, freqs, channel, channel_array, each_poi
             frequence.append('')
     ax.tick_params(axis='both', which='both', length=0)
 
-    plt.title('Sensor: ' + channel_array[channel], fontsize='large')
+    plt.title(title+'Sensor: ' + channel_array[channel], fontsize='large')
     # plt.xticks(range(len(freqs[index_fmin:(index_fmax + 1)])), frequence, fontsize=12)
     plt.xlabel(' Frequency (Hz)', fontdict=font)
     plt.ylabel('Power spectrum (db)', fontdict=font)
@@ -403,7 +404,7 @@ def plot_psd(Power_class1, Power_class2, freqs, channel, channel_array, each_poi
 
 
 def plot_psd_r2(Power_class1, Power_class2, Rsquare, freqs, channel, channel_array, each_point, fmin, fmax, fres, class1label,
-             class2label):
+             class2label, title):
     font = {'family': 'serif',
             'color': 'black',
             'weight': 'normal',
@@ -459,7 +460,7 @@ def plot_psd_r2(Power_class1, Power_class2, Rsquare, freqs, channel, channel_arr
             frequence.append('')
     ax.tick_params(axis='both', which='both', length=0)
 
-    plt.title('Sensor: ' + channel_array[channel], fontsize='large')
+    plt.title(title+'Sensor: ' + channel_array[channel], fontsize='large')
     # plt.xticks(range(len(freqs[index_fmin:(index_fmax + 1)])), frequence, fontsize=12)
     plt.xlabel(' Frequency (Hz)', fontdict=font)
     plt.ylabel('Power spectrum (db)', fontdict=font)
@@ -472,7 +473,7 @@ def plot_psd_r2(Power_class1, Power_class2, Rsquare, freqs, channel, channel_arr
     # plt.show()
 
 def plot_metric(Power_class1, Power_class2, freqs, channel, channel_array, each_point, fmin, fmax, fres, class1label,
-             class2label, metricLabel):
+             class2label, metricLabel, title):
     font = {'family': 'serif',
             'color': 'black',
             'weight': 'normal',
@@ -515,7 +516,7 @@ def plot_metric(Power_class1, Power_class2, freqs, channel, channel_array, each_
             frequence.append('')
     ax.tick_params(axis='both', which='both', length=0)
 
-    plt.title('Sensor: ' + channel_array[channel], fontsize='large')
+    plt.title(title+'Sensor: ' + channel_array[channel], fontsize='large')
     # plt.xticks(range(len(freqs[index_fmin:(index_fmax + 1)])), frequence, fontsize=12)
     plt.xlabel(' Frequency (Hz)', fontdict=font)
     plt.ylabel(str(metricLabel + ' per frequency'), fontdict=font)
@@ -528,7 +529,7 @@ def plot_metric(Power_class1, Power_class2, freqs, channel, channel_array, each_
     # plt.show()
 
 def plot_metric2(Power_class1, Power_class2, Rsquare, freqs, channel, channel_array, each_point, fmin, fmax, fres, class1label,
-             class2label, metricLabel):
+             class2label, metricLabel, title):
     font = {'family': 'serif',
             'color': 'black',
             'weight': 'normal',
@@ -574,7 +575,7 @@ def plot_metric2(Power_class1, Power_class2, Rsquare, freqs, channel, channel_ar
             frequence.append('')
     ax.tick_params(axis='both', which='both', length=0)
 
-    plt.title('Sensor: ' + channel_array[channel], fontsize='large')
+    plt.title(title+'Sensor: ' + channel_array[channel], fontsize='large')
     # plt.xticks(range(len(freqs[index_fmin:(index_fmax + 1)])), frequence, fontsize=12)
     plt.xlabel(' Frequency (Hz)', fontdict=font)
     plt.ylabel(str(metricLabel + ' per frequency'), fontdict=font)
@@ -586,7 +587,7 @@ def plot_metric2(Power_class1, Power_class2, Rsquare, freqs, channel, channel_ar
     plt.legend()
     # plt.show()
 
-def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, each_point, fmin, fmax, colormapScale):
+def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, each_point, fmin, fmax, colormapScale, title):
     fig, ax = plt.subplots()
     font = {'family': 'serif',
             'color': 'black',
@@ -656,6 +657,7 @@ def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, eac
     # Gridlines based on minor ticks
     ax.grid(which='minor', color='black', linestyle='-', linewidth=1)
     # (ax.grid(axis ='minor',color = 'black',linewidth=1)
+    plt.title(title)
     # Hplt.yticks(range(len(channel_array)),channel_array)
     # plt.show()
 
@@ -741,7 +743,7 @@ def Reorder_Rsquare(Rsquare, electrodes_orig, powerLeft, powerRight):
 
     return Rsquare_final, electrodes_target, powerLeft_final, powerRight_final
 
-def topo_plot(Rsquare, freqMin, freqMax, electrodes, fres, fs, scaleColormap, Stat_method):
+def topo_plot(Rsquare, title, freqMin, freqMax, electrodes, fres, fs, scaleColormap, Stat_method):
     fig, ax = plt.subplots()
 
     useRange = False
@@ -815,7 +817,7 @@ def topo_plot(Rsquare, freqMin, freqMax, electrodes, fres, fs, scaleColormap, St
     if scaleColormap:
         vmax = None
 
-    plot_topomap_data_viz(sizer, fake_evoked.info, sensors=False, names=biosemi_montage.ch_names, show_names=True,
+    plot_topomap_data_viz(title, sizer, fake_evoked.info, sensors=False, names=biosemi_montage.ch_names, show_names=True,
                           res=256, mask_params=dict(marker='', markerfacecolor='w', markeredgecolor='k', linewidth=0,
                                                     markersize=0), contours=0, image_interp='gaussian', show=True,
                           extrapolate='head', cmap='jet', freq=freq, vmin=vmin, vmax=vmax, Stat_method=Stat_method)

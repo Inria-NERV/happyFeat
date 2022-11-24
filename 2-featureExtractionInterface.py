@@ -22,10 +22,13 @@ from PyQt5.QtWidgets import QListWidget
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtWidgets import QFrame
-from PyQt5.QtWidgets import QSizePolicy
 from PyQt5.QtWidgets import QComboBox
 from PyQt5.QtWidgets import QPlainTextEdit
 from PyQt5.QtWidgets import QSizePolicy
+from PyQt5.QtWidgets import QMenuBar
+from PyQt5.QtWidgets import QMenu
+from PyQt5.QtWidgets import QAction
+
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QTimer
 
@@ -82,6 +85,7 @@ class Dialog(QDialog):
         self.progressBarViz2 = None
         self.progressBarTrain = None
 
+        self.acquisitionThread = None
         self.extractThread = None
         self.loadFilesForVizThread = None
         self.loadFilesForVizThread2 = None
@@ -117,23 +121,53 @@ class Dialog(QDialog):
         self.setWindowTitle('Feature Selection interface')
         self.dlgLayout = QHBoxLayout()
 
+        # Create menus...
+        self.menuBar = QMenuBar(self)
+        self.dlgLayout.setMenuBar(self.menuBar)
+        self.menuOptions = QMenu("&Options")
+        self.menuBar.addMenu(self.menuOptions)
+        self.qActionFindOV = QAction("&Browse for OpenViBE", self)
+        self.qActionFindOV.triggered.connect(lambda: self.browseForDesigner())
+        self.menuOptions.addAction(self.qActionFindOV)
+
+        # -----------------------------------------------------------------------
+        # NEW! LEFT-MOST PART: Signal acquisition & Online classification parts
+
+        self.layoutAcqOnline = QVBoxLayout()
+
+        # Top label...
+        labelAcqOnline = str("== ACQUISITION ==")
+        self.labelAcqOnline = QLabel(labelAcqOnline)
+        self.labelAcqOnline.setAlignment(QtCore.Qt.AlignCenter)
+        self.labelAcqOnline.setAlignment(QtCore.Qt.AlignTop)
+        self.labelAcqOnline.setFont(QFont("system-ui", 14))
+        self.labelAcqOnline.setStyleSheet("font-weight: bold")
+
+        # Acquisition button
+        self.btn_runAcquisitionScenario = QPushButton("Run Acquisition Scenario")
+        self.btn_runAcquisitionScenario.clicked.connect(lambda: self.runAcquisitionScenario())
+        self.btn_runAcquisitionScenario.setStyleSheet("font-weight: bold")
+
+        # Add separator...
+        separatorLeft = QFrame()
+        separatorLeft.setFrameShape(QFrame.VLine)
+        separatorLeft.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding)
+        separatorLeft.setLineWidth(1)
+
+        self.layoutAcqOnline.addWidget(self.labelAcqOnline)
+        self.layoutAcqOnline.addWidget(self.btn_runAcquisitionScenario, alignment=QtCore.Qt.AlignVCenter)
+
+        #self.dlgLayout.addLayout(self.layoutAcqOnline, 1)
+        #self.dlgLayout.addWidget(separatorLeft)
+
         # -----------------------------------------------------------------------
         # LEFT PART : Extraction from signal files (sc2-extract.xml)
+        # FILE LOADING (from .ov file(s))
+        # AND RUNNING SCENARIO FOR DATA EXTRACTION
+
         self.layoutExtract = QVBoxLayout()
 
-        # TODO : keep this part ? OPENVIBE DESIGNER FINDER
-        self.btn_browseOvScript = QPushButton("Browse for OpenViBE designer script")
-        self.btn_browseOvScript.clicked.connect(lambda: self.browseForDesigner())
-        self.designerWidget = QWidget()
-        layout_h = QHBoxLayout(self.designerWidget)
-        self.designerTextBox = QLineEdit()
-        self.designerTextBox.setText(str(self.ovScript))
-        self.designerTextBox.setEnabled(False)
-        layout_h.addWidget(self.designerTextBox)
-        layout_h.addWidget(self.btn_browseOvScript)
-
-        # FILE LOADING (from .ov file(s)) 
-        # AND RUNNING SCENARIO FOR DATA EXTRACTION
+        # Top label...
         labelFeatExtract = str("== FEATURE EXTRACTION ==")
         self.labelFeatExtract = QLabel(labelFeatExtract)
         self.labelFeatExtract.setAlignment(QtCore.Qt.AlignCenter)
@@ -190,6 +224,17 @@ class Dialog(QDialog):
         self.btn_runExtractionScenario.clicked.connect(lambda: self.runExtractionScenario())
         self.btn_runExtractionScenario.setStyleSheet("font-weight: bold")
 
+        # TODO : keep this part ? OPENVIBE DESIGNER FINDER
+        self.btn_browseOvScript = QPushButton("Browse for OpenViBE designer script")
+        self.btn_browseOvScript.clicked.connect(lambda: self.browseForDesigner())
+        self.designerWidget = QWidget()
+        layout_h = QHBoxLayout(self.designerWidget)
+        self.designerTextBox = QLineEdit()
+        self.designerTextBox.setText(str(self.ovScript))
+        self.designerTextBox.setEnabled(False)
+        layout_h.addWidget(self.designerTextBox)
+        layout_h.addWidget(self.btn_browseOvScript)
+
         # Arrange all widgets in the layout
         self.layoutExtract.addWidget(self.labelFeatExtract)
         self.layoutExtract.addWidget(self.fileListWidget)
@@ -206,7 +251,7 @@ class Dialog(QDialog):
         separator.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding)
         separator.setLineWidth(1)
 
-        self.dlgLayout.addLayout(self.layoutExtract)
+        self.dlgLayout.addLayout(self.layoutExtract,1)
         self.dlgLayout.addWidget(separator)
 
         # -----------------------------------------------------------------------
@@ -271,10 +316,14 @@ class Dialog(QDialog):
             self.btn_timefreq = QPushButton("Display Time-Frequency ERD/ERS analysis")
             self.btn_psd = QPushButton("Display PSD comparison between classes")
             self.btn_topo = QPushButton("Display Brain Topography")
-            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features))
-            self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq(self.Features))
-            self.btn_psd.clicked.connect(lambda: self.btnPsd(self.Features))
-            self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features))
+            titleR2 = "Freq.-chan. map of R² values of spectral power between classes"
+            titleTimeFreq = "Time-Frequency ERD/ERS analysis"
+            titlePsd = "Power Spectrum "
+            titleTopo = "Topography of power spectra, for freq. "
+            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2))
+            self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq(self.Features, titleTimeFreq))
+            self.btn_psd.clicked.connect(lambda: self.btnPsd(self.Features, titlePsd))
+            self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo))
 
             self.parallelVizLayouts[0].addWidget(self.btn_r2map)
             self.parallelVizLayouts[0].addWidget(self.btn_psd)
@@ -293,11 +342,14 @@ class Dialog(QDialog):
             self.btn_metric.clicked.connect(lambda: self.btnMetric(self.Features))
             # self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq())
             self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features))
-
-            self.parallelVizLayouts[1].addWidget(self.btn_r2map)
-            self.parallelVizLayouts[1].addWidget(self.btn_metric)
-            # self.parallelVizLayouts[1].addWidget(self.btn_timefreq)
-            self.parallelVizLayouts[1].addWidget(self.btn_topo)
+            titleR2 = "Freq.-chan. map of R² values of node strength"
+            titleTimeFreq = "Time-Frequency ERD/ERS analysis"
+            titleMetric = "Connectivity-based node strength, "
+            titleTopo = "Topography of node strengths, for freq. "
+            self.parallelVizLayouts[1].addWidget(self.btn_r2map, titleR2)
+            self.parallelVizLayouts[1].addWidget(self.btn_metric, titleMetric)
+            # self.parallelVizLayouts[1].addWidget(self.btn_timefreq, titleTimeFreq)
+            self.parallelVizLayouts[1].addWidget(self.btn_topo, titleTopo)
 
             self.layoutViz.addLayout(self.parallelVizLayouts[1])
 
@@ -315,9 +367,13 @@ class Dialog(QDialog):
             self.btn_r2map = QPushButton("Freq.-chan. R² map")
             self.btn_psd = QPushButton("PSD for the 2 classes")
             self.btn_topo = QPushButton("Brain Topography")
-            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features))
-            self.btn_psd.clicked.connect(lambda: self.btnPsd(self.Features))
-            self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features))
+            titleR2 = "Freq.-chan. map of R² values of spectral power between classes"
+            titleTimeFreq = "Time-Frequency ERD/ERS analysis"
+            titlePsd = "Power Spectrum "
+            titleTopo = "Topography of power spectra, for freq. "
+            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2))
+            self.btn_psd.clicked.connect(lambda: self.btnPsd(self.Features, titlePsd))
+            self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo))
             self.parallelVizLayouts[0].addWidget(self.btn_r2map)
             self.parallelVizLayouts[0].addWidget(self.btn_psd)
             self.parallelVizLayouts[0].addWidget(self.btn_topo)
@@ -326,9 +382,13 @@ class Dialog(QDialog):
             self.btn_r2map2 = QPushButton("Freq.-chan. R² map")
             self.btn_metric = QPushButton("NodeStr. for the 2 classes")
             self.btn_topo2 = QPushButton("Brain Topography")
-            self.btn_r2map2.clicked.connect(lambda: self.btnR2(self.Features2))
-            self.btn_metric.clicked.connect(lambda: self.btnMetric(self.Features2))
-            self.btn_topo2.clicked.connect(lambda: self.btnTopo(self.Features2))
+            titleR2_c = "Freq.-chan. map of R² values of node strength"
+            titleTimeFreq_c = "Time-Frequency ERD/ERS analysis"
+            titleMetric_c = "Connectivity-based Node Strength, "
+            titleTopo_c = "Topography of node strengths, for freq. "
+            self.btn_r2map2.clicked.connect(lambda: self.btnR2(self.Features2, titleR2_c))
+            self.btn_metric.clicked.connect(lambda: self.btnMetric(self.Features2, titleMetric_c))
+            self.btn_topo2.clicked.connect(lambda: self.btnTopo(self.Features2, titleTopo_c))
             self.parallelVizLayouts[1].addWidget(self.btn_r2map2)
             self.parallelVizLayouts[1].addWidget(self.btn_metric)
             self.parallelVizLayouts[1].addWidget(self.btn_topo2)
@@ -347,7 +407,7 @@ class Dialog(QDialog):
         separator2.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding)
         separator2.setLineWidth(1)
 
-        self.dlgLayout.addLayout(self.layoutViz)
+        self.dlgLayout.addLayout(self.layoutViz,1)
         self.dlgLayout.addWidget(separator2)
 
         # -----------------------------------------------------------------------
@@ -457,7 +517,7 @@ class Dialog(QDialog):
         self.qvTrainingLayout.addWidget(self.lastTrainingResults)
         self.qvTrainingLayout.addWidget(self.btn_selectFeatures)
         self.qvTrainingLayout.addWidget(self.btn_allCombinations)
-        self.dlgLayout.addLayout(self.layoutTrain)
+        self.dlgLayout.addLayout(self.layoutTrain, 1)
 
         # display initial layout
         self.setLayout(self.dlgLayout)
@@ -675,6 +735,33 @@ class Dialog(QDialog):
             if file.endswith('.csv') or file.endswith('.xml'):
                 os.remove(os.path.join(path2, file))
         return
+
+    def runAcquisitionScenario(self):
+        # ----------
+        # Use acquisition scenario (sc1-monitor-acq.xml) to record
+        # EEG signals and Stimulations, as .ov files, using the acquisition parameters
+        # set in GUI 1
+        # ----------
+
+        signalFolder = os.path.join(self.scriptPath, "generated", "signals")
+        scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[0])
+
+        # disable this part of the GUI...
+        self.enableAcquisitionGui(False)
+
+        # Instantiate the thread...
+        self.acquisitionThread = Acquisition(self.ovScript, scenFile, self.parameterDict)
+        # Signal: Extraction work thread finished
+        self.acquisitionThread.over.connect(self.acquisition_over)
+        # Launch the work thread
+        self.acquisitionThread.start()
+        return
+
+    def acquisition_over(self, success, text):
+        # Extraction work thread is over, display a msg if an error occurred
+        if not success:
+            myMsgBox(text)
+        self.enableAcquisitionGui(True)
 
     def runExtractionScenario(self):
         # ----------
@@ -1001,6 +1088,13 @@ class Dialog(QDialog):
             myMsgBox(resultsText)
         self.enableGui(True)
 
+    def enableAcquisitionGui(self, myBool):
+        # Acquisition part...
+        for idx in range(self.layoutAcqOnline.count()):
+            self.layoutAcqOnline.itemAt(idx).widget().setEnabled(myBool)
+        self.btn_browseOvScript.setEnabled(myBool)
+        self.menuOptions.setEnabled(myBool)
+
     def enableExtractionGui(self, myBool):
         # Extraction part...
         for idx in range(self.layoutExtractLabels.count()):
@@ -1008,6 +1102,7 @@ class Dialog(QDialog):
         self.btn_runExtractionScenario.setEnabled(myBool)
         self.fileListWidget.setEnabled(myBool)
         self.btn_browseOvScript.setEnabled(myBool)
+        self.menuOptions.setEnabled(myBool)
 
     def enableVizGui(self, myBool):
         # Viz part...
@@ -1037,9 +1132,11 @@ class Dialog(QDialog):
                 item.setEnabled(myBool)
         self.trainingPartitions.setEnabled(myBool)
         self.fileListWidgetTrain.setEnabled(myBool)
+        self.menuOptions.setEnabled(myBool)
 
     def enableGui(self, myBool):
         # Enable/Disable ALL PARTS of the GUI
+        self.enableAcquisitionGui(myBool)
         self.enableExtractionGui(myBool)
         self.enableVizGui(myBool)
         self.enableTrainGui(myBool)
@@ -1063,23 +1160,23 @@ class Dialog(QDialog):
         print(newDict)
         return newDict
 
-    def btnR2(self, features):
+    def btnR2(self, features, title):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             plot_stats(features.Rsigned,
                        features.freqs_array,
                        features.electrodes_final,
                        features.fres, int(self.userFmin.text()), int(self.userFmax.text()),
-                       self.colormapScale.isChecked())
+                       self.colormapScale.isChecked(), title)
 
-    def btnW2(self, features):
+    def btnW2(self, features, title):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             plot_stats(features.Wsigned,
                        features.freqs_array,
                        features.electrodes_final,
                        features.fres, int(self.userFmin.text()), int(self.userFmax.text()),
-                       self.colormapScale.isChecked())
+                       self.colormapScale.isChecked(), title)
 
-    def btnTimeFreq(self, features):
+    def btnTimeFreq(self, features, title):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             print("TimeFreq for sensor: " + self.electrodePsd.text())
 
@@ -1096,9 +1193,9 @@ class Dialog(QDialog):
                        features.average_baseline_cond1, features.average_baseline_cond2,
                        features.std_baseline_cond1, features.std_baseline_cond2,
                        features.electrodes_final,
-                       fmin, fmax, tmin, tmax, class1, class2)
+                       fmin, fmax, tmin, tmax, class1, class2, title)
 
-    def btnMetric(self, features):
+    def btnMetric(self, features, title):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             fmin = int(self.userFmin.text())
             fmax = int(self.userFmax.text())
@@ -1114,9 +1211,9 @@ class Dialog(QDialog):
                             features.Rsigned,
                             features.freqs_array, features.electrodes_final,
                             self.electrodePsd.text(),
-                            features.fres, fmin, fmax, class1, class2, metricLabel)
+                            features.fres, fmin, fmax, class1, class2, metricLabel, title)
 
-    def btnPsd(self, features):
+    def btnPsd(self, features, title):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             fmin = int(self.userFmin.text())
             fmax = int(self.userFmax.text())
@@ -1130,9 +1227,9 @@ class Dialog(QDialog):
                            features.Rsigned,
                             features.freqs_array, features.electrodes_final,
                             self.electrodePsd.text(),
-                            features.fres, fmin, fmax, class1, class2)
+                            features.fres, fmin, fmax, class1, class2, title)
 
-    def btnTopo(self, features):
+    def btnTopo(self, features, title):
         error = True
         if self.freqTopo.text().isdigit() \
                 and 0 < int(self.freqTopo.text()) < (self.samplingFreq / 2):
@@ -1141,7 +1238,7 @@ class Dialog(QDialog):
             freqMax = -1
             qt_plot_topo(features.Rsigned, features.electrodes_final,
                          int(self.freqTopo.text()), freqMax, features.fres, self.samplingFreq,
-                         self.colormapScale.isChecked())
+                         self.colormapScale.isChecked(), title)
         elif ":" in self.freqTopo.text() \
                 and len(self.freqTopo.text().split(":")) == 2:
                     if self.freqTopo.text().split(":")[0].isdigit() \
@@ -1152,17 +1249,17 @@ class Dialog(QDialog):
                             error = False
                             qt_plot_topo(features.Rsigned, features.electrodes_final,
                                          freqMin, freqMax, features.fres, self.samplingFreq,
-                                         self.colormapScale.isChecked())
+                                         self.colormapScale.isChecked(), title)
 
         if error:
             myMsgBox("Invalid frequency for topography")
 
-    def btnConnectSpect(self, features):
+    def btnConnectSpect(self, features, title):
         qt_plot_connectSpectrum(features.connect_cond1, features.connect_cond2,
                                 self.userChan1.text(), self.userChan2.text(), features.electrodes_orig,
-                                features.fres, self.parameterDict["Class1"], self.parameterDict["Class2"])
+                                features.fres, self.parameterDict["Class1"], self.parameterDict["Class2"], title)
 
-    def btnConnectMatrices(self, features):
+    def btnConnectMatrices(self, features, title):
         if self.userFmin.text().isdigit() \
                 and 0 < int(self.userFmin.text()) < (self.samplingFreq / 2) \
                 and self.userFmax.text().isdigit() \
@@ -1175,9 +1272,9 @@ class Dialog(QDialog):
         qt_plot_connectMatrices(features.connect_cond1, features.connect_cond2,
                                 int(self.userFmin.text()), int(self.userFmax.text()),
                                 features.electrodes_orig,
-                                self.parameterDict["Class1"], self.parameterDict["Class2"])
+                                self.parameterDict["Class1"], self.parameterDict["Class2"], title)
 
-    def btnConnectome(self, features):
+    def btnConnectome(self, features, title):
         if self.percentStrong.text().isdigit() \
                 and 0 < int(self.percentStrong.text()) <= 100:
             print("Percentage of strongest links: " + self.percentStrong.text() + "%")
@@ -1198,7 +1295,7 @@ class Dialog(QDialog):
                                     int(self.percentStrong.text()),
                                     int(self.userFmin.text()), int(self.userFmax.text()),
                                     features.electrodes_orig,
-                                    self.parameterDict["Class1"], self.parameterDict["Class2"])
+                                    self.parameterDict["Class1"], self.parameterDict["Class2"], title)
 
     def btnAddPair(self, selectedFeats, layout):
         if len(selectedFeats) == 0:
@@ -1262,12 +1359,12 @@ def checkFreqsMinMax(fmin, fmax, fs):
 
     return ok
 
-def plot_stats(Rsigned, freqs_array, electrodes, fres, fmin, fmax, colormapScale):
+def plot_stats(Rsigned, freqs_array, electrodes, fres, fmin, fmax, colormapScale, title):
     smoothing = False
-    plot_Rsquare_calcul_welch(Rsigned, np.array(electrodes)[:], freqs_array, smoothing, fres, 10, fmin, fmax, colormapScale)
+    plot_Rsquare_calcul_welch(Rsigned, np.array(electrodes)[:], freqs_array, smoothing, fres, 10, fmin, fmax, colormapScale, title)
     plt.show()
 
-def qt_plot_psd(power_cond1, power_cond2, freqs_array, electrodesList, electrodeToDisp, fres, fmin, fmax, class1label, class2label):
+def qt_plot_psd(power_cond1, power_cond2, freqs_array, electrodesList, electrodeToDisp, fres, fmin, fmax, class1label, class2label, title):
     electrodeExists = False
     electrodeIdx = 0
     for idx, elec in enumerate(electrodesList):
@@ -1280,10 +1377,10 @@ def qt_plot_psd(power_cond1, power_cond2, freqs_array, electrodesList, electrode
         myMsgBox("No sensor with this name found")
     else:
         plot_psd(power_cond1, power_cond2, freqs_array, electrodeIdx, electrodesList,
-                 10, fmin, fmax, fres, class1label, class2label)
+                 10, fmin, fmax, fres, class1label, class2label, title)
         plt.show()
 
-def qt_plot_psd_r2(power_cond1, power_cond2, rsquare, freqs_array, electrodesList, electrodeToDisp, fres, fmin, fmax, class1label, class2label):
+def qt_plot_psd_r2(power_cond1, power_cond2, rsquare, freqs_array, electrodesList, electrodeToDisp, fres, fmin, fmax, class1label, class2label, title):
     electrodeExists = False
     electrodeIdx = 0
     for idx, elec in enumerate(electrodesList):
@@ -1296,10 +1393,10 @@ def qt_plot_psd_r2(power_cond1, power_cond2, rsquare, freqs_array, electrodesLis
         myMsgBox("No sensor with this name found")
     else:
         plot_psd_r2(power_cond1, power_cond2, rsquare, freqs_array, electrodeIdx, electrodesList,
-                 10, fmin, fmax, fres, class1label, class2label)
+                 10, fmin, fmax, fres, class1label, class2label, title)
         plt.show()
 
-def qt_plot_metric(power_cond1, power_cond2, freqs_array, electrodesList, electrodeToDisp, fres, fmin, fmax, class1label, class2label, metricLabel):
+def qt_plot_metric(power_cond1, power_cond2, freqs_array, electrodesList, electrodeToDisp, fres, fmin, fmax, class1label, class2label, metricLabel, title):
     electrodeExists = False
     electrodeIdx = 0
     for idx, elec in enumerate(electrodesList):
@@ -1312,10 +1409,10 @@ def qt_plot_metric(power_cond1, power_cond2, freqs_array, electrodesList, electr
         myMsgBox("No sensor with this name found")
     else:
         plot_metric(power_cond1, power_cond2, freqs_array, electrodeIdx, electrodesList,
-                    10, fmin, fmax, fres, class1label, class2label, metricLabel)
+                    10, fmin, fmax, fres, class1label, class2label, metricLabel, title)
         plt.show()
 
-def qt_plot_metric2(power_cond1, power_cond2, rsquare, freqs_array, electrodesList, electrodeToDisp, fres, fmin, fmax, class1label, class2label, metricLabel):
+def qt_plot_metric2(power_cond1, power_cond2, rsquare, freqs_array, electrodesList, electrodeToDisp, fres, fmin, fmax, class1label, class2label, metricLabel, title):
     electrodeExists = False
     electrodeIdx = 0
     for idx, elec in enumerate(electrodesList):
@@ -1328,18 +1425,18 @@ def qt_plot_metric2(power_cond1, power_cond2, rsquare, freqs_array, electrodesLi
         myMsgBox("No sensor with this name found")
     else:
         plot_metric2(power_cond1, power_cond2, rsquare, freqs_array, electrodeIdx, electrodesList,
-                    10, fmin, fmax, fres, class1label, class2label, metricLabel)
+                    10, fmin, fmax, fres, class1label, class2label, metricLabel, title)
         plt.show()
 
 # Plot "Brain topography", using either Power Spectrum (in same pipeline)
 # or Node Strength (or similar metric) (in Connectivity pipeline)
-def qt_plot_topo(Rsigned, electrodes, freqMin, freqMax, fres, fs, scaleColormap):
-    topo_plot(Rsigned, round(freqMin/fres), round(freqMax/fres), electrodes,
+def qt_plot_topo(Rsigned, electrodes, freqMin, freqMax, fres, fs, scaleColormap, title):
+    topo_plot(Rsigned, title, round(freqMin/fres), round(freqMax/fres), electrodes,
               fres, fs, scaleColormap, 'Signed R square')
     plt.show()
 
 # Plot "time-frequency analysis", in the POWER SPECTRUM pipeline ONLY.
-def qt_plot_tf(timefreq_cond1, timefreq_cond2, time_array, freqs_array, electrode, fres, average_baseline_cond1, average_baseline_cond2, std_baseline_cond1, std_baseline_cond2, electrodes, f_min_var, f_max_var, tmin, tmax, class1label, class2label):
+def qt_plot_tf(timefreq_cond1, timefreq_cond2, time_array, freqs_array, electrode, fres, average_baseline_cond1, average_baseline_cond2, std_baseline_cond1, std_baseline_cond2, electrodes, f_min_var, f_max_var, tmin, tmax, class1label, class2label, title):
     font = {'family': 'serif',
             'color':  'black',
             'weight': 'normal',
@@ -1369,13 +1466,13 @@ def qt_plot_tf(timefreq_cond1, timefreq_cond2, time_array, freqs_array, electrod
         vmax = np.amax(tf)
         tlength = tmax-tmin
         time_frequency_map(timefreq_cond1, time_array, freqs_array, Index_electrode, fmin, fmax, fres, 10, average_baseline_cond1, electrodes, std_baseline_cond1, vmin, vmax, tlength)
-        plt.title('(' + class1label + ') Sensor ' + electrodes[Index_electrode], fontdict=font)
+        plt.title(title+'(' + class1label + ') Sensor ' + electrodes[Index_electrode], fontdict=font)
         time_frequency_map(timefreq_cond2, time_array, freqs_array, Index_electrode, fmin, fmax, fres, 10, average_baseline_cond2, electrodes, std_baseline_cond2, vmin, vmax, tlength)
-        plt.title('(' + class2label + ') Sensor ' + electrodes[Index_electrode], fontdict=font)
+        plt.title(title+'(' + class2label + ') Sensor ' + electrodes[Index_electrode], fontdict=font)
         plt.show()
 
 # Plot "connectivity spectrum" from a RAW connectivity matrix. UNUSED
-def qt_plot_connectSpectrum(connect1, connect2, chan1, chan2, electrodeList, fres, class1label, class2label):
+def qt_plot_connectSpectrum(connect1, connect2, chan1, chan2, electrodeList, fres, class1label, class2label, title):
     chan1ok = False
     chan2ok = False
     chan1idx = 0
@@ -1401,17 +1498,17 @@ def qt_plot_connectSpectrum(connect1, connect2, chan1, chan2, electrodeList, fre
     if not chan2ok:
         myMsgBox("No sensor with name in Chan 2 found")
     else:
-        plot_connect_spectrum(connect1, connect2, chan1idx, chan2idx, electrodeList, 10, fres, class1label, class2label)
+        plot_connect_spectrum(connect1, connect2, chan1idx, chan2idx, electrodeList, 10, fres, class1label, class2label, title)
         plt.show()
 
 # Plot full RAW connectivity matrix for a given [fmin;fmax] range. UNUSED
-def qt_plot_connectMatrices(connect1, connect2, fmin, fmax, electrodeList, class1label, class2label):
-    plot_connect_matrices(connect1, connect2, fmin, fmax, electrodeList, class1label, class2label)
+def qt_plot_connectMatrices(connect1, connect2, fmin, fmax, electrodeList, class1label, class2label, title):
+    plot_connect_matrices(connect1, connect2, fmin, fmax, electrodeList, class1label, class2label, title)
     plt.show()
 
 # Plot % of strongest nodes, from a RAW connectivity matrix, in range [fmin;fmax]. UNUSED
-def qt_plot_strongestConnectome(connect1, connect2, percentStrong, fmin, fmax, electrodeList, class1label, class2label):
-    plot_strongestConnectome(connect1, connect2, percentStrong, fmin, fmax, electrodeList, class1label, class2label)
+def qt_plot_strongestConnectome(connect1, connect2, percentStrong, fmin, fmax, electrodeList, class1label, class2label, title):
+    plot_strongestConnectome(connect1, connect2, percentStrong, fmin, fmax, electrodeList, class1label, class2label, title)
     plt.show()
 
 

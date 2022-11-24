@@ -22,6 +22,47 @@ import bcipipeline_settings as settings
 # CLASSES FOR LONG-RUNNING OPERATIONS IN THREADS
 # ------------------------------------------------------
 
+class Acquisition(QtCore.QThread):
+    over = pyqtSignal(bool, str)
+
+    def __init__(self, ovScript, scenFile, parameterDict, parent=None):
+        super().__init__(parent)
+        self.stop = False
+        self.ovScript = ovScript
+        self.scenFile = scenFile
+        self.parameterDict = parameterDict.copy()
+
+    def run(self):
+        command = self.ovScript
+        if platform.system() == 'Windows':
+            command = command.replace("/", "\\")
+
+        exitText = ""
+        success = True
+        p = subprocess.Popen([command, "--no-gui", "--play", self.scenFile],
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+
+        # Print console output, and detect end of process...
+        while True:
+            output = p.stdout.readline()
+            if p.poll() is not None:
+                break
+            if output:
+                print(str(output))
+                if "Application terminated" in str(output):
+                    break
+                if "Could not connect to server" in str(output):
+                    exitText = str("Error running \"Acquisition\" scenario\n")
+                    exitText += str("Make sure the Acquisition Server is running and in \"Play\" mode\n")
+                    success = False
+                    break
+
+        self.stop = True
+        self.over.emit(success, exitText)
+
+    def stopThread(self):
+        self.stop = True
+
 class Extraction(QtCore.QThread):
     info = pyqtSignal(bool)
     info2 = pyqtSignal(str)
@@ -707,6 +748,7 @@ class TrainClassifier(QtCore.QThread):
 
             if not success:
                 self.errorMessageTrainer()
+                self.over.emit(False, self.exitText)
             else:
                 # Copy weights file to generated/classifier-weights.xml
                 newWeights = os.path.join(self.signalFolder, "training", "classifier-weights.xml")
@@ -775,6 +817,7 @@ class TrainClassifier(QtCore.QThread):
 
             if not successGlobal:
                 self.errorMessageTrainer()
+                self.over.emit(False, self.exitText)
             else:
                 # Find max score
                 maxIdx = scores.index(max(scores))
