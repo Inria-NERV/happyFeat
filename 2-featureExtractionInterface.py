@@ -338,18 +338,18 @@ class Dialog(QDialog):
             # self.btn_timefreq = QPushButton("Display Time-Frequency ERD/ERS analysis")
             self.btn_metric = QPushButton("Display NODE STRENGTH comparison between classes")
             self.btn_topo = QPushButton("Display NODE STRENGTH Brain Topography")
-            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features))
-            self.btn_metric.clicked.connect(lambda: self.btnMetric(self.Features))
-            # self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq())
-            self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features))
             titleR2 = "Freq.-chan. map of R² values of node strength"
             titleTimeFreq = "Time-Frequency ERD/ERS analysis"
             titleMetric = "Connectivity-based node strength, "
             titleTopo = "Topography of node strengths, for freq. "
-            self.parallelVizLayouts[1].addWidget(self.btn_r2map, titleR2)
-            self.parallelVizLayouts[1].addWidget(self.btn_metric, titleMetric)
-            # self.parallelVizLayouts[1].addWidget(self.btn_timefreq, titleTimeFreq)
-            self.parallelVizLayouts[1].addWidget(self.btn_topo, titleTopo)
+            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2))
+            self.btn_metric.clicked.connect(lambda: self.btnMetric(self.Features, titleMetric))
+            # self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq(self.Features, titleTimeFreq))
+            self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo))
+            self.parallelVizLayouts[0].addWidget(self.btn_r2map)
+            self.parallelVizLayouts[0].addWidget(self.btn_metric)
+            # self.parallelVizLayouts[0].addWidget(self.btn_timefreq)
+            self.parallelVizLayouts[0].addWidget(self.btn_topo)
 
             self.layoutViz.addLayout(self.parallelVizLayouts[1])
 
@@ -942,16 +942,19 @@ class Dialog(QDialog):
         # ex: if feats(connectivity) is empty, then we use the "powerspectrum" template.
         trainingParamDict = self.parameterDict.copy()
         trainingFeats = self.selectedFeats
-        if self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+        if self.parameterDict["pipelineType"] != settings.optionKeys[3]:
+            trainingFeats = self.selectedFeats[0]
+        else:
             trainingFeats = self.selectedFeats
-            if len(self.selectedFeats[0]) <1:
+            if len(self.selectedFeats[0]) < 1:
                 # no powspectum feature = use connectivity pipeline's training template
                 trainingParamDict["pipelineType"] = settings.optionKeys[2]
                 # copy the selected feats to the first list, for processing in the thread...
-                trainingFeats[0] = self.selectedFeats[1]
-            elif len(self.selectedFeats[1]) <1:
+                trainingFeats = self.selectedFeats[1]
+            elif len(self.selectedFeats[1]) < 1:
                 # no connectivity feature = use powspectrum pipeline's training template
                 trainingParamDict["pipelineType"] = settings.optionKeys[1]
+                trainingFeats = self.selectedFeats[0]
 
         signalFolder = os.path.join(self.scriptPath, "generated", "signals")
         pipelineType = trainingParamDict["pipelineType"]

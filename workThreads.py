@@ -661,13 +661,18 @@ class TrainClassifier(QtCore.QThread):
 
         selectedFeats = None
         selectedFeats2 = None
-        selectedFeats, errMsg = self.checkSelectedFeats(self.selectedFeats[0], listSampFreq[0], listElectrodeList[0])
-        if not selectedFeats:
-            self.over.emit(False, errMsg)
-            return
-        if self.usingDualFeatures:
-            selectedFeats2, errMsg = self.checkSelectedFeats(self.selectedFeats[1], listSampFreq[0], listElectrodeList[0])
+        if not self.usingDualFeatures:
+            selectedFeats, errMsg = self.checkSelectedFeats(self.selectedFeats, listSampFreq[0], listElectrodeList[0])
             if not selectedFeats:
+                self.over.emit(False, errMsg)
+                return
+        else:
+            selectedFeats, errMsg = self.checkSelectedFeats(self.selectedFeats[0], listSampFreq[0], listElectrodeList[0])
+            if not selectedFeats:
+                self.over.emit(False, errMsg)
+                return
+            selectedFeats2, errMsg = self.checkSelectedFeats(self.selectedFeats[1], listSampFreq[0], listElectrodeList[0])
+            if not selectedFeats2:
                 self.over.emit(False, errMsg)
                 return
 
@@ -761,7 +766,8 @@ class TrainClassifier(QtCore.QThread):
                     textFeats += str(os.path.basename(compositeSigList[i]) + "\n")
 
                 if not self.usingDualFeatures:
-                    textFeats += str("\nFeature(s):\n")
+                    textFeats += str("\nFeature(s) ")
+                    textFeats += str("(" + self.parameterDict["pipelineType"]+"):\n")
                     for i in range(len(selectedFeats)):
                         textFeats += str("\t"+"Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
                 else:
