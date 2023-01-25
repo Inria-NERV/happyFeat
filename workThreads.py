@@ -85,7 +85,7 @@ class Extraction(QtCore.QThread):
             command = command.replace("/", "\\")
 
         for signalFile in self.signalFiles:
-
+            tstart = time.perf_counter()
             self.info2.emit(str("Extracting data for file " + signalFile + "..."))
 
             # Verify the existence of metadata files for each selected files,
@@ -125,13 +125,8 @@ class Extraction(QtCore.QThread):
             modifyScenarioGeneralSettings(self.scenFile, self.parameterDict)
 
             # Special case: "connectivity metric"
-            if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
-                if self.parameterDict["ConnectivityMetric"] in settings.connectMetrics:
-                    modifyConnectivityMetric(self.parameterDict["ConnectivityMetric"], self.scenFile)
-                else:
-                    errMsg = str("Error: wrong connectivity metric")
-                    self.over.emit(False, errMsg)
-                    return
+            if "ConnectivityMetric" in self.parameterDict.keys():
+                modifyConnectivityMetric(self.parameterDict["ConnectivityMetric"], self.scenFile)
 
             # Modify extraction scenario to use provided signal file, and rename outputs accordingly
             filename = signalFile.removesuffix(".ov")
@@ -159,7 +154,8 @@ class Extraction(QtCore.QThread):
                         break
 
             self.info.emit(True)
-
+            tstop = time.perf_counter()
+            print("= Extraction from file " + filename + " finished in " + str(tstop-tstart))
         self.stop = True
         self.over.emit(True, "")
 
@@ -690,6 +686,13 @@ class TrainClassifier(QtCore.QThread):
             winShift1 = float(self.parameterDict["ConnectivityLength"]) * (100.0 - float(self.parameterDict["ConnectivityOverlap"])) / 100.0
             epochCount[1] = np.floor(float(stimEpochLength) / float(winShift1))
 
+        ## MODIFY THE SCENARIO with entered parameters
+        # /!\ after updating ARburg order and FFT size using sampfreq
+        self.parameterDict["ChannelNames"] = ";".join(listElectrodeList[0])
+        self.parameterDict["AutoRegressiveOrder"] = str(
+            timeToSamples(float(self.parameterDict["AutoRegressiveOrderTime"]), listSampFreq[0]))
+        self.parameterDict["PsdSize"] = str(freqResToPsdSize(float(self.parameterDict["FreqRes"]), listSampFreq[0]))
+
         # Case of a single feature type (power spectrum OR connectivity...)
         # RE-COPY sc2 & sc3 FROM TEMPLATE, SO THE USER CAN DO THIS MULTIPLE TIMES
         for i in [2, 3]:
@@ -713,7 +716,7 @@ class TrainClassifier(QtCore.QThread):
             elif i == 3:
                 # Modify the "online" scenario
                 modifyAcqScenario(destFile, self.parameterDict, True)
-                if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
+                if self.parameterDict["pipelineType"] != settings.optionKeys[3]:
                     # TODO for "CONNECTIVITY pipeline"!!
                     modifyOnlineScenario(selectedFeats, destFile)
                     # Special case: "connectivity metric"
