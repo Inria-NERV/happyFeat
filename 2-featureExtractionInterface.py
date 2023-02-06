@@ -87,6 +87,13 @@ class Dialog(QDialog):
         # Sampling Freq: to be loaded later, in CSV files
         self.samplingFreq = None
 
+        self.extractTimerStart = 0
+        self.extractTimerEnd = 0
+        self.vizTimerStart = 0
+        self.vizTimerEnd = 0
+        self.trainTimerStart = 0
+        self.trainTimerEnd = 0
+
         # Work Threads & Progress bars
         self.acquisitionThread = None
         self.extractThread = None
@@ -140,7 +147,7 @@ class Dialog(QDialog):
         self.labelAcqOnline = QLabel(labelAcqOnline)
         self.labelAcqOnline.setAlignment(QtCore.Qt.AlignCenter)
         self.labelAcqOnline.setAlignment(QtCore.Qt.AlignTop)
-        self.labelAcqOnline.setFont(QFont("system-ui", 14))
+        self.labelAcqOnline.setFont(QFont("system-ui", 12))
         self.labelAcqOnline.setStyleSheet("font-weight: bold")
 
         # Acquisition button
@@ -173,7 +180,7 @@ class Dialog(QDialog):
         labelFeatExtract = str("== FEATURE EXTRACTION ==")
         self.labelFeatExtract = QLabel(labelFeatExtract)
         self.labelFeatExtract.setAlignment(QtCore.Qt.AlignCenter)
-        self.labelFeatExtract.setFont(QFont("system-ui", 14))
+        self.labelFeatExtract.setFont(QFont("system-ui", 12))
         self.labelFeatExtract.setStyleSheet("font-weight: bold")
 
         self.fileListWidget = QListWidget()
@@ -265,7 +272,7 @@ class Dialog(QDialog):
         self.layoutViz = QVBoxLayout()
         self.layoutViz.setAlignment(QtCore.Qt.AlignTop)
         self.labelViz = QLabel('== VISUALIZE FEATURES ==')
-        self.labelViz.setFont(QFont("system-ui", 14))
+        self.labelViz.setFont(QFont("system-ui", 12))
         self.labelViz.setStyleSheet("font-weight: bold")
         self.labelViz.setAlignment(QtCore.Qt.AlignCenter)
         self.layoutViz.addWidget(self.labelViz)
@@ -351,10 +358,10 @@ class Dialog(QDialog):
             self.btn_metric.clicked.connect(lambda: self.btnMetric(self.Features, titleMetric))
             # self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq(self.Features, titleTimeFreq))
             self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo))
-            self.parallelVizLayouts[0].addWidget(self.btn_r2map)
-            self.parallelVizLayouts[0].addWidget(self.btn_metric)
-            # self.parallelVizLayouts[0].addWidget(self.btn_timefreq)
-            self.parallelVizLayouts[0].addWidget(self.btn_topo)
+            self.parallelVizLayouts[1].addWidget(self.btn_r2map)
+            self.parallelVizLayouts[1].addWidget(self.btn_metric)
+            # self.parallelVizLayouts[1].addWidget(self.btn_timefreq)
+            self.parallelVizLayouts[1].addWidget(self.btn_topo)
 
             self.layoutViz.addLayout(self.parallelVizLayouts[1])
 
@@ -426,7 +433,7 @@ class Dialog(QDialog):
 
         self.labelTrain = QLabel('== CLASSIFIER TRAINING ==')
         self.labelTrain.setAlignment(QtCore.Qt.AlignCenter)
-        self.labelTrain.setFont(QFont("system-ui", 14))
+        self.labelTrain.setFont(QFont("system-ui", 12))
         self.labelTrain.setStyleSheet("font-weight: bold")
         self.layoutTrain.addWidget(self.labelTrain)
 
@@ -532,6 +539,8 @@ class Dialog(QDialog):
         self.setLayout(self.dlgLayout)
         self.btn_loadFilesForViz.setEnabled(True)
         self.enablePlotBtns(False)
+
+        self.refreshLists(os.path.join(self.scriptPath, "generated", "signals"))
 
         # Timing loop every 4s to get files in working folder
         self.filesRefreshTimer = QtCore.QTimer(self)
@@ -821,12 +830,18 @@ class Dialog(QDialog):
         # Signal: Extraction work thread finished
         self.extractThread.over.connect(self.extraction_over)
         # Launch the work thread
+        self.extractTimerStart = time.perf_counter()
         self.extractThread.start()
 
     def extraction_over(self, success, text):
         # Extraction work thread is over, so we kill the progress bar,
         # display a msg if an error occurred, restart the timer and
         # make the extraction Gui available again
+        self.extractTimerEnd = time.perf_counter()
+
+        elapsed = self.extractTimerEnd-self.extractTimerStart
+        print("=== Extraction finished in: ", str(elapsed))
+
         self.progressBarExtract.finish()
         if not success:
             myMsgBox(text)
@@ -893,9 +908,15 @@ class Dialog(QDialog):
             # Launch the work thread
             self.loadFilesForVizThread2.start()
 
+        self.vizTimerStart = time.perf_counter()
+
     def loadFilesForViz_over(self, success, text):
         # Viz work thread is over, so we kill the progress bar,
         # and make the viz Gui available again
+        self.vizTimerEnd = time.perf_counter()
+        elapsed = self.vizTimerEnd - self.vizTimerStart
+        print("=== Viz data loaded in: ", str(elapsed))
+
         self.progressBarViz.finish()
         if not success:
             myMsgBox(text)
@@ -994,6 +1015,8 @@ class Dialog(QDialog):
         # Launch the work thread
         self.trainClassThread.start()
 
+        self.trainTimerStart = time.perf_counter()
+
     def btnAllCombinations(self):
         # ----------
         # Callback from button :
@@ -1081,9 +1104,15 @@ class Dialog(QDialog):
         # Launch the work thread
         self.trainClassThread.start()
 
+        self.trainTimerStart = time.perf_counter()
+
     def training_over(self, success, resultsText):
         # Training work thread is over, so we kill the progress bar,
         # display a msg with results, and make the training Gui available again
+        self.trainTimerEnd = time.perf_counter()
+        elapsed = self.trainTimerEnd - self.trainTimerStart
+        print("=== Training done in: ", str(elapsed))
+
         self.progressBarTrain.finish()
         if success:
             textGoodbye = str("Classifier weights were written in:\n\tgenerated/classifier-weights.xml\n")
@@ -1475,8 +1504,8 @@ def qt_plot_tf(timefreq_cond1, timefreq_cond2, time_array, freqs_array, electrod
         for i in range(tf.shape[1]):
             A.append(np.divide((tf[:, i]-PSD_baseline), PSD_baseline)*100)
         tf = np.transpose(A)
-        vmin = -np.amax(tf)
-        vmax = np.amax(tf)
+        vmin = np.amin(tf[f_min_var:f_max_var, :])
+        vmax = np.amax(tf[f_min_var:f_max_var, :])
         tlength = tmax-tmin
         time_frequency_map(timefreq_cond1, time_array, freqs_array, Index_electrode, fmin, fmax, fres, 10, average_baseline_cond1, electrodes, std_baseline_cond1, vmin, vmax, tlength)
         plt.title(title+'(' + class1label + ') Sensor ' + electrodes[Index_electrode], fontdict=font)

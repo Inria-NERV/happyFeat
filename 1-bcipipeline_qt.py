@@ -19,6 +19,8 @@ from PyQt5.QtWidgets import QDialog
 from PyQt5.QtWidgets import QPushButton
 from PyQt5.QtWidgets import QLineEdit
 
+from PyQt5.QtGui import QFont
+
 from modifyOpenvibeScen import *
 import bcipipeline_settings as settings
 
@@ -44,8 +46,9 @@ class Dialog(QDialog):
         self.setWindowTitle('Pipeline Generation GUI')
         self.dlgLayout = QVBoxLayout()
 
-        label = str("Protocol Selection")
+        label = str("=== Protocol Selection ===")
         self.label = QLabel(label)
+        self.label.setFont(QFont("system-ui", 12))
         self.label.setAlignment(QtCore.Qt.AlignCenter)
 
         self.selectedScenarioName = None
@@ -69,7 +72,7 @@ class Dialog(QDialog):
         # layout_h.addWidget(self.btn_browse)
 
         # Generate button
-        self.btn_generateLaunch = QPushButton("Generate scenarios, launch OpenViBE and HappyFeat")
+        self.btn_generateLaunch = QPushButton("Generate scenarios, launch HappyFeat")
         self.btn_generateLaunch.clicked.connect(lambda: self.generate(True))
         self.btn_generate = QPushButton("Generate scenarios, let me handle things!")
         self.btn_generate.clicked.connect(lambda: self.generate(False))
@@ -111,6 +114,7 @@ class Dialog(QDialog):
             labelText[0] = str(labelText[0] + " ===")
             label[0] = QLabel(labelText[0])
             label[0].setAlignment(QtCore.Qt.AlignCenter)
+            label[0].setFont(QFont("system-ui", 12))
             vBoxLayout.addWidget(label[0])
 
             formLayout = None
