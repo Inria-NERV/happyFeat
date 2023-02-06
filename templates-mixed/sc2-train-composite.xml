@@ -74,6 +74,13 @@
 			<Value>36</Value>
 		</Setting>
 		<Setting>
+			<Identifier>(0x8ab42a44, 0xba3b421f)</Identifier>
+			<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
+			<Name>ConnectivityShift</Name>
+			<DefaultValue>0.160000</DefaultValue>
+			<Value>0.16</Value>
+		</Setting>
+		<Setting>
 			<Identifier>(0x8ebad88d, 0x81a95e75)</Identifier>
 			<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
 			<Name>AutoRegressiveOrder</Name>
@@ -2529,14 +2536,14 @@
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Epoch duration (in sec)</Name>
 					<DefaultValue>1</DefaultValue>
-					<Value>$var{TimeWindowLength}</Value>
+					<Value>$var{ConnectivityLength}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Epoch intervals (in sec)</Name>
 					<DefaultValue>0.5</DefaultValue>
-					<Value>$var{TimeWindowShift}</Value>
+					<Value>$var{ConnectivityShift}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
@@ -2588,14 +2595,14 @@
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Epoch duration (in sec)</Name>
 					<DefaultValue>1</DefaultValue>
-					<Value>$var{TimeWindowLength}</Value>
+					<Value>$var{ConnectivityLength}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Epoch intervals (in sec)</Name>
 					<DefaultValue>0.5</DefaultValue>
-					<Value>$var{TimeWindowShift}</Value>
+					<Value>$var{ConnectivityShift}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>

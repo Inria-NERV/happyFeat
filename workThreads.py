@@ -121,6 +121,11 @@ class Extraction(QtCore.QThread):
             #         self.parameterDict["ChannelSubset"] = self.parameterDict["ChannelNames"]
             self.parameterDict["ChannelSubset"] = self.parameterDict["ChannelNames"]
 
+            # Special case : "connectivity shift", used in scenarios but not set that way
+            # in the interface
+            if "ConnectivityOverlap" in self.parameterDict.keys():
+                self.parameterDict["ConnectivityShift"] = str(float(self.parameterDict["ConnectivityLength"]) * (100.0 - float(self.parameterDict["ConnectivityOverlap"])) / 100.0)
+
             # Modify the scenario
             modifyScenarioGeneralSettings(self.scenFile, self.parameterDict)
 
@@ -565,7 +570,6 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
                 connect_cond2_final = np.concatenate((connect_cond2_final, connect_cond2))
 
         self.info2.emit("Computing statistics")
-
         trialLengthSec = float(self.parameterDict["TrialLength"])
         totalTrials = len(self.dataNp1) * trials
         fres = float(self.parameterDict["FreqRes"])
@@ -673,18 +677,24 @@ class TrainClassifier(QtCore.QThread):
                 return
 
         epochCount = [0, 0]
-        stimEpochLength = self.parameterDict["StimulationEpoch"]
+        stimEpochLength = float(self.parameterDict["StimulationEpoch"])
         if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
-            winShift = self.parameterDict["TimeWindowShift"]
-            epochCount[0] = np.floor(float(stimEpochLength) / float(winShift))
+            winLength = float(self.parameterDict["TimeWindowLength"])
+            winShift = float(self.parameterDict["TimeWindowShift"])
+            epochCount[0] = np.floor((stimEpochLength - winLength) / winShift) + 1
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
-            winShift = float(self.parameterDict["ConnectivityLength"]) * (100.0-float(self.parameterDict["ConnectivityOverlap"])) / 100.0
-            epochCount[0] = np.floor(float(stimEpochLength) / float(winShift))
+            winLength = float(self.parameterDict["ConnectivityLength"])
+            overlap = float(self.parameterDict["ConnectivityOverlap"])
+            winShift = winLength * (100.0-overlap) / 100.0
+            epochCount[0] = np.floor((stimEpochLength - winLength) / winShift) + 1
         elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
-            winShift0 = self.parameterDict["TimeWindowShift"]
-            epochCount[0] = np.floor(float(stimEpochLength) / float(winShift0))
-            winShift1 = float(self.parameterDict["ConnectivityLength"]) * (100.0 - float(self.parameterDict["ConnectivityOverlap"])) / 100.0
-            epochCount[1] = np.floor(float(stimEpochLength) / float(winShift1))
+            winLength0 = float(self.parameterDict["TimeWindowLength"])
+            winShift0 = float(self.parameterDict["TimeWindowShift"])
+            epochCount[0] = np.floor((stimEpochLength - winLength0) / winShift0) + 1
+            winLength1 = float(self.parameterDict["ConnectivityLength"])
+            overlap = float(self.parameterDict["ConnectivityOverlap"])
+            winShift1 = winLength1 * (100.0-overlap) / 100.0
+            epochCount[1] = np.floor((stimEpochLength - winLength1) / winShift1) + 1
 
         ## MODIFY THE SCENARIO with entered parameters
         # /!\ after updating ARburg order and FFT size using sampfreq
@@ -692,6 +702,11 @@ class TrainClassifier(QtCore.QThread):
         self.parameterDict["AutoRegressiveOrder"] = str(
             timeToSamples(float(self.parameterDict["AutoRegressiveOrderTime"]), listSampFreq[0]))
         self.parameterDict["PsdSize"] = str(freqResToPsdSize(float(self.parameterDict["FreqRes"]), listSampFreq[0]))
+
+        # Special case : "connectivity shift", used in scenarios but not set that way
+        # in the interface
+        if "ConnectivityOverlap" in self.parameterDict.keys():
+            self.parameterDict["ConnectivityShift"] = str(float(self.parameterDict["ConnectivityLength"]) * (100.0 - float(self.parameterDict["ConnectivityOverlap"])) / 100.0)
 
         # Case of a single feature type (power spectrum OR connectivity...)
         # RE-COPY sc2 & sc3 FROM TEMPLATE, SO THE USER CAN DO THIS MULTIPLE TIMES
