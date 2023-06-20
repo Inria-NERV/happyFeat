@@ -11,14 +11,14 @@ stimulationCodes = {
     "OVTK_StimulationId_Label_00": "33024",
 }
 
-def mergeRunsCsv(testSigList, class1, class2, class1Stim, class2Stim, tmin, tmax):
+def mergeRunsCsv(sigList, class1, class2, class1Stim, class2Stim, tmin, tmax):
     start = time.time()
 
     # Load raw data and check sampling freqs
     rawData = []
     channels = []
     fsamp = None
-    for sig in testSigList:
+    for sig in sigList:
         data = pd.read_csv(sig)
         datanp = data.to_numpy()
         rawData.append(datanp)
@@ -33,8 +33,7 @@ def mergeRunsCsv(testSigList, class1, class2, class1Stim, class2Stim, tmin, tmax
         elif any(col[2:-3] != channels):
             return None
 
-    outCsv = testSigList[0].replace("TRIALS", "TRAINCOMPOSITE")
-
+    outCsv = sigList[0].replace("TRIALS", "TRAINCOMPOSITE")
     writeCompositeCsv(outCsv, rawData, class1Stim, class2Stim, channels, tmin, tmax, fsamp)
 
     end = time.time()
@@ -43,7 +42,7 @@ def mergeRunsCsv(testSigList, class1, class2, class1Stim, class2Stim, tmin, tmax
     return outCsv
 
 
-def writeCompositeCsv(filename, rawData, class1Stim, class2Stim, channels, tmin, tmax, fsamp):
+def writeCompositeCsv(filename, rawData, class1Stim, class2Stim, channelList, tmin, tmax, fsamp):
     class1StimCode = stimulationCodes[class1Stim]
     class2StimCode = stimulationCodes[class2Stim]
     dummyCode = stimulationCodes["OVTK_StimulationId_Label_00"]
@@ -53,8 +52,9 @@ def writeCompositeCsv(filename, rawData, class1Stim, class2Stim, channels, tmin,
         # write header
         fieldnames = [str('Time:' + str(int(fsamp)) + 'Hz'), 'Epoch']
 
-        for elec in channels:
-            fieldnames.append(elec)
+
+        for chan in channelList:
+            fieldnames.append(chan)
         fieldnames.append("Event Id")
         fieldnames.append("Event Date")
         fieldnames.append("Event Duration")
@@ -191,12 +191,97 @@ def writeCompositeCsv(filename, rawData, class1Stim, class2Stim, channels, tmin,
 
     return
 
+def mergeRunsCsv_new(sigList):
+    start = time.time()
+
+    # Load raw data and check the headers of the different files match
+    rawData = []
+    refHeader = None
+    firstSig = True
+    for sig in sigList:
+        data = pd.read_csv(sig)
+        datanp = data.to_numpy()
+        rawData.append(datanp)
+        if firstSig:
+            refHeader = data.columns
+            firstSig = False
+        else:
+            header = data.columns
+            if any(header != refHeader):
+                return -1
+
+    outCsv = sigList[0]
+    outCsv = outCsv.replace(".csv", "-TRAINCOMPOSITE.csv")
+    writeCompositeCsv_new(outCsv, refHeader, rawData)
+
+    end = time.time()
+    print("==== ELAPSED: " + str(end - start))
+
+    return outCsv
+
+def writeCompositeCsv_new(filename, header, rawData):
+
+    with open(filename, 'w', newline='') as csvfile:
+        # write header
+        headwriter = csv.DictWriter(csvfile, fieldnames=header)
+        headwriter.writeheader()
+
+        writer = csv.writer(csvfile, delimiter=',')
+
+        dataType = None
+        if header[1] == "Epoch":
+            dataType = "Signal"
+        elif header[1] == "End Time":
+            dataType = "Matrix"
+
+        timeOffset = 0
+        epochOffset = 0
+        lastTime = 0
+        currentTime = 0
+
+        for fileId, rawData in enumerate(rawData):
+            nbChan = np.shape(rawData)[1] - 5
+            # Process the data and reconstruct CSV file
+            currentTime = 0
+
+            for row in rawData:
+                # copy row data, then we'll modify stuff
+                dataToWrite = ["" for x in range(np.shape(row)[0])]
+
+                # Time field
+                dataToWrite[0] = str(timeOffset)
+
+                # End Time field / Epoch field
+                if dataType == "Signal":
+                    dataToWrite[1] = str(0)
+                elif dataType == "Matrix":
+                    dataToWrite[1] = str(timeOffset + float(row[1])-float(row[0]))
+
+                timeOffset += float(row[1])-float(row[0])
+
+                # Actual Data
+                for chan in range(nbChan):
+                    dataToWrite[chan+2] = str(row[chan+2])
+
+                # Events
+                dataToWrite[-3] = ""
+                dataToWrite[-2] = ""
+                dataToWrite[-1] = ""
+
+                writer.writerow(dataToWrite)
+
+            print("= Merging run: ", str(fileId))
+
+    return
+
 
 if __name__ == '__main__':
     # Populate list of signals to merge
-    testSig = ["C:\\Users\\arthur.desbois\\Documents\\dev\\openvibeScripting\\openvibe-automation\\generated\\signals\\training\\motor-imagery-TRIALS.csv"]
+    # testSig = ["C:\\Users\\arthur.desbois\\Documents\\dev\\openvibeScripting\\openvibe-automation\\generated\\signals\\training\\motor-imagery-TRIALS.csv"]
     # testSig.append("C:\\Users\\arthur.desbois\\Documents\\dev\\openvibeScripting\\openvibe-automation\\generated\\signals\\training\\motor-imagery-TRIALS.csv")
     # testSig.append("C:\\Users\\arthur.desbois\\Documents\\dev\\openvibeScripting\\openvibe-automation\\generated\\signals\\training\\motor-imagery-TRIALS.csv")
+
+    testSig = ["C:\\Users\\arthur.desbois\\Documents\\dev\\happyFeat\\generated\\signals\\training\\Test-[2022.10.17-15.58.41]-TRIALS.csv"]
 
     testSigList = testSig
 
@@ -205,6 +290,18 @@ if __name__ == '__main__':
     class1Stim = "OVTK_GDF_Left"
     class2Stim = "OVTK_GDF_Right"
     tmin = 0
-    tmax = 1.5
+    tmax = 3
 
-    mergeRunsCsv(testSigList, class1, class2, class1Stim, class2Stim, tmin, tmax)
+    # mergeRunsCsv(testSigList, class1, class2, class1Stim, class2Stim, tmin, tmax)
+
+    testSig = ["C:\\Users\\arthur.desbois\\Documents\\dev\\happyFeat\\generated\\signals\\analysis\\Test-[2022.10.17-15.48.03]-CONNECT-MI.csv",
+               "C:\\Users\\arthur.desbois\\Documents\\dev\\happyFeat\\generated\\signals\\analysis\\Test-[2022.10.17-15.58.41]-CONNECT-MI.csv"]
+    testSigList = testSig
+
+    mergeRunsCsv_new(testSig)
+
+    testSig = ["C:\\Users\\arthur.desbois\\Documents\\dev\\happyFeat\\generated\\signals\\analysis\\Test-[2022.10.17-15.48.03]-CONNECT-REST.csv",
+               "C:\\Users\\arthur.desbois\\Documents\\dev\\happyFeat\\generated\\signals\\analysis\\Test-[2022.10.17-15.58.41]-CONNECT-REST.csv"]
+    testSigList = testSig
+
+    mergeRunsCsv_new(testSig)

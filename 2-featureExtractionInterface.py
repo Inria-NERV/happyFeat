@@ -191,7 +191,13 @@ class Dialog(QDialog):
         self.labelExtractParams = QLabel(labelExtractParams)
         self.labelExtractParams.setAlignment(QtCore.Qt.AlignCenter)
 
+        # Copy elements from json file.
         self.extractParamsDict = self.getExtractionParameters()
+        if self.parameterDict:
+            for (key, elem) in enumerate(self.extractParamsDict):
+                if elem in self.parameterDict:
+                    self.extractParamsDict[elem] = self.parameterDict[elem]
+
         extractParametersLayout = QHBoxLayout()
         self.layoutExtractLabels = QVBoxLayout()
         self.layoutExtractLineEdits = QVBoxLayout()
@@ -205,8 +211,15 @@ class Dialog(QDialog):
             # special case : combobox for connectivity metric
             if paramId == "ConnectivityMetric":
                 metricCombo = QComboBox(self)
+                connectIdx = 0
                 for idxMetric, key in enumerate(settings.connectMetricsComboText):
                     metricCombo.addItem(settings.connectMetricsComboText[key], idxMetric)
+                    # if current metric is the one in the params, save the idx
+                    # in order to set the combobox to this value
+                    if self.extractParamsDict["ConnectivityMetric"] == settings.connectMetrics[idxMetric]:
+                        connectIdx = idxMetric
+
+                metricCombo.setCurrentIndex(connectIdx)
                 self.layoutExtractLineEdits.addWidget(metricCombo)
             else:
                 lineEditExtractTemp = QLineEdit()
@@ -527,10 +540,24 @@ class Dialog(QDialog):
         self.btn_selectFeatures.setStyleSheet("font-weight: bold")
         self.btn_allCombinations.setStyleSheet("font-weight: bold")
 
+        # Connectivity: allow to enable/disable "Speed up" training"
+        if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+            self.enableSpeedUp = QCheckBox()
+            self.enableSpeedUp.setTristate(False)
+            self.enableSpeedUp.setChecked(False)
+            speedUpLabel = str("Speed-up training (experimental)")
+            self.speedUpLabel = QLabel(speedUpLabel)
+            self.speedUpLabel.setAlignment(QtCore.Qt.AlignCenter)
+            self.speedUpLayout = QHBoxLayout()
+            self.speedUpLayout.addWidget(self.speedUpLabel)
+            self.speedUpLayout.addWidget(self.enableSpeedUp)
+
         self.qvTrainingLayout.addLayout(self.trainingParamsLayout)
         self.qvTrainingLayout.addWidget(self.fileListWidgetTrain)
         self.qvTrainingLayout.addWidget(self.labelLastResults)
         self.qvTrainingLayout.addWidget(self.lastTrainingResults)
+        if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+            self.qvTrainingLayout.addLayout(self.speedUpLayout)
         self.qvTrainingLayout.addWidget(self.btn_selectFeatures)
         self.qvTrainingLayout.addWidget(self.btn_allCombinations)
         self.dlgLayout.addLayout(self.layoutTrain, 1)
@@ -1001,10 +1028,11 @@ class Dialog(QDialog):
         self.progressBarTrain = ProgressBar("Classifier training", "Creating composite file", 2)
 
         # Instantiate the thread...
-        self.trainClassThread = TrainClassifier(False, self.trainingFiles,
+        combiComp = False
+        self.trainClassThread = TrainClassifier(combiComp, self.trainingFiles,
                                                 signalFolder, templateFolder, scriptsFolder, self.ovScript,
                                                 trainingSize, trainingFeats,
-                                                trainingParamDict, self.samplingFreq)
+                                                trainingParamDict, self.samplingFreq, self.enableSpeedUp.isChecked())
 
         # Signal: Training work thread finished one step
         # Increment progress bar + change its label
@@ -1091,10 +1119,12 @@ class Dialog(QDialog):
         self.progressBarTrain = ProgressBar("Classifier Training", "First combination", nbCombinations)
 
         # Instantiate the thread...
-        self.trainClassThread = TrainClassifier(True, self.trainingFiles,
+        combiComp = True
+        speedUp = False
+        self.trainClassThread = TrainClassifier(combiComp, self.trainingFiles,
                                                 signalFolder, templateFolder, scriptsFolder, self.ovScript,
                                                 trainingSize, trainingFeats,
-                                                trainingParamDict, self.samplingFreq)
+                                                trainingParamDict, self.samplingFreq, speedUp)
         # Signal: Extraction work thread finished one file of the selected list.
         # Refresh the viz&train file lists to make it available + increment progress bar
         self.trainClassThread.info.connect(self.progressBarTrain.increment)
@@ -1176,6 +1206,9 @@ class Dialog(QDialog):
         self.trainingPartitions.setEnabled(myBool)
         self.fileListWidgetTrain.setEnabled(myBool)
         self.menuOptions.setEnabled(myBool)
+        if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+            self.enableSpeedUp.setEnabled(myBool)
+
 
     def enableGui(self, myBool):
         # Enable/Disable ALL PARTS of the GUI

@@ -34,7 +34,8 @@ class Dialog(QDialog):
         self.jsonfilename = "params.json"
         self.generatedFolder = "generated"
         self.templateFolder = None
-        self.ovScript = "C:\\openvibeDevelop_update\\dist\\x64\\Release\\openvibe-designer.cmd"  # TODO : set to None in release version
+        # self.ovScript = "C:\\openvibeDevelop_update\\dist\\x64\\Release\\openvibe-designer.cmd"  # TODO : set to None in release version
+        self.ovScript = "C:\\openvibe-3.5.0-64bit\\bin\\openvibe-designer.exe"  # TODO : set to None in release version
 
         # SCENARIO PARAMETERS...
         self.parameterDict = {}
@@ -151,7 +152,7 @@ class Dialog(QDialog):
             self.designerWidget = QWidget()
             layout_h = QHBoxLayout(self.designerWidget)
             self.designerTextBox = QLineEdit()
-            self.designerTextBox.setText("C:\\openvibeDevelop_update\\dist\\x64\\Release\\openvibe-designer.cmd")  # TODO set to "" in release
+            self.designerTextBox.setText("C:\\openvibe-3.5.0-64bit\\bin\\openvibe-designer.exe")  # TODO set to "" in release
             self.designerTextBox.setEnabled(False)
             layout_h.addWidget(self.designerTextBox)
             layout_h.addWidget(self.btn_browseOV)
@@ -222,13 +223,16 @@ class Dialog(QDialog):
         #   SC2 (FEATURE EXT)
         #   SC2 (TRAIN)
         #   SC3 (ONLINE)
+        #   SC2-SPEEDUP-FIRSTSTEP (TRAIN+, 1)
+        #   SC2-SPEEDUP-FINALIZE  (TRAIN+, 2)
         for filename in settings.templateScenFilenames:
             srcFile = os.path.join(os.getcwd(), self.templateFolder, filename)
             destFile = os.path.join(os.getcwd(), self.generatedFolder, filename)
-            print("---Copying file " + srcFile + " to " + destFile)
-            copyfile(srcFile, destFile)
-            if "xml" in destFile:
-                modifyScenarioGeneralSettings(destFile, self.parameterDict)
+            if os.path.exists(srcFile):
+                print("---Copying file " + srcFile + " to " + destFile)
+                copyfile(srcFile, destFile)
+                if "xml" in destFile:
+                    modifyScenarioGeneralSettings(destFile, self.parameterDict)
 
         # SPECIAL CASES :
         #   SC1 & SC3 : "GRAZ" BOX SETTINGS

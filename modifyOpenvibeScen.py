@@ -190,7 +190,7 @@ def modifyTrainScenario(chanFreqPairs, epochCount, scenXml):
                     pair = [chan, freq]
                     # Copy list of chained boxes (except the first (SPLIT) and
                     # the 2 last ones (feature aggreg, classifier trainer) and chain them.
-                    listofBoxesToChain, nbOfOutputs = copyBoxList(root, boxList, locOffset, pair)
+                    listofBoxesToChain, nbOfOutputs = copyBoxList(root, boxList, locOffset, pair, 1, 2)
                     locOffset += locOffset
 
                     # Add an input to Feature Aggregator box in the current chain
@@ -202,7 +202,7 @@ def modifyTrainScenario(chanFreqPairs, epochCount, scenXml):
     tree.write(scenXml)
     return
 
-def modifyTrainScenarioUsingSplit(splitStr, chanFreqPairs, epochCount, scenXml):
+def modifyTrainScenUsingSplitAndClassifierTrainer(splitStr, chanFreqPairs, epochCount, scenXml):
     print("---Modifying " + scenXml + " with Selected Features")
     tree = ET.parse(scenXml)
     root = tree.getroot()
@@ -264,10 +264,10 @@ def modifyTrainScenarioUsingSplit(splitStr, chanFreqPairs, epochCount, scenXml):
                             print("            with " + xmlVal.text)
                             break
 
-    locOffset = 120
     if len(chanFreqPairs) > 1:
         # COPY/PASTE PROCESSING BRANCHES
         for splitbox in splitBoxes:
+            locOffset = 120
             boxId = splitbox.find("Identifier").text
             # Find all boxes chained btw this split and the last (classifier trainer)
             if boxId is not None and boxLastId is not None:
@@ -281,13 +281,135 @@ def modifyTrainScenarioUsingSplit(splitStr, chanFreqPairs, epochCount, scenXml):
                     pair = [chan, freq]
                     # Copy list of chained boxes (except the first (SPLIT) and
                     # the 2 last ones (feature aggreg, classifier trainer) and chain them.
-                    listofBoxesToChain, nbOfOutputs = copyBoxList(root, boxList, locOffset, pair)
-                    locOffset += locOffset
+                    listofBoxesToChain, nbOfOutputs = copyBoxList(root, boxList, locOffset, pair, 1, 2)
 
                     # Add an input to Feature Aggregator box in the current chain
                     addInputToBox(root, listofBoxesToChain[-1])
                     featAggInputIdx = countBoxInputs(root, listofBoxesToChain[-1]) - 1
                     linkBoxes(root, listofBoxesToChain, nbOfOutputs, featAggInputIdx)
+
+                    locOffset += locOffset
+
+    # WRITE NEW XML
+    tree.write(scenXml)
+    return
+
+def modifyTrainScenUsingSplitAndCsvWriter(splitStr, chanFreqPairs, epochCount, scenXml, trainingpath):
+    print("---Modifying " + scenXml + " with Selected Features")
+    tree = ET.parse(scenXml)
+    root = tree.getroot()
+
+    # FIRST STEP : GET THE "SPLIT" IDENTITY BOXES
+    splitBoxes = []
+    for boxes in root.findall('Boxes'):
+        for box in boxes.findall('Box'):
+            if box.find('Name').text == splitStr:
+                splitBoxes.append(box)
+                print("-- SPLIT " + str(len(splitBoxes)+1))
+                continue
+
+    # Find Ids of CSV Writer boxes
+    csvBoxes = []
+    csvBoxesIds = []
+    for boxes in root.findall('Boxes'):
+        for box in boxes.findall('Box'):
+            if box.find('Name').text == "CSV Class1 Feat1":
+                csvBoxes.append(box)
+                csvBoxesIds.append(csvBoxes[-1].find("Identifier").text)
+                print("-- CSV WRITER " + str(len(csvBoxes) + 1))
+                continue
+            elif box.find('Name').text == "CSV Class2 Feat1":
+                csvBoxes.append(box)
+                csvBoxesIds.append(csvBoxes[-1].find("Identifier").text)
+                print("-- CSV WRITER " + str(len(csvBoxes) + 1))
+                continue
+
+    # FIRST STEP : modify existing branches in the scenario, using the first pair of features
+    for splitbox in splitBoxes:
+        boxId = splitbox.find("Identifier").text
+
+        boxListFound = False
+        # Find all boxes chained btw this box and the last one (csv Writer)
+        for csvBoxId in csvBoxesIds:
+            if boxId is not None and csvBoxId is not None:
+                boxList = findChainedBoxes(root, boxId, csvBoxId)
+
+                if boxList:
+                    boxListFound = True
+                    # Change parameters of particular boxes in this list of chained boxes
+                    for boxid in boxList:
+                        box = findBoxId(root, boxid)
+                        if box.find('Name').text == 'Channel Selector':
+                            print("-- CHANNEL SELECTOR BOX ")
+                            for settings in box.findall('Settings'):
+                                for setting in settings.findall('Setting'):
+                                    if setting.find('Name').text == "Channel List":
+                                        xmlVal = setting.find('Value')
+                                        print("       replacing " + xmlVal.text)
+                                        xmlVal.text = chanFreqPairs[0][0]
+                                        print("            with " + xmlVal.text)
+                                        break
+
+                        if box.find('Name').text == 'Frequency Band Selector':
+                            print("-- FREQ SELECTION BOX ")
+                            for settings in box.findall('Settings'):
+                                for setting in settings.findall('Setting'):
+                                    # POWER SPECTRUM PIPELINE: actual "freq band selector" box
+                                    # CONNECTIVITY PIPELINE: channel selector rebranded as freq band selector
+                                    if setting.find('Name').text == "Frequencies to select" or setting.find('Name').text == "Channel List":
+                                        xmlVal = setting.find('Value')
+                                        print("       replacing " + xmlVal.text)
+                                        xmlVal.text = chanFreqPairs[0][1]
+                                        print("            with " + xmlVal.text)
+                                        break
+                        if box.find('Name').text == 'Epoch average':
+                            print("-- EPOCH AVERAGE BOX ")
+                            for settings in box.findall('Settings'):
+                                for setting in settings.findall('Setting'):
+                                    if setting.find('Name').text == "Epoch count":
+                                        xmlVal = setting.find('Value')
+                                        print("       replacing " + xmlVal.text)
+                                        xmlVal.text = str(epochCount)
+                                        print("            with " + xmlVal.text)
+                                        break
+        if not boxListFound:
+            print("-- ERROR IN TEMPLATE SCENARIO !! --")
+            return
+
+    if len(chanFreqPairs) > 1:
+        # COPY/PASTE PROCESSING BRANCHES
+        for splitbox in splitBoxes:
+
+            locOffset = 120
+            boxId = splitbox.find("Identifier").text
+            boxListFound = False
+
+            # Find all boxes chained btw this box and the last one (csv Writer)
+            for csvBoxId in csvBoxesIds:
+                if boxId is not None and csvBoxId is not None:
+                    boxList = findChainedBoxes(root, boxId, csvBoxId)
+
+                    if boxList:
+                        boxListFound = True
+
+                        for idxPair, [chan, freq] in enumerate(chanFreqPairs):
+                            # Don't do it for the first pair, it was done earlier in the function
+                            if idxPair == 0:
+                                continue
+
+                            pair = [chan, freq]
+                            # Copy list of chained boxes (except the first (SPLIT)) and chain them.
+                            listofBoxesToChain, nbOfOutputs = copyBoxListGeneric(root, boxList, locOffset, pair, 1, 0)
+                            csvWriter = findBoxId(root, listofBoxesToChain[-1])
+                            oldName = csvWriter.find('Name').text.split("Feat")
+                            changeBoxName(csvWriter, str(oldName[0] + 'Feat' + str(int(oldName[1])+1) ) )
+                            linkBoxesGeneric(root, listofBoxesToChain, nbOfOutputs)
+
+                            locOffset += locOffset
+
+            if not boxListFound:
+                print("-- ERROR IN TEMPLATE SCENARIO !! --")
+                return
 
     # WRITE NEW XML
     tree.write(scenXml)
@@ -402,10 +524,10 @@ def modifyOnlineScenario(chanFreqPairs, scenXml):
         boxLastId = boxLast.find("Identifier").text
 
         featAggInputIdx = 0
-        locOffset = 120
 
         # Find all chained box btw those two
         if splitBoxId is not None and boxLastId is not None:
+            locOffset = 120
             boxList = findChainedBoxes(root, splitBoxId, boxLastId)
 
             for idxPair, [chan, freq] in enumerate(chanFreqPairs):
@@ -416,7 +538,7 @@ def modifyOnlineScenario(chanFreqPairs, scenXml):
                 pair = [chan, freq]
                 # Copy list of chained boxes (except first (identity)
                 # and 2 last (feature aggreg, classifier trainer)) and chain them.
-                listofBoxesToChain, nbOfOutputs = copyBoxList(root, boxList, locOffset, pair)
+                listofBoxesToChain, nbOfOutputs = copyBoxList(root, boxList, locOffset, pair, 1, 2)
                 locOffset += locOffset
 
                 # Add an input to Feature Aggregator box in the current chain
@@ -449,6 +571,126 @@ def modifyConnectivityMetric(metric, scenXml):
     # WRITE NEW XML
     tree.write(scenXml)
     return
+
+
+def modifyTrainingFirstStep(runBasename, nbFeats, analysisPath, trainingPath, scenXml):
+    print("---Modifying " + scenXml + " outputs")
+    tree = ET.parse(scenXml)
+    root = tree.getroot()
+
+    for settings in root.findall('Settings'):
+        for setting in settings.findall('Setting'):
+            if setting.find('Name').text == "InputClass1":
+                xmlVal = setting.find('Value')
+                newinput1 = str(runBasename + "-CONNECT-REST.csv")
+                xmlVal.text = newinput1
+                continue
+            elif setting.find('Name').text == "InputClass2":
+                xmlVal = setting.find('Value')
+                newinput2 = str(runBasename + "-CONNECT-MI.csv")
+                xmlVal.text = newinput2
+                continue
+
+
+    for feat in range(nbFeats):
+
+        for boxes in root.findall('Boxes'):
+            for box in boxes.findall('Box'):
+                if box.find('Name').text == str('CSV Class1 Feat'+str(feat+1)):
+                    for settings in box.findall('Settings'):
+                        for setting in settings.findall('Setting'):
+                            if setting.find('Name').text == "Filename":
+                                xmlVal = setting.find('Value')
+                                print("       replacing " + xmlVal.text)
+                                class1featX = os.path.join(trainingPath, str(runBasename + "-class1-feat" + str(feat + 1)) + ".csv")
+                                class1featX = class1featX.replace("\\", "/")
+                                xmlVal.text = str(class1featX)
+                                print("            with " + xmlVal.text)
+                                break
+                elif box.find('Name').text == str('CSV Class2 Feat'+str(feat+1)):
+                    for settings in box.findall('Settings'):
+                        for setting in settings.findall('Setting'):
+                            if setting.find('Name').text == "Filename":
+                                xmlVal = setting.find('Value')
+                                print("       replacing " + xmlVal.text)
+                                class2featX = os.path.join(trainingPath, str(runBasename + "-class2-feat" + str(feat + 1)) + ".csv" )
+                                class2featX = class2featX.replace("\\", "/")
+                                xmlVal.text = str(class2featX)
+                                print("            with " + xmlVal.text)
+                                break
+    # WRITE NEW XML
+    tree.write(scenXml)
+    return
+
+def modifyTrainingSecondStep(compositeFiles, nbFeats, newWeightsName, scenXml):
+    print("---Modifying " + scenXml + " outputs")
+    tree = ET.parse(scenXml)
+    root = tree.getroot()
+
+    # PARSE SCENARIO GENERAL SETTINGS, AND MODIFY THEM ACCORDING TO THE PROVIDED
+    # PARAMETER LIST
+    for settings in root.findall('Settings'):
+        for setting in settings.findall('Setting'):
+            if setting.find('Name').text == "OutputWeights":
+                xmlVal = setting.find('Value')
+                xmlVal.text = newWeightsName
+
+    featAgg = []
+    featAgg.append(findBox(root, "FeatAgg1") )
+    featAgg.append(findBox(root, "FeatAgg2") )
+    csvBoxes = []
+    csvBoxes.append(findBox(root, "CSV class1 feat1") )
+    csvBoxes.append(findBox(root, "CSV class2 feat1") )
+
+    for classIdx in [0, 1]:
+        locOffset = 120
+
+        for feat in range(nbFeats):
+            # first feat : don't copy, just edit the filename
+            if feat == 0:
+                for settings in csvBoxes[classIdx].findall('Settings'):
+                    for setting in settings.findall('Setting'):
+                        if setting.find('Name').text == "Filename":
+                            xmlVal = setting.find('Value')
+                            print("       replacing " + xmlVal.text)
+                            for file in compositeFiles:
+                                if str("class" + str(classIdx + 1) + "-feat" + str(
+                                        feat + 1) + "-TRAINCOMPOSITE.csv") in file:
+                                    classXfeatX = file.replace("\\", "/")
+                                    xmlVal.text = str(classXfeatX)
+                                    print("            with " + xmlVal.text)
+                                    break
+                continue
+            else:
+                newCsvIn = copyBox(root, csvBoxes[classIdx], locOffset)
+                locOffset += locOffset
+                oldName = csvBoxes[classIdx].find("Name").text
+                changeBoxName(newCsvIn, oldName.replace("feat1", str('feat' + str(feat+1))) )
+                for settings in newCsvIn.findall('Settings'):
+                    for setting in settings.findall('Setting'):
+                        if setting.find('Name').text == "Filename":
+                            xmlVal = setting.find('Value')
+                            print("       replacing " + xmlVal.text)
+                            for file in compositeFiles:
+                                if str("class" + str(classIdx+1) + "-feat" + str(feat+1) + "-TRAINCOMPOSITE.csv") in file:
+                                    classXfeatX = file.replace("\\", "/")
+                                    xmlVal.text = str(classXfeatX)
+                                    print("            with " + xmlVal.text)
+                                    break
+
+                addInputToBox(root, featAgg[classIdx].find('Identifier').text)
+                linkTwoBoxesGeneric(root, newCsvIn.find("Identifier").text,
+                                    featAgg[classIdx].find("Identifier").text, 0, feat)
+
+
+
+    # WRITE NEW XML
+    tree.write(scenXml)
+    return
+
+##################
+# HELPER FUNCTIONS
+##################
 
 def findPreviousBox(root, boxIdx):
     for links in root.findall('Links'):
@@ -502,6 +744,52 @@ def linkBoxes(root, listofBoxesToChain, nbOfOutputs, featAggInputIdx):
             else:
                 targetBoxIn.text = str(featAggInputIdx)
 
+def linkBoxesGeneric(root, listofBoxesToChain, nbOfOutputs):
+    links = root.find("Links")
+    for idx, boxId in enumerate(listofBoxesToChain):
+
+        if boxId is not listofBoxesToChain[-1]:
+
+            link = ET.SubElement(links, "Link")
+            identifier = ET.SubElement(link, "Identifier")
+            newId1 = str(generateRandomHexId(4)).replace("b", "").replace("\'", '')
+            newId2 = str(generateRandomHexId(4)).replace("b", "").replace("\'", '')
+            identifier.text = str("(0x" + str(newId1) + ", 0x" + str(newId2) + ")")
+
+            source = ET.SubElement(link, "Source")
+            sourceBoxId = ET.SubElement(source, "BoxIdentifier")
+            sourceBoxId.text = str(boxId)
+            sourceBoxOut = ET.SubElement(source, "BoxOutputIndex")
+            # We take the last output id of the box... (works for AR coeffs, for now...)
+            # WARNING : this is a baaad patch
+            sourceBoxOut.text = str(nbOfOutputs[idx] - 1)
+            target = ET.SubElement(link, "Target")
+            targetBoxId = ET.SubElement(target, "BoxIdentifier")
+            targetBoxId.text = str(listofBoxesToChain[idx+1])
+            targetBoxIn = ET.SubElement(target, "BoxInputIndex")
+            targetBoxIn.text = str(0)
+
+def linkTwoBoxesGeneric(root, boxId1, boxId2, outputidx, inputidx):
+    links = root.find("Links")
+    link = ET.SubElement(links, "Link")
+
+    identifier = ET.SubElement(link, "Identifier")
+    newId1 = str(generateRandomHexId(4)).replace("b", "").replace("\'", '')
+    newId2 = str(generateRandomHexId(4)).replace("b", "").replace("\'", '')
+    identifier.text = str("(0x" + str(newId1) + ", 0x" + str(newId2) + ")")
+
+    source = ET.SubElement(link, "Source")
+    sourceBoxId = ET.SubElement(source, "BoxIdentifier")
+    sourceBoxId.text = str(boxId1)
+    sourceBoxOut = ET.SubElement(source, "BoxOutputIndex")
+    sourceBoxOut.text = str(outputidx)
+
+    target = ET.SubElement(link, "Target")
+    targetBoxId = ET.SubElement(target, "BoxIdentifier")
+    targetBoxId.text = str(boxId2)
+    targetBoxIn = ET.SubElement(target, "BoxInputIndex")
+    targetBoxIn.text = str(inputidx)
+
 def generateRandomHexId(length):
     return binascii.b2a_hex(os.urandom(length))
 
@@ -554,18 +842,20 @@ def copyBox(root, box, locOffset):
     boxes.append(newbox)
     return newbox
 
-def copyBoxList(root, boxIdList, locOffset, chanFreqPair):
+def copyBoxList(root, boxIdList, locOffset, chanFreqPair, nbDiscardTop, nbDiscardBottom):
 
     boxes = root.find('Boxes')
     # newBoxIdList & nbOfOutputs will serve for chaining later on.
     # Hence we add the first box to both lists (Stim based epoching)
     nbOfOutputs = [1]
     newBoxIdList = [boxIdList[0]]
-    # List to parse : discard first and 2 last ones, we don't want them copied...
+
+    # List to parse : discard boxes we don't want to copy
     boxIdListToParse = boxIdList.copy()
-    boxIdListToParse.pop(0)
-    boxIdListToParse.pop()
-    boxIdListToParse.pop()
+    for i in range(nbDiscardTop):
+        boxIdListToParse.pop(0)
+    for i in range(nbDiscardBottom):
+        boxIdListToParse.pop()
 
     for boxId in boxIdListToParse:
         # Find actual box in root and copy it
@@ -613,16 +903,79 @@ def copyBoxList(root, boxIdList, locOffset, chanFreqPair):
     return newBoxIdList, nbOfOutputs
 
 
+def copyBoxListGeneric(root, boxIdList, locOffset, chanFreqPair, nbDiscardTop, nbDiscardBottom):
+
+    boxes = root.find('Boxes')
+    # newBoxIdList & nbOfOutputs will serve for chaining later on.
+    # Hence we add the first box to both lists (Stim based epoching)
+    nbOfOutputs = [1]
+    newBoxIdList = [boxIdList[0]]
+
+    # List to parse : discard boxes we don't want to copy
+    boxIdListToParse = boxIdList.copy()
+    for i in range(nbDiscardTop):
+        boxIdListToParse.pop(0)
+    for i in range(nbDiscardBottom):
+        boxIdListToParse.pop()
+
+    for boxId in boxIdListToParse:
+        # Find actual box in root and copy it
+        for box in boxes:
+            if box.find('Identifier').text == boxId:
+                newBox = copyBox(root, box, locOffset)
+                newBoxId = newBox.find('Identifier').text
+                newBoxIdList.append(newBoxId)
+                outputs = box.find('Outputs')
+                nbOfOutputs.append(0)
+                if outputs:
+                    for output in outputs:
+                        nbOfOutputs[-1] += 1
+
+                # EDIT CHANNEL SELECTOR AND FREQ SELECTOR PARAMETERS
+                if newBox.find('Name').text == "Channel Selector":
+                    for settings in box.findall('Settings'):
+                        for setting in settings.findall('Setting'):
+                            if setting.find('Name').text == "Channel List":
+                                xmlVal = setting.find('Value')
+                                print("       replacing " + xmlVal.text)
+                                xmlVal.text = chanFreqPair[0]
+                                print("            with " + xmlVal.text)
+                                continue
+                elif newBox.find('Name').text == "Frequency Band Selector":
+                    for settings in box.findall('Settings'):
+                        for setting in settings.findall('Setting'):
+                            # POWER SPECTRUM PIPELINE: actual "freq band selector" box
+                            # CONNECTIVITY PIPELINE: channel selector rebranded as freq band selector
+                            if setting.find('Name').text == "Frequencies to select" or setting.find('Name').text == "Channel List":
+                                xmlVal = setting.find('Value')
+                                print("       replacing " + xmlVal.text)
+                                xmlVal.text = chanFreqPair[1]
+                                print("            with " + xmlVal.text)
+                                continue
+
+                break
+
+    # For future linking/chaining
+    if len(newBoxIdList) > 1:
+        nbOfOutputs.append(1)
+
+    print(newBoxIdList)
+
+    return newBoxIdList, nbOfOutputs
+
+
 # Find (linear) chain of boxes. No branches please !
 def findChainedBoxes(root, firstBoxId, lastBoxId):
     boxList = [firstBoxId]
     condition = True
 
+    foundLast = False
+
     for links in root.findall('Links'):
 
         while condition:
             found = False
-            foundLast = False
+
             for link in links.findall('Link'):
                 sourceBox = link.find("Source")
                 id = sourceBox.find('BoxIdentifier')
@@ -637,6 +990,13 @@ def findChainedBoxes(root, firstBoxId, lastBoxId):
             if not found or foundLast:
                 condition = False
 
+    if not foundLast:
+        boxList = []
+
     print(boxList)
     return boxList
+
+def changeBoxName(box, newName):
+    box.find('Name').text = newName
+    return
 

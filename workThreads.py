@@ -8,7 +8,7 @@ from shutil import copyfile
 from PyQt5 import QtCore
 from PyQt5.QtCore import pyqtSignal
 
-from mergeRunsCsv import mergeRunsCsv
+from mergeRunsCsv import mergeRunsCsv, mergeRunsCsv_new
 from extractMetaData import extractMetadata, generateMetadata
 from modifyOpenvibeScen import *
 from Visualization_Data import *
@@ -609,7 +609,7 @@ class TrainClassifier(QtCore.QThread):
     def __init__(self, isCombinationComputing, trainingFiles,
                  signalFolder, templateFolder, scriptFolder, ovScript,
                  trainingSize, selectedFeats,
-                 parameterDict, sampFreq, parent=None):
+                 parameterDict, sampFreq, speedUp, parent=None):
 
         super().__init__(parent)
         self.stop = False
@@ -620,6 +620,7 @@ class TrainClassifier(QtCore.QThread):
         self.scriptFolder = scriptFolder
         self.ovScript = ovScript
         self.trainingSize = trainingSize
+        self.speedUp = speedUp
 
         # selectedFeats is either a list of feats. of interest
         # or (case of mixed features) a list of 2 lists
@@ -633,7 +634,7 @@ class TrainClassifier(QtCore.QThread):
     def run(self):
         # Get electrodes lists and sampling freqs, and check that they match
         # + that the selected channels are in the list of electrodes
-        compositeSigList = []
+        trainingSigList = []
         listSampFreq = []
         listElectrodeList = []
         for trainingFile in self.trainingFiles:
@@ -641,7 +642,7 @@ class TrainClassifier(QtCore.QThread):
             header = pd.read_csv(path, nrows=0).columns.tolist()
             listSampFreq.append(int(header[0].split(':')[1].removesuffix('Hz')))
             listElectrodeList.append(header[2:-3])
-            compositeSigList.append(path)
+            trainingSigList.append(path)
 
         if not all(freqsamp == listSampFreq[0] for freqsamp in listSampFreq):
             errMsg = str("Error when loading CSV files\n")
@@ -710,66 +711,102 @@ class TrainClassifier(QtCore.QThread):
 
         # Case of a single feature type (power spectrum OR connectivity...)
         # RE-COPY sc2 & sc3 FROM TEMPLATE, SO THE USER CAN DO THIS MULTIPLE TIMES
-        for i in [2, 3]:
+        for i in [2, 3, 4, 5]:
             scenName = settings.templateScenFilenames[i]
             srcFile = os.path.join(self.templateFolder, scenName)
             destFile = os.path.join(self.scriptFolder, "generated", scenName)
+            trainingpath = os.path.join(self.scriptFolder, "generated", "signals", "training")
             print("---Copying file " + srcFile + " to " + destFile)
             copyfile(srcFile, destFile)
             modifyScenarioGeneralSettings(destFile, self.parameterDict)
             if i == 2:
-                # Modify the "Training" scenario
+                # training scenarios
                 if not self.usingDualFeatures:
-                    modifyTrainScenarioUsingSplit("SPLIT", selectedFeats, epochCount[0], destFile)
+                    modifyTrainScenUsingSplitAndClassifierTrainer("SPLIT", selectedFeats, epochCount[0], destFile)
                     # Special case: "connectivity metric"
                     if "ConnectivityMetric" in self.parameterDict.keys():
                         modifyConnectivityMetric(self.parameterDict["ConnectivityMetric"], destFile)
                 else:
-                    modifyTrainScenarioUsingSplit("SPLIT POWSPECTRUM", selectedFeats, epochCount[0], destFile)
-                    modifyTrainScenarioUsingSplit("SPLIT CONNECT", selectedFeats2, epochCount[1], destFile)
+                    modifyTrainScenUsingSplitAndClassifierTrainer("SPLIT POWSPECTRUM", selectedFeats, epochCount[0], destFile)
+                    modifyTrainScenUsingSplitAndClassifierTrainer("SPLIT CONNECT", selectedFeats2, epochCount[1], destFile)
                     modifyConnectivityMetric(self.parameterDict["ConnectivityMetric"], destFile)
+            elif i == 4 and not self.usingDualFeatures and self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+                # "speed up" training scenarios (ONLY CONNECTIVITY)
+                modifyTrainScenUsingSplitAndCsvWriter("SPLIT", selectedFeats, epochCount[0], destFile, trainingpath)
+
             elif i == 3:
                 # Modify the "online" scenario
                 modifyAcqScenario(destFile, self.parameterDict, True)
                 if self.parameterDict["pipelineType"] != settings.optionKeys[3]:
                     # TODO for "CONNECTIVITY pipeline"!!
-                    modifyOnlineScenario(selectedFeats, destFile)
+                    print("Online scenarios for pipelines: CONNECTIVITY and MIXED are not yet available")
+                    # modifyOnlineScenario(selectedFeats, destFile)
                     # Special case: "connectivity metric"
-                    if "ConnectivityMetric" in self.parameterDict.keys():
-                        modifyConnectivityMetric(self.parameterDict["ConnectivityMetric"], destFile)
+                    # if "ConnectivityMetric" in self.parameterDict.keys():
+                    #    modifyConnectivityMetric(self.parameterDict["ConnectivityMetric"], destFile)
                 else:
                     # TODO for "MIXED pipeline"!!
                     print("Online scenarios for pipelines: CONNECTIVITY and MIXED are not yet available")
 
-        scenFile = os.path.join(self.scriptFolder, "generated", settings.templateScenFilenames[2])
-        modifyTrainPartitions(self.trainingSize, scenFile)
+        # ------------------------------------------
+        # TEST USING NEW SPLITTED "SPED UP" TRAINING
+        # In this experimental setup, we want to avoid re-computing connectivity matrices
+        # each time a training is attempted.
+        # To this end, we use the connectivity matrices (as node strengths) computed in
+        # the extraction step. For each run selected for the training, we compute a "temporary"
+        # feature vector, and store it before we would feed it to the "classifier trainer" box in
+        # openvibe.
+        # When all runs have been processed that way, we aggregate all feature vectors (per class, per
+        # feat), and feed those composite files to the feature aggregators and classifier trainer (in
+        # scenario sc2-train-speedup-finalize.xml)
+        if self.speedUp and self.parameterDict["pipelineType"] == settings.optionKeys[2]:
 
-        # Create composite file from selected items
-        class1Stim = "OVTK_GDF_Left"
-        class2Stim = "OVTK_GDF_Right"
-        tmin = 0
-        tmax = float(self.parameterDict["StimulationEpoch"])
+            # "First step"
+            scenFile = os.path.join(self.scriptFolder, "generated", settings.templateScenFilenames[4])
+            analysisPath = os.path.join(self.scriptFolder, "generated", "signals", "analysis")
+            trainingPath = os.path.join(self.scriptFolder, "generated", "signals", "training")
 
-        if not self.isCombinationComputing:
-            compositeCsv = mergeRunsCsv(compositeSigList, self.parameterDict["Class1"], self.parameterDict["Class2"],
-                                        class1Stim, class2Stim, tmin, tmax)
-            if not compositeCsv:
-                self.over.emit(False, "Error merging runs!! Most probably different list of electrodes")
-                return
+            self.info2.emit("Running first step (feature vector computation per run)")
+            for run in trainingSigList:
+                # MODIFY "FIRST STEP" SCENARIO
+                runBasename = run.split("\\")[-1].removesuffix("-TRIALS.csv")
+                modifyTrainingFirstStep(runBasename, len(selectedFeats), analysisPath, trainingPath, scenFile)
 
+                # RUN THE SCENARIO, with "False" to ignore training results
+                success = self.runOvScenarioGeneric(os.path.join(self.scriptFolder, "generated", scenFile))
+                if not success:
+                    successGlobal = False
+                    self.errorMessageTrainer()
+                    self.over.emit(False, self.exitText)
+                    break
+
+            # NOW AGGREGATE FEATURE VECTORS PER FEATURE AND PER CLASS...
             self.info.emit(True)
+            self.info2.emit("Combining Feature Vectors...")
+            compositeFiles = []
+            for classIdx in [1, 2]:
+                for feat in range(len(selectedFeats)):
+                    featFilesToMerge = []
+                    for run in trainingSigList:
+                        runBasename = run.split("\\")[-1].removesuffix("-TRIALS.csv")
+                        runFeatClassCmb = str(runBasename + "-class" + str(classIdx) + "-feat" + str(feat+1) + ".csv" )
+                        if os.path.exists(os.path.join(trainingPath, runFeatClassCmb)):
+                            featFilesToMerge.append(os.path.join(trainingPath, runFeatClassCmb))
 
-            print("Composite file for training: " + compositeCsv)
-            compositeCsvBasename = os.path.basename(compositeCsv)
+                    outCsv = mergeRunsCsv_new(featFilesToMerge)
+                    compositeFiles.append(outCsv)
+
+            # MODIFY "SECOND STEP" SCENARIO INPUTS & OUTPUT...
+            scenFile = os.path.join(self.scriptFolder, "generated", settings.templateScenFilenames[5])
             newWeightsName = "classifier-weights.xml"
-            modifyTrainIO(compositeCsvBasename, newWeightsName, scenFile)
+            modifyTrainingSecondStep(compositeFiles, len(selectedFeats), newWeightsName, scenFile)
+            modifyTrainPartitions(self.trainingSize, scenFile)
 
-            self.info2.emit("Running Training Scenario")
-
-            # RUN THE CLASSIFIER TRAINING SCENARIO
-            success, classifierScoreStr, accuracy = self.runClassifierScenario()
-
+            self.info2.emit("Finalizing Training...")
+            scenXml = os.path.join(self.scriptFolder, "generated", settings.templateScenFilenames[5])
+            success, classifierScoreStr, accuracy = self.runClassifierScenario(scenXml)
             if not success:
+                successGlobal = False
                 self.errorMessageTrainer()
                 self.over.emit(False, self.exitText)
             else:
@@ -780,23 +817,14 @@ class TrainClassifier(QtCore.QThread):
 
                 # PREPARE GOODBYE MESSAGE...
                 textFeats = str("")
-                for i in range(len(compositeSigList)):
-                    textFeats += str(os.path.basename(compositeSigList[i]) + "\n")
+                for i in range(len(trainingSigList)):
+                    textFeats += str(os.path.basename(trainingSigList[i]) + "\n")
 
-                if not self.usingDualFeatures:
-                    textFeats += str("\nFeature(s) ")
-                    textFeats += str("(" + self.parameterDict["pipelineType"]+"):\n")
-                    for i in range(len(selectedFeats)):
-                        textFeats += str("\t"+"Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
-                else:
-                    textFeats += str("\nFeature(s) for PowSpectrum:\n")
-                    for i in range(len(selectedFeats)):
-                        textFeats += str(
-                            "\t" + "Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
-                    textFeats += str("Feature(s) for Connectivity:\n")
-                    for i in range(len(selectedFeats2)):
-                        textFeats += str(
-                            "\t" + "Channel " + str(selectedFeats2[i][0]) + " at " + str(selectedFeats2[i][1]) + " Hz\n")
+                textFeats += str("\nFeature(s) ")
+                textFeats += str("(" + self.parameterDict["pipelineType"] + "):\n")
+                for i in range(len(selectedFeats)):
+                    textFeats += str(
+                        "\t" + "Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
 
                 textDisplay = textFeats
                 textDisplay += str("\n" + classifierScoreStr)
@@ -804,90 +832,155 @@ class TrainClassifier(QtCore.QThread):
                 self.exitText = textDisplay
 
         else:
-            # Create list of files from selected items
-            combinationsList = list(myPowerset(compositeSigList))
-            sigIdxList = range(len(compositeSigList))
-            combIdx = list(myPowerset(sigIdxList))
-            scores = [0 for x in range(len(combIdx))]
-            classifierScoreStrList = ["" for x in range(len(combIdx))]
+            scenFile = os.path.join(self.scriptFolder, "generated", settings.templateScenFilenames[2])
+            modifyTrainPartitions(self.trainingSize, scenFile)
 
-            successGlobal = True
-            for idxcomb, comb in enumerate(combinationsList):
-                newLabel = str("Combination " + str(combIdx[idxcomb]))
-                self.info2.emit(newLabel)
+            # Run the first training scenario  composite file from selected items
+            class1Stim = "OVTK_GDF_Left"
+            class2Stim = "OVTK_GDF_Right"
+            tmin = 0
+            tmax = float(self.parameterDict["StimulationEpoch"])
 
-                sigList = []
-                for file in comb:
-                    sigList.append(file)
-                compositeCsv = mergeRunsCsv(sigList, self.parameterDict["Class1"], self.parameterDict["Class2"],
+            if not self.isCombinationComputing:
+                compositeCsv = mergeRunsCsv(trainingSigList, self.parameterDict["Class1"], self.parameterDict["Class2"],
                                             class1Stim, class2Stim, tmin, tmax)
                 if not compositeCsv:
                     self.over.emit(False, "Error merging runs!! Most probably different list of electrodes")
                     return
 
-                print("Composite file for training: " + compositeCsv)
-                compositeCsvBasename = os.path.basename(compositeCsv)
-                newWeightsName = str("classifier-weights-" + str(idxcomb) + ".xml")
-                modifyTrainIO(compositeCsvBasename, newWeightsName, scenFile)
-
-                # RUN THE CLASSIFIER TRAINING SCENARIO
-                success, classifierScoreStrList[idxcomb], scores[idxcomb] = self.runClassifierScenario()
-                if not success:
-                    successGlobal = False
-                    self.errorMessageTrainer()
-                    break
-
                 self.info.emit(True)
 
-            if not successGlobal:
-                self.errorMessageTrainer()
-                self.over.emit(False, self.exitText)
-            else:
-                # Find max score
-                maxIdx = scores.index(max(scores))
-                # Copy weights file to generated/classifier-weights.xml
-                maxFilename = os.path.join(self.scriptFolder, "generated", "signals", "training", "classifier-weights-")
-                maxFilename += str(str(maxIdx) + ".xml")
-                origFilename = os.path.join(self.scriptFolder, "generated", "classifier-weights.xml")
-                copyfile(maxFilename, origFilename)
+                print("Composite file for training: " + compositeCsv)
+                compositeCsvBasename = os.path.basename(compositeCsv)
+                newWeightsName = "classifier-weights.xml"
+                modifyTrainIO(compositeCsvBasename, newWeightsName, scenFile)
 
-                # ==========================
-                # PREPARE GOODBYE MESSAGE...
-                textFeats = str("")
-                if not self.usingDualFeatures:
-                    textFeats += str("\nFeature(s):\n")
-                    for i in range(len(selectedFeats)):
-                        textFeats += str("\t"+"Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+                self.info2.emit("Running Training Scenario")
+
+                # RUN THE CLASSIFIER TRAINING SCENARIO
+                scenXml = os.path.join(self.scriptFolder, "generated", settings.templateScenFilenames[2])
+                success, classifierScoreStr, accuracy = self.runClassifierScenario(scenXml)
+
+                if not success:
+                    self.errorMessageTrainer()
+                    self.over.emit(False, self.exitText)
                 else:
-                    textFeats += str("\nFeature(s) for PowSpectrum:\n")
-                    for i in range(len(selectedFeats)):
-                        textFeats += str(
-                            "\t" + "Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
-                    textFeats += str("Feature(s) for Connectivity:\n")
-                    for i in range(len(selectedFeats2)):
-                        textFeats += str(
-                            "\t" + "Channel " + str(selectedFeats2[i][0]) + " at " + str(selectedFeats2[i][1]) + " Hz\n")
+                    # Copy weights file to generated/classifier-weights.xml
+                    newWeights = os.path.join(self.signalFolder, "training", "classifier-weights.xml")
+                    origFilename = os.path.join(self.scriptFolder, "generated", "classifier-weights.xml")
+                    copyfile(newWeights, origFilename)
 
-                textFeats += str("\nExperiment runs:")
-                for i in range(len(compositeSigList)):
-                    textFeats += str("\n\t[" + str(i) + "]: " + os.path.basename(compositeSigList[i]))
+                    # PREPARE GOODBYE MESSAGE...
+                    textFeats = str("")
+                    for i in range(len(trainingSigList)):
+                        textFeats += str(os.path.basename(trainingSigList[i]) + "\n")
 
-                textScore = str("Training Cross-Validation Test Accuracies per combination:\n")
-                for i in range(len(combIdx)):
-                    combIdxStr = []
-                    for j in combIdx[i]:
-                        combIdxStr.append(str(j))
-                    textScore += str("\t[" + ",".join(combIdxStr) + "]: " + str(scores[i]) + "%\n")
-                maxIdxStr = []
-                for j in combIdx[maxIdx]:
-                    maxIdxStr.append(str(j))
-                textScore += str("\nMax is combination [" + ','.join(maxIdxStr) + "] with " + str(max(scores)) + "%\n")
-                textScore += classifierScoreStrList[maxIdx]
+                    if not self.usingDualFeatures:
+                        textFeats += str("\nFeature(s) ")
+                        textFeats += str("(" + self.parameterDict["pipelineType"]+"):\n")
+                        for i in range(len(selectedFeats)):
+                            textFeats += str("\t"+"Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+                    else:
+                        textFeats += str("\nFeature(s) for PowSpectrum:\n")
+                        for i in range(len(selectedFeats)):
+                            textFeats += str(
+                                "\t" + "Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+                        textFeats += str("Feature(s) for Connectivity:\n")
+                        for i in range(len(selectedFeats2)):
+                            textFeats += str(
+                                "\t" + "Channel " + str(selectedFeats2[i][0]) + " at " + str(selectedFeats2[i][1]) + " Hz\n")
 
-                textDisplay = textFeats
-                textDisplay = str(textDisplay + "\n" + textScore)
+                    textDisplay = textFeats
+                    textDisplay += str("\n" + classifierScoreStr)
 
-                self.exitText = textDisplay
+                    self.exitText = textDisplay
+
+            else:
+                # Create list of files from selected items
+                combinationsList = list(myPowerset(trainingSigList))
+                sigIdxList = range(len(trainingSigList))
+                combIdx = list(myPowerset(sigIdxList))
+                scores = [0 for x in range(len(combIdx))]
+                classifierScoreStrList = ["" for x in range(len(combIdx))]
+
+                successGlobal = True
+                for idxcomb, comb in enumerate(combinationsList):
+                    newLabel = str("Combination " + str(combIdx[idxcomb]))
+                    self.info2.emit(newLabel)
+
+                    sigList = []
+                    for file in comb:
+                        sigList.append(file)
+                    compositeCsv = mergeRunsCsv(sigList, self.parameterDict["Class1"], self.parameterDict["Class2"],
+                                                class1Stim, class2Stim, tmin, tmax)
+                    if not compositeCsv:
+                        self.over.emit(False, "Error merging runs!! Most probably different list of electrodes")
+                        return
+
+                    print("Composite file for training: " + compositeCsv)
+                    compositeCsvBasename = os.path.basename(compositeCsv)
+                    newWeightsName = str("classifier-weights-" + str(idxcomb) + ".xml")
+                    modifyTrainIO(compositeCsvBasename, newWeightsName, scenFile)
+
+                    # RUN THE CLASSIFIER TRAINING SCENARIO
+                    scenXml = os.path.join(self.scriptFolder, "generated", settings.templateScenFilenames[2])
+                    success, classifierScoreStrList[idxcomb], scores[idxcomb] = self.runClassifierScenario(scenXml)
+                    if not success:
+                        successGlobal = False
+                        self.errorMessageTrainer()
+                        break
+
+                    self.info.emit(True)
+
+                if not successGlobal:
+                    self.errorMessageTrainer()
+                    self.over.emit(False, self.exitText)
+                else:
+                    # Find max score
+                    maxIdx = scores.index(max(scores))
+                    # Copy weights file to generated/classifier-weights.xml
+                    maxFilename = os.path.join(self.scriptFolder, "generated", "signals", "training", "classifier-weights-")
+                    maxFilename += str(str(maxIdx) + ".xml")
+                    origFilename = os.path.join(self.scriptFolder, "generated", "classifier-weights.xml")
+                    copyfile(maxFilename, origFilename)
+
+                    # ==========================
+                    # PREPARE GOODBYE MESSAGE...
+                    textFeats = str("")
+                    if not self.usingDualFeatures:
+                        textFeats += str("\nFeature(s):\n")
+                        for i in range(len(selectedFeats)):
+                            textFeats += str("\t"+"Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+                    else:
+                        textFeats += str("\nFeature(s) for PowSpectrum:\n")
+                        for i in range(len(selectedFeats)):
+                            textFeats += str(
+                                "\t" + "Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+                        textFeats += str("Feature(s) for Connectivity:\n")
+                        for i in range(len(selectedFeats2)):
+                            textFeats += str(
+                                "\t" + "Channel " + str(selectedFeats2[i][0]) + " at " + str(selectedFeats2[i][1]) + " Hz\n")
+
+                    textFeats += str("\nExperiment runs:")
+                    for i in range(len(trainingSigList)):
+                        textFeats += str("\n\t[" + str(i) + "]: " + os.path.basename(trainingSigList[i]))
+
+                    textScore = str("Training Cross-Validation Test Accuracies per combination:\n")
+                    for i in range(len(combIdx)):
+                        combIdxStr = []
+                        for j in combIdx[i]:
+                            combIdxStr.append(str(j))
+                        textScore += str("\t[" + ",".join(combIdxStr) + "]: " + str(scores[i]) + "%\n")
+                    maxIdxStr = []
+                    for j in combIdx[maxIdx]:
+                        maxIdxStr.append(str(j))
+                    textScore += str("\nMax is combination [" + ','.join(maxIdxStr) + "] with " + str(max(scores)) + "%\n")
+                    textScore += classifierScoreStrList[maxIdx]
+
+                    textDisplay = textFeats
+                    textDisplay = str(textDisplay + "\n" + textScore)
+
+                    self.exitText = textDisplay
 
         self.stop = True
         self.over.emit(True, self.exitText)
@@ -931,12 +1024,11 @@ class TrainClassifier(QtCore.QThread):
 
         return selectedFeats, errMsg
 
-    def runClassifierScenario(self):
+    def runClassifierScenario(self, scenFile):
         # ----------
-        # Run the classifier training scen (sc2-train.xml), using the provided parameters
-        # and features
+        # Run the provided training scenario, and check the console output for termination, errors, and
+        # classification results
         # ----------
-        scenFile = os.path.join(self.scriptFolder, "generated", settings.templateScenFilenames[2])
 
         # TODO WARNING : MAYBE CHANGE THAT IN THE FUTURE...
         # enableConfChange = False
@@ -990,33 +1082,74 @@ class TrainClassifier(QtCore.QThread):
                         stringToWrite = stringToWrite.split("trainer> ")
                         classifierScoreStr = str(classifierScoreStr + stringToWrite[1] + "\n")
 
-        lines = classifierScoreStr.splitlines()
 
-        target_1_True_Negative = float(lines[2].split()[2])
-        target_1_False_Positive = float(lines[2].split()[3])
-        target_2_False_Negative = float(lines[3].split()[2])
-        target_2_True_Positive = float(lines[3].split()[3])
+        if activateScoreMsgBox:
+            lines = classifierScoreStr.splitlines()
 
-        precision_Class_1 = round(target_1_True_Negative / (target_1_True_Negative + target_2_False_Negative), 2)
-        sensitivity_Class_1 = round(target_1_True_Negative / (target_1_True_Negative + target_1_False_Positive), 2)
-        precision_Class_2 = round(target_2_True_Positive / (target_2_True_Positive + target_1_False_Positive), 2)
-        sensitivity_Class_2 = round(target_2_True_Positive / (target_2_True_Positive + target_2_False_Negative), 2)
+            target_1_True_Negative = float(lines[2].split()[2])
+            target_1_False_Positive = float(lines[2].split()[3])
+            target_2_False_Negative = float(lines[3].split()[2])
+            target_2_True_Positive = float(lines[3].split()[3])
 
-        accuracy = round(100.0 * (target_1_True_Negative + target_2_True_Positive) / (
-                target_1_True_Negative + target_1_False_Positive + target_2_False_Negative + target_2_True_Positive),
-                         2)
+            precision_Class_1 = round(target_1_True_Negative / (target_1_True_Negative + target_2_False_Negative), 2)
+            sensitivity_Class_1 = round(target_1_True_Negative / (target_1_True_Negative + target_1_False_Positive), 2)
+            precision_Class_2 = round(target_2_True_Positive / (target_2_True_Positive + target_1_False_Positive), 2)
+            sensitivity_Class_2 = round(target_2_True_Positive / (target_2_True_Positive + target_2_False_Negative), 2)
 
-        F_1_Score_Class_1 = round(
-            2 * precision_Class_1 * sensitivity_Class_1 / (precision_Class_1 + sensitivity_Class_1), 2)
-        F_1_Score_Class_2 = round(
-            2 * precision_Class_2 * sensitivity_Class_2 / (precision_Class_2 + sensitivity_Class_2), 2)
+            accuracy = round(100.0 * (target_1_True_Negative + target_2_True_Positive) / (
+                    target_1_True_Negative + target_1_False_Positive + target_2_False_Negative + target_2_True_Positive),
+                             2)
 
-        messageClassif = "Overall accuracy : " + str(accuracy) + "%\n"
-        messageClassif += "Class 1 | Precision  : " + str(precision_Class_1) + " | " + "Sensitivity : " + str(
-            sensitivity_Class_1)
-        messageClassif += " | F_1 Score : " + str(F_1_Score_Class_1) + "\n"
-        messageClassif += "Class 2 | Precision  : " + str(precision_Class_2) + " | " + "Sensitivity : " + str(
-            sensitivity_Class_2)
-        messageClassif += " | F_1 Score : " + str(F_1_Score_Class_2)
+            F_1_Score_Class_1 = round(
+                2 * precision_Class_1 * sensitivity_Class_1 / (precision_Class_1 + sensitivity_Class_1), 2)
+            F_1_Score_Class_2 = round(
+                2 * precision_Class_2 * sensitivity_Class_2 / (precision_Class_2 + sensitivity_Class_2), 2)
 
-        return success, messageClassif, accuracy
+            messageClassif = "Overall accuracy : " + str(accuracy) + "%\n"
+            messageClassif += "Class 1 | Precision  : " + str(precision_Class_1) + " | " + "Sensitivity : " + str(
+                sensitivity_Class_1)
+            messageClassif += " | F_1 Score : " + str(F_1_Score_Class_1) + "\n"
+            messageClassif += "Class 2 | Precision  : " + str(precision_Class_2) + " | " + "Sensitivity : " + str(
+                sensitivity_Class_2)
+            messageClassif += " | F_1 Score : " + str(F_1_Score_Class_2)
+
+            return success, messageClassif, accuracy
+
+        else:
+            return success
+
+    def runOvScenarioGeneric(self, scenXml):
+        # ----------
+        # Run a specified OpenViBE scenario. Filename must be absolute.
+        # The console output is read only to find "Application terminated" or specific errors
+        # ----------
+
+        # BUILD THE COMMAND (use designer.cmd from GUI)
+        command = self.ovScript
+        if platform.system() == 'Windows':
+            command = command.replace("/", "\\")
+
+        # Run actual command (openvibe-designer.cmd --no-gui --play-fast <scen.xml>)
+        p = subprocess.Popen([command, "--invisible", "--play-fast", scenXml],
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+
+        # Read console output to detect end of process
+        # and prompt user with classification score. Quite artisanal but works
+        success = True
+        classifierScoreStr = ""
+        activateScoreMsgBox = False
+        while True:
+            output = p.stdout.readline()
+            if p.poll() is not None:
+                break
+            if output:
+                print(str(output))
+                if "Invalid indexes: stopIdx - trainIndex = 1" in str(output):
+                    success = False
+                    return success
+                if "Application terminated" in str(output):
+                    classifierScoreStr = str(classifierScoreStr + "\n")
+                    break
+
+        return success
+

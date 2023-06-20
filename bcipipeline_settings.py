@@ -25,6 +25,8 @@ templateScenFilenames = ["sc1-monitor-acq.xml",
                          "sc2-extract.xml",
                          "sc2-train-composite.xml",
                          "sc3-online.xml",
+                         "sc2-train-speedup-firststep.xml",
+                         "sc2-train-speedup-finalize.xml",
                          "mi-stimulations.lua"]
 
 global connectMetrics

@@ -109,6 +109,13 @@
 			<Value>0.0</Value>
 		</Setting>
 		<Setting>
+			<Identifier>(0x4da3159f, 0x3c425757)</Identifier>
+			<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
+			<Name>ConnectivityShift</Name>
+			<DefaultValue>0</DefaultValue>
+			<Value>0</Value>
+		</Setting>
+		<Setting>
 			<Identifier>(0x8b3361a8, 0xa318ece3)</Identifier>
 			<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
 			<Name>AutoRegressiveOrder</Name>
