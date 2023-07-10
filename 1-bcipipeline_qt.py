@@ -1,5 +1,6 @@
 import sys
 import os
+import mne
 import subprocess
 from shutil import copyfile
 import json
@@ -47,30 +48,22 @@ class Dialog(QDialog):
         self.setWindowTitle('Pipeline Generation GUI')
         self.dlgLayout = QVBoxLayout()
 
+        # SPECIAL LAYOUTS...
+        self.montageLayoutIdx = None
+        self.customMontageLayoutIdx = None
+
         label = str("=== Protocol Selection ===")
         self.label = QLabel(label)
         self.label.setFont(QFont("system-ui", 12))
         self.label.setAlignment(QtCore.Qt.AlignCenter)
 
         self.selectedScenarioName = None
-        self.combo = QComboBox(self)
+        self.scenarioComboBox = QComboBox(self)
         for idx, key in enumerate(settings.optionKeys):
-            self.combo.addItem(settings.optionsComboText[key], idx)
-        self.combo.currentIndexChanged.connect(self.comboBoxChanged)
+            self.scenarioComboBox.addItem(settings.optionsComboText[key], idx)
+        self.scenarioComboBox.currentIndexChanged.connect(self.scenarioComboBoxChanged)
 
         self.paramWidgets = []
-
-        # Electrodes file...
-        self.electrodesFile = None
-        # self.btn_browse = QPushButton("Browse for electrode file...")
-        # self.btn_browse.clicked.connect(lambda: self.browseForElectrodeFile())
-        # self.electrodesFileWidget = QWidget()
-        # layout_h = QHBoxLayout(self.electrodesFileWidget)
-        # self.electrodesFileTextBox = QLineEdit()
-        # self.electrodesFileTextBox.setText(";".join(self.electrodesList))
-        # self.electrodesFileTextBox.setEnabled(True)
-        # layout_h.addWidget(self.electrodesFileTextBox)
-        # layout_h.addWidget(self.btn_browse)
 
         # Generate button
         self.btn_generateLaunch = QPushButton("Generate scenarios, launch HappyFeat")
@@ -79,35 +72,30 @@ class Dialog(QDialog):
         self.btn_generate.clicked.connect(lambda: self.generate(False))
 
         self.dlgLayout.addWidget(self.label)
-        self.dlgLayout.addWidget(self.combo)
+        self.dlgLayout.addWidget(self.scenarioComboBox)
         # self.dlgLayout.addLayout(self.formLayout)
         self.setLayout(self.dlgLayout)
 
         # display initial layout
         self.initialWindow()
 
-    def comboBoxChanged(self, ix):
+    def scenarioComboBoxChanged(self, ix):
         if ix:
             pipelineKey = settings.optionKeys[ix]
 
             # TODO : replace by "reset" later on ?
-            self.combo.setEnabled(False)
+            self.scenarioComboBox.setEnabled(False)
 
             self.templateFolder = settings.optionsTemplatesDir[pipelineKey]
             print(str("TEMPLATE FOLDER : " + self.templateFolder))
 
-            self.selectedScenarioName = self.combo.currentText()
-            formLayout = QFormLayout()
-
-            # PARAMETER ALWAYS PRESENT : LIST OF CHANNELS
-            # formLayout.addRow("Electrodes List", self.electrodesFileWidget)
-            # self.dlgLayout.addLayout(formLayout)
+            self.selectedScenarioName = self.scenarioComboBox.currentText()
+            self.parameterDict = {}
 
             # COLUMN OF PARAMETERS
             vBoxLayout = QVBoxLayout()
 
-            self.parameterDict = {}
-
+            # PARAMETERS
             labelText = [None, None]
             label = [None, None]
             labelText[0] = str("=== ")
@@ -117,6 +105,36 @@ class Dialog(QDialog):
             label[0].setAlignment(QtCore.Qt.AlignCenter)
             label[0].setFont(QFont("system-ui", 12))
             vBoxLayout.addWidget(label[0])
+
+            # PARAMETER ALWAYS PRESENT : ELECTRODES MONTAGE
+            # Drop-down menu with montages available in MNE
+            # + Custom option (will open a file selection in the future... TODO)
+            self.layoutMontages = QVBoxLayout()
+            self.layoutMontageSelectionH = QHBoxLayout()
+            self.layoutMontageV1 = QVBoxLayout()
+            self.layoutMontageV2 = QVBoxLayout()
+            labelMontage = QLabel()
+            labelMontage.setText("Channel Montage")
+            self.layoutMontageV1.addWidget(labelMontage)
+            self.layoutMontageV1.setAlignment(QtCore.Qt.AlignTop)
+            self.montageComboBox = QComboBox(self)
+            montageIdx = 0
+            self.montageComboBox.addItem("Custom... (select file)")
+            for idx, mtg in enumerate(mne.channels.get_builtin_montages()):
+                self.montageComboBox.addItem(mtg)
+                if mtg == "standard_1020":  # default
+                    montageIdx = idx+1
+
+            self.montageComboBox.setCurrentIndex(montageIdx)
+            self.montageComboBox.currentIndexChanged.connect(self.montageComboBoxChanged)
+            self.layoutMontageV2.addWidget(self.montageComboBox)
+            self.layoutMontageSelectionH.addLayout(self.layoutMontageV1)
+            self.layoutMontageSelectionH.addLayout(self.layoutMontageV2)
+            self.layoutMontages.addLayout(self.layoutMontageSelectionH)
+
+            vBoxLayout.addLayout(self.layoutMontages)
+
+            # OTHER PARAMETERS
 
             formLayout = None
             formLayout = QFormLayout()
@@ -163,6 +181,30 @@ class Dialog(QDialog):
             self.dlgLayout.addWidget(self.btn_generate)
             self.show()
 
+    def montageComboBoxChanged(self, ix):
+        if ix == 0:  # Custom
+            # open new layout to let user choose montage file
+            self.btn_browseMontage = QPushButton("Browse...")
+            self.btn_browseMontage.clicked.connect(lambda: self.browseForMontage())
+            self.customMontageWidget = QWidget()
+            layout_h = QHBoxLayout(self.customMontageWidget)
+            self.customMontageTxtBox = QLineEdit()
+            self.customMontageTxtBox.setText("")
+            self.customMontageTxtBox.setEnabled(False)
+            layout_h.addWidget(self.customMontageTxtBox)
+            layout_h.addWidget(self.btn_browseMontage)
+            self.layoutMontageV2.addWidget(self.customMontageWidget)
+
+        else:
+            # if "custom" layout had been opened before, remove it.
+            if self.layoutMontageV2.count() > 1:
+                self.btn_browseMontage.setParent(None)
+                self.customMontageWidget.setParent(None)
+                self.customMontageTxtBox.setParent(None)
+                self.layoutMontageV2.removeItem(self.layoutMontageV2.itemAt(1))
+
+        return
+
     def browseForDesigner(self):
         directory = os.getcwd()
         self.ovScript, dummy = QFileDialog.getOpenFileName(self, "OpenViBE designer script", str(directory))
@@ -173,16 +215,16 @@ class Dialog(QDialog):
 
         return
 
-    def browseForElectrodeFile(self):
+    def browseForMontage(self):
         directory = os.getcwd()
-        self.electrodesFile, dummy = QFileDialog.getOpenFileName(self, "Open electrode names file", str(directory))
-        if self.electrodesFile:
-            electrodes = []
-            with open(self.electrodesFile) as f:
-                lines = f.readlines()
-                for elec in lines:
-                    electrodes.append(elec.rstrip("\n"))
-            self.electrodesFileTextBox.setText(";".join(electrodes))
+        self.customMontagePath, dummy = QFileDialog.getOpenFileName(self, "Open electrode names file", str(directory))
+        # TODO : add a check on the content of the file...
+        if ".txt" in self.customMontagePath:
+            self.customMontageTxtBox.setText(self.customMontagePath)
+        else:
+            myMsgBox("Please enter a valid path for the custom montage file")
+
+        return
 
     def initialWindow(self):
         self.show()
@@ -196,6 +238,18 @@ class Dialog(QDialog):
         if self.ovScript is None:
             myMsgBox("Please enter a valid path for the openViBE designer script")
             return
+
+        if self.montageComboBox.currentIndex() == 0:  # custom
+            if self.customMontagePath is None:
+                myMsgBox("Please provide a valid file for the custom montage")
+                return
+
+        # Montage : default values...
+        self.parameterDict["sensorMontage"] = self.montageComboBox.currentText()
+        self.parameterDict["customMontagePath"] = ''
+        if self.montageComboBox.currentIndex() == 0:
+            self.parameterDict["sensorMontage"] = "custom"
+            self.parameterDict["customMontagePath"] = self.customMontagePath
 
         # self.parameterDict["ChannelNames"] = electrodes
         self.parameterDict["ovDesignerPath"] = self.ovScript

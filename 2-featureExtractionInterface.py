@@ -86,6 +86,9 @@ class Dialog(QDialog):
         self.trainingFiles = []
         # Sampling Freq: to be loaded later, in CSV files
         self.samplingFreq = None
+        self.ovScript = None
+        self.sensorMontage = None
+        self.customMontagePath = None
 
         self.extractTimerStart = 0
         self.extractTimerEnd = 0
@@ -107,14 +110,17 @@ class Dialog(QDialog):
 
         # GET PARAMS FROM JSON FILE
         self.scriptPath = os.path.dirname(os.path.realpath(sys.argv[0]))
+
         if "params.json" in os.listdir(os.path.join(self.scriptPath, "generated")):
             print("--- Using parameters from params.json...")
             self.jsonfullpath = os.path.join(self.scriptPath, "generated", "params.json")
             with open(self.jsonfullpath) as jsonfile:
                 self.parameterDict = json.load(jsonfile)
             self.ovScript = self.parameterDict["ovDesignerPath"]
+            self.sensorMontage = self.parameterDict["sensorMontage"]
+            self.customMontagePath = self.parameterDict["customMontagePath"]
         else:
-            # WARN create a params.json with default parameters
+            # WARN and exit
             myMsgBox("--- WARNING : no params.json found, please use 1-bcipipeline_qt.py first !")
             self.reject()
 
@@ -127,14 +133,20 @@ class Dialog(QDialog):
         self.setWindowTitle('HappyFeat - Feature Selection interface')
         self.dlgLayout = QHBoxLayout()
 
-        # Create menus...
+        # Create top bar menus...
         self.menuBar = QMenuBar(self)
         self.dlgLayout.setMenuBar(self.menuBar)
         self.menuOptions = QMenu("&Options")
         self.menuBar.addMenu(self.menuOptions)
+        # OpenViBE designer browser...
         self.qActionFindOV = QAction("&Browse for OpenViBE", self)
         self.qActionFindOV.triggered.connect(lambda: self.browseForDesigner())
         self.menuOptions.addAction(self.qActionFindOV)
+
+        # # JSON params...
+        # self.qActionLoadJson = QAction("&Load param file", self)
+        # self.qActionLoadJson.triggered.connect(lambda: self.loadJsonFile())
+        # self.menuOptions.addAction(self.qActionLoadJson)
 
         # -----------------------------------------------------------------------
         # NEW! LEFT-MOST PART: Signal acquisition & Online classification parts
@@ -191,8 +203,10 @@ class Dialog(QDialog):
         self.labelExtractParams = QLabel(labelExtractParams)
         self.labelExtractParams.setAlignment(QtCore.Qt.AlignCenter)
 
-        # Copy elements from json file.
+        # Copy extraction parameters from json file.
+        # First create a new dict (extractParamsDict) with defaults params...
         self.extractParamsDict = self.getExtractionParameters()
+        # ... then copy from existing params file
         if self.parameterDict:
             for (key, elem) in enumerate(self.extractParamsDict):
                 if elem in self.parameterDict:
@@ -204,6 +218,8 @@ class Dialog(QDialog):
         extractParametersLayout.addLayout(self.layoutExtractLabels)
         extractParametersLayout.addLayout(self.layoutExtractLineEdits)
 
+        # For each extraction param of the selected metric (see bcipipeline_settings.py)
+        # add a widget allowing the user to edit this parameter
         for idx, (paramId, paramVal) in enumerate(self.extractParamsDict.items()):
             labelTemp = QLabel()
             labelTemp.setText(settings.paramIdText[paramId])
@@ -246,16 +262,17 @@ class Dialog(QDialog):
         self.btn_runExtractionScenario.clicked.connect(lambda: self.runExtractionScenario())
         self.btn_runExtractionScenario.setStyleSheet("font-weight: bold")
 
-        # TODO : keep this part ? OPENVIBE DESIGNER FINDER
-        self.btn_browseOvScript = QPushButton("Browse for OpenViBE designer script")
-        self.btn_browseOvScript.clicked.connect(lambda: self.browseForDesigner())
-        self.designerWidget = QWidget()
-        layout_h = QHBoxLayout(self.designerWidget)
-        self.designerTextBox = QLineEdit()
-        self.designerTextBox.setText(str(self.ovScript))
-        self.designerTextBox.setEnabled(False)
-        layout_h.addWidget(self.designerTextBox)
-        layout_h.addWidget(self.btn_browseOvScript)
+        # NOTE : THIS HAS BEEN MOVED TO "OPTIONS" MENU IN TOP BAR
+        # # TODO : keep this part ? OPENVIBE DESIGNER FINDER
+        # self.btn_browseOvScript = QPushButton("Browse for OpenViBE designer script")
+        # self.btn_browseOvScript.clicked.connect(lambda: self.browseForDesigner())
+        # self.designerWidget = QWidget()
+        # layout_designer_h = QHBoxLayout(self.designerWidget)
+        # self.designerTextBox = QLineEdit()
+        # self.designerTextBox.setText(str(self.ovScript))
+        # self.designerTextBox.setEnabled(False)
+        # layout_designer_h.addWidget(self.designerTextBox)
+        # layout_designer_h.addWidget(self.btn_browseOvScript)
 
         # Arrange all widgets in the layout
         self.layoutExtract.addWidget(self.labelFeatExtract)
@@ -264,7 +281,7 @@ class Dialog(QDialog):
         self.layoutExtract.addLayout(extractParametersLayout)
         self.layoutExtract.addWidget(self.labelReminder)
         self.layoutExtract.addWidget(self.expParamListWidget)
-        self.layoutExtract.addWidget(self.designerWidget)
+        # self.layoutExtract.addWidget(self.designerWidget)
         self.layoutExtract.addWidget(self.btn_runExtractionScenario)
 
         # Add separator...
@@ -1170,7 +1187,7 @@ class Dialog(QDialog):
         # Acquisition part...
         for idx in range(self.layoutAcqOnline.count()):
             self.layoutAcqOnline.itemAt(idx).widget().setEnabled(myBool)
-        self.btn_browseOvScript.setEnabled(myBool)
+        # self.btn_browseOvScript.setEnabled(myBool)
         self.menuOptions.setEnabled(myBool)
 
     def enableExtractionGui(self, myBool):
@@ -1179,7 +1196,7 @@ class Dialog(QDialog):
             self.layoutExtractLineEdits.itemAt(idx).widget().setEnabled(myBool)
         self.btn_runExtractionScenario.setEnabled(myBool)
         self.fileListWidget.setEnabled(myBool)
-        self.btn_browseOvScript.setEnabled(myBool)
+        # self.btn_browseOvScript.setEnabled(myBool)
         self.menuOptions.setEnabled(myBool)
 
     def enableVizGui(self, myBool):
@@ -1311,12 +1328,20 @@ class Dialog(QDialog):
 
     def btnTopo(self, features, title):
         error = True
+
+        # First manage montage option...
+        if self.sensorMontage == "custom":
+            # TODO : get custom montage...
+            myMsgBox("wow this is impossible as of today, please choose a standard montage in GUI 1")
+            return
+
+        # 2 cases : 1 freq bin, or freq range
         if self.freqTopo.text().isdigit() \
                 and 0 < int(self.freqTopo.text()) < (self.samplingFreq / 2):
             print("Freq Topo: " + self.freqTopo.text())
             error = False
             freqMax = -1
-            qt_plot_topo(features.Rsigned, features.electrodes_final,
+            qt_plot_topo(features.Rsigned, self.sensorMontage, self.customMontagePath, features.electrodes_final,
                          int(self.freqTopo.text()), freqMax, features.fres, self.samplingFreq,
                          self.colormapScale.isChecked(), title)
         elif ":" in self.freqTopo.text() \
@@ -1327,7 +1352,7 @@ class Dialog(QDialog):
                         freqMax = int(self.freqTopo.text().split(":")[1])
                         if 0 < freqMin < freqMax < (self.samplingFreq / 2):
                             error = False
-                            qt_plot_topo(features.Rsigned, features.electrodes_final,
+                            qt_plot_topo(features.Rsigned, self.sensorMontage, self.customMontagePath, features.electrodes_final,
                                          freqMin, freqMax, features.fres, self.samplingFreq,
                                          self.colormapScale.isChecked(), title)
 
@@ -1410,13 +1435,20 @@ class Dialog(QDialog):
         directory = os.getcwd()
         newPath, dummy = QFileDialog.getOpenFileName(self, "OpenViBE designer", str(directory))
         if "openvibe-designer.cmd" or "openvibe-designer.exe" or "openvibe-designer.sh" in newPath:
-            self.designerTextBox.setText(newPath)
+            # self.designerTextBox.setText(newPath)
+            self.parameterDict["ovDesignerPath"] = newPath
             self.ovScript = newPath
+
+        # TODO : add some check, to verify that it's an OpenViBE exec..? how..?
+        #
 
         # TODO : update json file
         # ...
         return
 
+    def updateJsonFile(self):
+        with open(self.jsonfullpath, "w") as outfile:
+            json.dump(self.parameterDict, outfile, indent=4)
 
 # ------------------------------------------------------
 # STATIC FUNCTIONS
@@ -1510,8 +1542,8 @@ def qt_plot_metric2(power_cond1, power_cond2, rsquare, freqs_array, electrodesLi
 
 # Plot "Brain topography", using either Power Spectrum (in same pipeline)
 # or Node Strength (or similar metric) (in Connectivity pipeline)
-def qt_plot_topo(Rsigned, electrodes, freqMin, freqMax, fres, fs, scaleColormap, title):
-    topo_plot(Rsigned, title, round(freqMin/fres), round(freqMax/fres), electrodes,
+def qt_plot_topo(Rsigned, montage, customMontage, electrodes, freqMin, freqMax, fres, fs, scaleColormap, title):
+    topo_plot(Rsigned, title, montage, customMontage, electrodes, round(freqMin/fres), round(freqMax/fres),
               fres, fs, scaleColormap, 'Signed R square')
     plt.show()
 
