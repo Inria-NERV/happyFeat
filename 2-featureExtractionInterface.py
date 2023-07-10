@@ -1029,10 +1029,15 @@ class Dialog(QDialog):
 
         # Instantiate the thread...
         combiComp = False
+        enableSpeedUp = False
+        if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+            if self.enableSpeedUp.isChecked():
+                enableSpeedUp = True
+
         self.trainClassThread = TrainClassifier(combiComp, self.trainingFiles,
                                                 signalFolder, templateFolder, scriptsFolder, self.ovScript,
                                                 trainingSize, trainingFeats,
-                                                trainingParamDict, self.samplingFreq, self.enableSpeedUp.isChecked())
+                                                trainingParamDict, self.samplingFreq, enableSpeedUp)
 
         # Signal: Training work thread finished one step
         # Increment progress bar + change its label
