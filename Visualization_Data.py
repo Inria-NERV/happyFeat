@@ -2,7 +2,6 @@ from Statistical_analysis import *
 import matplotlib.pyplot as plt
 from matplotlib.widgets import RectangleSelector
 from matplotlib import cm
-from matplotlib.colors import ListedColormap
 from mne.defaults import _EXTRAPOLATE_DEFAULT, _BORDER_DEFAULT
 
 import mne
@@ -21,6 +20,61 @@ def add_colorbar(ax, im, cmap, side="right", pad=.05, title=None,
 
     return cbar, cax
 
+def topo_plot(Rsquare, title, montage, customMontage, electrodes, freqMin, freqMax, fres, fs, scaleColormap, Stat_method):
+    fig, ax = plt.subplots()
+
+    useRange = False
+    if freqMax > 0:
+        useRange = True
+
+    if montage == "custom":
+        # TODO : manage custom montage...
+        print ("Custom electrode layout not yet available!")
+        return
+
+    size_dim = mne.channels.make_standard_montage(montage)
+    biosemi_montage_inter = mne.channels.make_standard_montage(montage)
+    ind = [i for (i, channel) in enumerate(biosemi_montage_inter.ch_names) if channel in electrodes]
+    biosemi_montage = biosemi_montage_inter.copy()
+    # Only keep the desired channels
+    biosemi_montage.ch_names = [biosemi_montage_inter.ch_names[x] for x in ind]
+    kept_channel_info = [biosemi_montage_inter.dig[x + 3] for x in ind]
+    # Keep the first three rows as they are the fiducial points information
+    biosemi_montage.dig = biosemi_montage_inter.dig[0:3] + kept_channel_info
+
+    n_channels = len(biosemi_montage.ch_names)
+    fake_info = mne.create_info(ch_names=biosemi_montage.ch_names, sfreq=fs / 2,
+                                ch_types='eeg')
+
+    rng = np.random.RandomState(0)
+    data = rng.normal(size=(n_channels, 1)) * 1e-6
+    fake_evoked = mne.EvokedArray(data, fake_info)
+    fake_evoked.set_montage(biosemi_montage)
+
+    sizer = np.zeros([n_channels])
+
+    if not useRange:
+        freq = str(freqMin)
+        for i in range(n_channels):
+            for j in range(len(electrodes)):
+                if biosemi_montage.ch_names[i] == electrodes[j]:
+                    sizer[i] = Rsquare[:, freqMin][j]
+    else:
+        freq = str(freqMin) + ":" + str(freqMax)
+        for i in range(n_channels):
+            for j in range(len(electrodes)):
+                if biosemi_montage.ch_names[i] == electrodes[j]:
+                    sizer[i] = Rsquare[:, freqMin:freqMax][j].mean()
+
+    vmin = None
+    vmax = 1
+    if scaleColormap:
+        vmax = None
+
+    plot_topomap_data_viz(title, sizer, fake_evoked.info, sensors=False, names=biosemi_montage.ch_names, show_names=True,
+                          res=500, mask_params=dict(marker='', markerfacecolor='w', markeredgecolor='k', linewidth=0,
+                                                    markersize=0), contours=0, image_interp='gaussian', show=True,
+                          extrapolate='head', cmap='jet', freq=freq, vmin=vmin, vmax=vmax, Stat_method=Stat_method)
 
 def plot_topomap_data_viz(title, data, pos, vmin=None, vmax=None, cmap=None, sensors=True,
                           res=64, axes=None, names=None, show_names=False, mask=None,
@@ -114,11 +168,9 @@ def _plot_topomap_test(title, data, pos, vmin=None, vmax=None, cmap=None, sensor
                        show_names=False, mask=None, mask_params=None, outlines='head', contours=6,
                        image_interp='bilinear', show=True, onselect=None, extrapolate=_EXTRAPOLATE_DEFAULT, sphere=None,
                        border=_BORDER_DEFAULT, ch_type='eeg', freq='10', Stat_method='R square signed'):
+
     data = np.asarray(data)
-    top = cm.get_cmap('YlOrRd_r', 128)  # r means reversed version
-    bottom = cm.get_cmap('YlGnBu_r', 128)
-    newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)), top(np.linspace(1, 0, 128))))
-    double = ListedColormap(newcolors2, name='double')
+
     if isinstance(pos, Info):  # infer pos from Info object
         picks = topomap._pick_data_channels(pos, exclude=())  # pick only data channels
         pos = topomap.pick_info(pos, picks)
@@ -202,7 +254,7 @@ def _plot_topomap_test(title, data, pos, vmin=None, vmax=None, cmap=None, sensor
                    aspect='equal', extent=extent)
     cbar, cax = add_colorbar(ax, im, cmap, side="right", pad=.1, title=None,
                              format=None, size="5%")
-    cbar.set_label('Signed R^2', rotation=270, labelpad=15)
+    cbar.set_label('R^2 value', rotation=270, labelpad=15)
     ax.set_title(title + freq + ' Hz', fontsize='large')
     # gh-1432 had a workaround for no contours here, but we'll remove it
     # because mpl has probably fixed it
@@ -297,14 +349,10 @@ def time_frequency_map(time_freq, time, freqs, channel, fmin, fmax, fres, each_p
             index_fmax = i
 
     tf = tf[index_fmin:index_fmax + 1, :]
-    top = cm.get_cmap('YlOrRd_r', 128)  # r means reversed version
-    bottom = cm.get_cmap('YlGnBu_r', 128)
-    newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)), top(np.linspace(1, 0, 128))))
-    double = ListedColormap(newcolors2, name='double')
     if np.amin(tf) < 0:
         plt.imshow(tf, cmap='jet', aspect='auto', origin='lower', vmin=vmin, vmax=vmax)
     else:
-        plt.imshow(tf, cmap='jet', aspect='auto', origin='lower')
+        plt.imshow(tf,cmap='jet',aspect='auto',origin ='lower',vmin = vmin,vmax = vmax)
     size_time = len(time) / each_point
 
     for i in range(len(time)):
@@ -565,6 +613,11 @@ def plot_metric2(Power_class1, Power_class2, Rsquare, freqs, channel, channel_ar
     #                  color='red', alpha=0.3)
 
     selected_Rsquare = Rsquare[channel, index_fmin:index_fmax]
+    # test scaling for r2
+    if max(Selected_class1) > 1.0:
+        factor = max(Selected_class1) / max(selected_Rsquare)
+        selected_Rsquare = selected_Rsquare * factor
+
     plt.plot(freqs[index_fmin:index_fmax], selected_Rsquare, label="r2", color='black')
 
     sizing = round(len(freqs[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
@@ -602,12 +655,7 @@ def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, eac
     for i in range(len(freq)):
         if freq[i] == fmax:
             index_fmax = i
-    Rsquare_reshape = Rsquare[0:64, index_fmin:index_fmax + 1]
-
-    top = cm.get_cmap('YlOrRd_r', 128)  # r means reversed version
-    bottom = cm.get_cmap('YlGnBu_r', 128)
-    newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)), top(np.linspace(1, 0, 128))))
-    double = ListedColormap(newcolors2, name='double')
+    Rsquare_reshape = Rsquare[0:len(channel_array), index_fmin:index_fmax + 1]
 
     vmin = 0
     vmax = 1
@@ -621,7 +669,8 @@ def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, eac
     cm.get_cmap('jet')
     # plt.jet()
     cbar = plt.colorbar()
-    cbar.set_label('Signed R^2', rotation=270, labelpad=10)
+    cbar.set_label('R^2', rotation=270,labelpad = 10,fontsize = 20)
+    cbar.ax.tick_params(labelsize=20)
     plt.yticks(range(len(channel_array)), channel_array)
     freq_real = range(0, round(freq[len(freq) - 1]), 2)
     sizing = round(len(freq[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
@@ -662,19 +711,49 @@ def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, eac
     # plt.show()
 
 def Reorder_plusplus(Rsquare, Wsquare, Wpvalues, electrodes_orig, powerLeft, powerRight, timefreqLeft, timefreqRight):
-    if len(electrodes_orig) >= 64:
-        electrodes_target = ['Fp1','AF7','AF3','F7','F5','F3','F1','FT9','FT7','FC5','FC3','FC1','T7','C5','C3','C1','TP7','CP5','CP3','CP1','P7','P5','P3','P1','PO7','PO3','O1','FPz','AFz','Fz','FCz','Cz','CPz','Pz','POz','Oz','Iz','Fp2','AF8','AF4','F8','F6','F4','F2','FT10','FT8','FC6','FC4','FC2','T8','C6','C4','C2','TP8','CP6','CP4','CP2','P8','P6','P4','P2','PO8','PO4','O2']
+    if len(electrodes_orig) == 74:
+        # NETBCI...
+        # electrodes_target = ['fp1', 'af7', 'af3', 'f7', 'f5', 'f3', 'f1', 'ft9', 'ft7', 'fc5', 'fc3', 'fc1',
+        #              't9', 't7', 'c5', 'c3', 'c1', 'tp9', 'tp7', 'cp5', 'cp3', 'cp1', 'p9', 'p7',
+        #              'p5', 'p3', 'p1', 'po3', 'po7', 'o1', 'po9', 'o9', 'fpz', 'afz', 'fz', 'fcz',
+        #              'cz', 'cpz', 'pz', 'poz', 'oz', 'iz', 'fp2', 'af4', 'af8', 'f2', 'f4', 'f6',
+        #              'f8', 'fc2', 'fc4', 'fc6', 'ft8', 'ft10', 'c2', 'c4', 'c6', 't8', 't10', 'cp2',
+        #              'cp4', 'cp6', 'tp8', 'tp10', 'p2', 'p4', 'p6', 'p8', 'p10', 'po4', 'o2', 'po8',
+        #              'o10', 'po10']
+
+        electrodes_target = ['FP1', 'FPz', 'FP2', 'AF1', 'AF3', 'AFz', 'AF4',
+                             'AF8', 'F7',  'F5',  'F3',   'F1',   'Fz',  'F2',
+                             'F4',  'F6',  'F8', 'FT9',  'FT7', 'FC5', 'FC3',
+                             'FC1', 'FCz', 'FC2', 'FC4', 'FC6', 'FT8', 'FT10',
+                             'T9',  'T7',   'C5',  'C3',  'C1', 'Cz', 'C2', 'C4',
+                             'C6',  'T8',  'T10', 'TP9', 'TP7', 'CP5',  'CP3', 'CP1', 'CPz',
+                             'CP2', 'CP4', 'CP6', 'TP8', 'TP10', 'P9',
+                             'P7',   'P3',  'P1',  'Pz',  'P2',  'P4',
+                             'P6',   'P8', 'P10',  'PO9', 'PO7', 'PO5',
+                             'PO3', 'POz', 'PO4',  'PO8', 'PO10', 'O1',
+                             'Oz',   'O2',  'O9',   'IZ', 'O10']
+
+    elif len(electrodes_orig) >= 64:
+        electrodes_target = ['Fp1','AF7','AF3','F7','F5','F3','F1','FT9','FT7','FC5','FC3','FC1','T7','C5','C3','C1','TP7','CP5','CP3','CP1','P7','P5','P3','P1','PO7','PO3','O1','Fpz','AFz','Fz','FCz','Cz','CPz','Pz','POz','Oz','Iz','Fp2','AF8','AF4','F8','F6','F4','F2','FT10','FT8','FC6','FC4','FC2','T8','C6','C4','C2','TP8','CP6','CP4','CP2','P8','P6','P4','P2','PO8','PO4','O2']
     else:
         electrodes_target = ['Fp1', 'F7', 'F3', 'FC5', 'FC1', 'T7', 'C3', 'CP5', 'CP1', 'P7', 'P3', 'PO9', 'O1', 'AFz',
                              'Fz', 'FCz', 'Cz', 'Pz', 'Oz', 'Fp2', 'F8', 'F4', 'FC6', 'FC2', 'T8', 'C4', 'CP6', 'CP2',
                              'P8', 'P4', 'PO10', 'O2']
     index_elec = []
+    if len(electrodes_orig) == 74:
+        # NETBCI...
+        index_elec = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                      17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+                      32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46,
+                      47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61,
+                      62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73]
 
-    for k in range(len(electrodes_target)):
-        for i in range(len(electrodes_orig)):
-            if electrodes_orig[i].casefold() == electrodes_target[k].casefold():
-                index_elec.append(i)
-                break
+    else:
+        for k in range(len(electrodes_target)):
+            for i in range(len(electrodes_orig)):
+                if electrodes_orig[i].casefold() == electrodes_target[k].casefold():
+                    index_elec.append(i)
+                    break
 
     print(index_elec)
 
@@ -704,8 +783,29 @@ def Reorder_plusplus(Rsquare, Wsquare, Wpvalues, electrodes_orig, powerLeft, pow
     return Rsquare_final, Wsquare_final, Wpvalues_final, electrodes_target, powerLeft_final, powerRight_final, timefreqLeftfinal, timefreqRightfinal
 
 def Reorder_Rsquare(Rsquare, electrodes_orig, powerLeft, powerRight):
-    if len(electrodes_orig) >= 64:
-        electrodes_target = ['Fp1','AF7','AF3','F7','F5','F3','F1','FT9','FT7','FC5','FC3','FC1','T7','C5','C3','C1','TP7','CP5','CP3','CP1','P7','P5','P3','P1','PO7','PO3','O1','FPz','AFz','Fz','FCz','Cz','CPz','Pz','POz','Oz','Iz','Fp2','AF8','AF4','F8','F6','F4','F2','FT10','FT8','FC6','FC4','FC2','T8','C6','C4','C2','TP8','CP6','CP4','CP2','P8','P6','P4','P2','PO8','PO4','O2']
+    if len(electrodes_orig) == 74:
+        # NETBCI...
+        # electrodes_target = ['fp1', 'af7', 'af3', 'f7', 'f5', 'f3', 'f1', 'ft9', 'ft7', 'fc5', 'fc3', 'fc1',
+        #               't9', 't7', 'c5', 'c3', 'c1', 'tp9', 'tp7', 'cp5', 'cp3', 'cp1', 'p9', 'p7',
+        #               'p5', 'p3', 'p1', 'po3', 'po7', 'o1', 'po9', 'o9', 'fpz', 'afz', 'fz', 'fcz',
+        #               'cz', 'cpz', 'pz', 'poz', 'oz', 'iz', 'fp2', 'af4', 'af8', 'f2', 'f4', 'f6',
+        #               'f8', 'fc2', 'fc4', 'fc6', 'ft8', 'ft10', 'c2', 'c4', 'c6', 't8', 't10', 'cp2',
+        #               'cp4', 'cp6', 'tp8', 'tp10', 'p2', 'p4', 'p6', 'p8', 'p10', 'po4', 'o2', 'po8',
+        #               'o10', 'po10']
+        electrodes_target = ['FP1', 'FPz', 'FP2', 'AF1', 'AF3', 'AFz', 'AF4',
+                             'AF8', 'F7', 'F5', 'F3', 'F1', 'Fz', 'F2',
+                             'F4', 'F6', 'F8', 'FT9', 'FT7', 'FC5', 'FC3',
+                             'FC1', 'FCz', 'FC2', 'FC4', 'FC6', 'FT8', 'FT10',
+                             'T9', 'T7', 'C5', 'C3', 'C1', 'Cz', 'C2',  'C4',
+                             'C6', 'T8', 'T10', 'TP9', 'TP7', 'CP5', 'CP3', 'CP1', 'CPz',
+                             'CP2', 'CP4', 'CP6', 'TP8', 'TP10', 'P9',
+                             'P7', 'P3', 'P1', 'Pz', 'P2', 'P4',
+                             'P6', 'P8', 'P10', 'PO9', 'PO7', 'PO5',
+                             'PO3', 'POz', 'PO4', 'PO8', 'PO10', 'O1',
+                             'Oz', 'O2', 'O9', 'IZ', 'O10']
+
+    elif len(electrodes_orig) >= 64:
+        electrodes_target = ['Fp1','AF7','AF3','F7','F5','F3','F1','FT9','FT7','FC5','FC3','FC1','T7','C5','C3','C1','TP7','CP5','CP3','CP1','P7','P5','P3','P1','PO7','PO3','O1','Fpz','AFz','Fz','FCz','Cz','CPz','Pz','POz','Oz','Iz','Fp2','AF8','AF4','F8','F6','F4','F2','FT10','FT8','FC6','FC4','FC2','T8','C6','C4','C2','TP8','CP6','CP4','CP2','P8','P6','P4','P2','PO8','PO4','O2']
     elif len(electrodes_orig) == 32:
         electrodes_target = ['Fp1', 'F7', 'F3', 'FC5', 'FC1', 'T7', 'C3', 'CP5', 'CP1', 'P7', 'P3', 'PO9', 'O1', 'AFz',
                              'Fz', 'FCz', 'Cz', 'Pz', 'Oz', 'Fp2', 'F8', 'F4', 'FC6', 'FC2', 'T8', 'C4', 'CP6', 'CP2',
@@ -715,15 +815,24 @@ def Reorder_Rsquare(Rsquare, electrodes_orig, powerLeft, powerRight):
 
     index_elec = []
 
-    for k in range(len(electrodes_target)):
-        found = False
-        for i in range(len(electrodes_orig)):
-            if electrodes_orig[i].casefold() == electrodes_target[k].casefold():
-                index_elec.append(i)
-                found = True
-                break
-        if not found:
-            print("Electrode " + electrodes_target[k] + " not found in original list!")
+    if len(electrodes_orig) == 74:
+        # NETBCI...
+        index_elec = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                      17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+                      32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46,
+                      47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61,
+                      62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73]
+
+    else:
+        for k in range(len(electrodes_target)):
+            found = False
+            for i in range(len(electrodes_orig)):
+                if electrodes_orig[i].casefold() == electrodes_target[k].casefold():
+                    index_elec.append(i)
+                    found = True
+                    break
+            if not found:
+                print("Electrode " + electrodes_target[k] + " not found in original list!")
 
 
     print(index_elec)
@@ -743,84 +852,6 @@ def Reorder_Rsquare(Rsquare, electrodes_orig, powerLeft, powerRight):
 
     return Rsquare_final, electrodes_target, powerLeft_final, powerRight_final
 
-def topo_plot(Rsquare, title, freqMin, freqMax, electrodes, fres, fs, scaleColormap, Stat_method):
-    fig, ax = plt.subplots()
-
-    useRange = False
-    if freqMax > 0:
-        useRange = True
-
-    size_dim = mne.channels.make_standard_montage('standard_1020')
-    if len(electrodes) > 32:
-        biosemi_montage = mne.channels.make_standard_montage('standard_1020')
-    else:
-        biosemi_montage_inter = mne.channels.make_standard_montage('standard_1020')
-        ind = [i for (i, channel) in enumerate(biosemi_montage_inter.ch_names) if channel in electrodes]
-        biosemi_montage = biosemi_montage_inter.copy()
-        # Keep only the desired channels
-        biosemi_montage.ch_names = [biosemi_montage_inter.ch_names[x] for x in ind]
-        kept_channel_info = [biosemi_montage_inter.dig[x + 3] for x in ind]
-        # Keep the first three rows as they are the fiducial points information
-        biosemi_montage.dig = biosemi_montage_inter.dig[0:3] + kept_channel_info
-        # biosemi_montage = mne.channels.make_standard_montage('standard_1020')
-    n_channels = len(biosemi_montage.ch_names)
-    fake_info = mne.create_info(ch_names=biosemi_montage.ch_names, sfreq=fs / 2,
-                                ch_types='eeg')
-
-    rng = np.random.RandomState(0)
-    data = rng.normal(size=(n_channels, 1)) * 1e-6
-    fake_evoked = mne.EvokedArray(data, fake_info)
-    fake_evoked.set_montage(biosemi_montage)
-
-    # first we obtain the 3d positions of selected channels
-    chs = ['Iz', 'Cz', 'T9', 'T10']
-    pos = np.stack([size_dim.get_positions()['ch_pos'][ch] for ch in chs])
-
-    # now we calculate the radius from T7 and T8 x position
-    # (we could use Oz and Fpz y positions as well)
-    radius = np.abs(pos[[2, 3], 0]).mean()
-
-    # then we obtain the x, y, z sphere center this way:
-    # x: x position of the Oz channel (should be very close to 0)
-    # y: y position of the T8 channel (should be very close to 0 too)
-    # z: average z position of Oz, Fpz, T7 and T8 (their z position should be the
-    #    the same, so we could also use just one of these channels), it should be
-    #    positive and somewhere around `0.03` (3 cm)
-    x = pos[0, 0]
-    y = pos[-1, 1]
-    z = pos[:, -1].mean()
-    sizer = np.zeros([n_channels])
-    print(x)
-    print(y)
-    print(z)
-
-    if not useRange:
-        freq = str(freqMin)
-        for i in range(n_channels):
-            for j in range(len(electrodes)):
-                if biosemi_montage.ch_names[i] == electrodes[j]:
-                    sizer[i] = Rsquare[:, freqMin][j]
-    else:
-        freq = str(freqMin) + ":" + str(freqMax)
-        for i in range(n_channels):
-            for j in range(len(electrodes)):
-                if biosemi_montage.ch_names[i] == electrodes[j]:
-                    sizer[i] = Rsquare[:, freqMin:freqMax][j].mean()
-
-    top = cm.get_cmap('YlOrRd_r', 128)  # r means reversed version
-    bottom = cm.get_cmap('YlGnBu_r', 128)
-    newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)), top(np.linspace(1, 0, 128))))
-    double = ListedColormap(newcolors2, name='double')
-
-    vmin = None
-    vmax = 1
-    if scaleColormap:
-        vmax = None
-
-    plot_topomap_data_viz(title, sizer, fake_evoked.info, sensors=False, names=biosemi_montage.ch_names, show_names=True,
-                          res=256, mask_params=dict(marker='', markerfacecolor='w', markeredgecolor='k', linewidth=0,
-                                                    markersize=0), contours=0, image_interp='gaussian', show=True,
-                          extrapolate='head', cmap='jet', freq=freq, vmin=vmin, vmax=vmax, Stat_method=Stat_method)
 
 
 def plot_Wsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, each_point, fmin, fmax):
@@ -839,12 +870,7 @@ def plot_Wsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, eac
     for i in range(len(freq)):
         if freq[i] == fmax:
             index_fmax = i
-    Rsquare_reshape = Rsquare[0:64, index_fmin:index_fmax + 1]
-
-    top = cm.get_cmap('YlOrRd_r', 128)  # r means reversed version
-    bottom = cm.get_cmap('YlGnBu_r', 128)
-    newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)), top(np.linspace(1, 0, 128))))
-    double = ListedColormap(newcolors2, name='double')
+    Rsquare_reshape = Rsquare[0:len(channel_array), index_fmin:index_fmax + 1]
 
     if np.amin(Rsquare_reshape) < 0:
         plt.imshow(Rsquare_reshape, cmap='jet', aspect='auto', vmin=-np.amax(abs(Rsquare_reshape)),
@@ -914,10 +940,6 @@ def time_frequency_map_between_cond(time_freq, time, freqs, channel, fmin, fmax,
             index_fmax = i
 
     rsquare_signed = rsquare_signed[index_fmin:index_fmax + 1, :]
-    top = cm.get_cmap('YlOrRd_r', 128)  # r means reversed version
-    bottom = cm.get_cmap('YlGnBu_r', 128)
-    newcolors2 = np.vstack((bottom(np.linspace(0, 1, 128)), top(np.linspace(1, 0, 128))))
-    double = ListedColormap(newcolors2, name='double')
     if np.amin(rsquare_signed) < 0:
         plt.imshow(rsquare_signed, cmap='jet', aspect='auto', origin='lower', vmin=-np.amax(rsquare_signed),
                    vmax=np.amax(rsquare_signed))
