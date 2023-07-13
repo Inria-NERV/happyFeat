@@ -296,18 +296,6 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         winLen = float(self.parameterDict["TimeWindowLength"])
         winShift = float(self.parameterDict["TimeWindowShift"])
 
-        # electrodes_orig = channel_generator(nbElectrodes, 'TP9', 'TP10')
-        # Replace "ground" and "ref" electrodes (eg TP9/TP10) with new grounds and ref (eg AFz and FCz)
-        ground = 'TP9'
-        newGround = 'FPz'
-        ref = 'TP10'
-        newRef = 'FCz'
-        electrodes_orig = elecGroundRef(electrodeList, ground, newGround, ref, newRef)
-        if not electrodes_orig:
-            errMsg = str("Problem with the list of electrodes...")
-            self.over.emit(False, errMsg)
-            return
-
         # For multiple runs (ie. multiple selected CSV files), we just concatenate
         # the trials from all files. Then the displayed spectral features (R²map, PSD, topography)
         # will be computed as averages over all the trials.
@@ -382,10 +370,10 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
                                                  power_cond1_final[:, :, :(n_bins - 1)])
 
         Rsigned_2, Wsquare_2, Wpvalues_2, electrodes_final, power_cond1_2, power_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
-            = Reorder_plusplus(Rsigned, Wsquare, Wpvalues, electrodes_orig, power_cond1_final, power_cond2_final,
+            = Reorder_plusplus(Rsigned, Wsquare, Wpvalues, electrodeList, power_cond1_final, power_cond2_final,
                                timefreq_cond1_final, timefreq_cond2_final)
 
-        self.Features.electrodes_orig = electrodes_orig
+        self.Features.electrodes_orig = electrodeList
         self.Features.power_cond2 = power_cond2_2
         self.Features.power_cond1 = power_cond1_2
         self.Features.timefreq_cond1 = timefreq_cond1_2
@@ -537,20 +525,6 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         connectOverlap = float(self.parameterDict["ConnectivityOverlap"])
         sampFreq = listSamplingFreqs[0]
 
-        # TODO : later (pb with subset...)
-        # Replace "ground" and "ref" electrodes (eg TP9/TP10) with new grounds and ref (eg AFz and FCz)
-        ground = 'TP9'
-        newGround = 'FPz'
-        ref = 'TP10'
-        newRef = 'FCz'
-        electrodes_orig = elecGroundRef(electrodeList, ground, newGround, ref, newRef)
-        if not electrodes_orig:
-            errMsg = str("Problem with the list of electrodes...")
-            self.over.emit(False, errMsg)
-            return
-
-        # electrodes_orig = electrodeList
-
         # For multiple runs (ie. multiple selected CSV files), we just concatenate
         # the trials from all files. Then the displayed spectral features (R²map, PSD, topography)
         # will be computed as averages over all the trials.
@@ -582,11 +556,10 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
                                       connect_cond1_final[:, :, :(n_bins - 1)])
 
         Rsigned_2, electrodes_final, connect_cond1_2, connect_cond2_2, \
-            = Reorder_Rsquare(Rsigned, electrodes_orig, connect_cond1_final, connect_cond2_final)
+            = Reorder_Rsquare(Rsigned, electrodeList, connect_cond1_final, connect_cond2_final)
 
         # Fill Features struct...
-        self.Features.electrodes_orig = electrodes_orig
-        # self.Features.electrodes_orig = electrodeList
+        self.Features.electrodes_orig = electrodeList
         self.Features.electrodes_final = electrodes_final
         self.Features.power_cond1 = connect_cond1_2
         self.Features.power_cond2 = connect_cond2_2
