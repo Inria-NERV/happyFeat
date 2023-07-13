@@ -549,6 +549,8 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
             self.over.emit(False, errMsg)
             return
 
+        # electrodes_orig = electrodeList
+
         # For multiple runs (ie. multiple selected CSV files), we just concatenate
         # the trials from all files. Then the displayed spectral features (R²map, PSD, topography)
         # will be computed as averages over all the trials.
@@ -722,31 +724,33 @@ class TrainClassifier(QtCore.QThread):
             if i == 2:
                 # training scenarios
                 if not self.usingDualFeatures:
-                    modifyTrainScenUsingSplitAndClassifierTrainer("SPLIT", selectedFeats, epochCount[0], destFile)
+                    modifyTrainScenUsingSplitAndClassifiers("SPLIT", "Classifier trainer", selectedFeats, epochCount[0], destFile)
                     # Special case: "connectivity metric"
                     if "ConnectivityMetric" in self.parameterDict.keys():
                         modifyConnectivityMetric(self.parameterDict["ConnectivityMetric"], destFile)
                 else:
-                    modifyTrainScenUsingSplitAndClassifierTrainer("SPLIT POWSPECTRUM", selectedFeats, epochCount[0], destFile)
-                    modifyTrainScenUsingSplitAndClassifierTrainer("SPLIT CONNECT", selectedFeats2, epochCount[1], destFile)
+                    modifyTrainScenUsingSplitAndClassifiers("SPLIT POWSPECTRUM", "Classifier trainer", selectedFeats, epochCount[0], destFile)
+                    modifyTrainScenUsingSplitAndClassifiers("SPLIT CONNECT", "Classifier trainer", selectedFeats2, epochCount[1], destFile)
                     modifyConnectivityMetric(self.parameterDict["ConnectivityMetric"], destFile)
+
             elif i == 4 and not self.usingDualFeatures and self.parameterDict["pipelineType"] == settings.optionKeys[2]:
                 # "speed up" training scenarios (ONLY CONNECTIVITY)
                 modifyTrainScenUsingSplitAndCsvWriter("SPLIT", selectedFeats, epochCount[0], destFile, trainingpath)
 
             elif i == 3:
-                # Modify the "online" scenario
+                #  "online" scenario
                 modifyAcqScenario(destFile, self.parameterDict, True)
-                if self.parameterDict["pipelineType"] != settings.optionKeys[3]:
-                    # TODO for "CONNECTIVITY pipeline"!!
-                    print("Online scenarios for pipelines: CONNECTIVITY and MIXED are not yet available")
-                    # modifyOnlineScenario(selectedFeats, destFile)
+                if not self.usingDualFeatures:
+                    modifyTrainScenUsingSplitAndClassifiers("SPLIT", "Classifier processor", selectedFeats, epochCount[0], destFile)
                     # Special case: "connectivity metric"
-                    # if "ConnectivityMetric" in self.parameterDict.keys():
-                    #    modifyConnectivityMetric(self.parameterDict["ConnectivityMetric"], destFile)
+                    if "ConnectivityMetric" in self.parameterDict.keys():
+                        modifyConnectivityMetric(self.parameterDict["ConnectivityMetric"], destFile)
                 else:
-                    # TODO for "MIXED pipeline"!!
-                    print("Online scenarios for pipelines: CONNECTIVITY and MIXED are not yet available")
+                    modifyTrainScenUsingSplitAndClassifiers("SPLIT POWSPECTRUM", "Classifier processor", selectedFeats, epochCount[0], destFile)
+                    modifyTrainScenUsingSplitAndClassifiers("SPLIT CONNECT", "Classifier processor", selectedFeats2, epochCount[1], destFile)
+                    modifyConnectivityMetric(self.parameterDict["ConnectivityMetric"], destFile)
+
+
 
         # ------------------------------------------
         # TEST USING NEW SPLITTED "SPED UP" TRAINING

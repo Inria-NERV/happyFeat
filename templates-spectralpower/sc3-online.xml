@@ -1,7 +1,7 @@
 <OpenViBE-Scenario>
 	<FormatVersion>2</FormatVersion>
 	<Creator>OpenViBE Designer</Creator>
-	<CreatorVersion>3.3.0</CreatorVersion>
+	<CreatorVersion>3.5.0</CreatorVersion>
 	<Settings>
 		<Setting>
 			<Identifier>(0x018f81c4, 0xd5bb371b)</Identifier>
@@ -2538,6 +2538,34 @@ visualization technique...</Text>
 			</Attributes>
 		</Comment>
 		<Comment>
+			<Identifier>(0x00001911, 0x00007988)</Identifier>
+			<Text>Rename your channels if necessary</Text>
+			<Attributes>
+				<Attribute>
+					<Identifier>(0x473d9a43, 0x97fc0a97)</Identifier>
+					<Value>80</Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0x7234b86b, 0x2b8651a5)</Identifier>
+					<Value>-96</Value>
+				</Attribute>
+			</Attributes>
+		</Comment>
+		<Comment>
+			<Identifier>(0x00001911, 0x00007989)</Identifier>
+			<Text>Use ACQ client or pre-recorded file</Text>
+			<Attributes>
+				<Attribute>
+					<Identifier>(0x473d9a43, 0x97fc0a97)</Identifier>
+					<Value>160</Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0x7234b86b, 0x2b8651a5)</Identifier>
+					<Value>-240</Value>
+				</Attribute>
+			</Attributes>
+		</Comment>
+		<Comment>
 			<Identifier>(0x000027eb, 0x000056b5)</Identifier>
 			<Text>Online Classification
 using selected features 
@@ -2559,11 +2587,11 @@ using selected features
 			<Attributes>
 				<Attribute>
 					<Identifier>(0x473d9a43, 0x97fc0a97)</Identifier>
-					<Value>112</Value>
+					<Value>48</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x7234b86b, 0x2b8651a5)</Identifier>
-					<Value>0</Value>
+					<Value>16</Value>
 				</Attribute>
 			</Attributes>
 		</Comment>
@@ -2574,11 +2602,11 @@ for this online test</Text>
 			<Attributes>
 				<Attribute>
 					<Identifier>(0x473d9a43, 0x97fc0a97)</Identifier>
-					<Value>608</Value>
+					<Value>832</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x7234b86b, 0x2b8651a5)</Identifier>
-					<Value>32</Value>
+					<Value>96</Value>
 				</Attribute>
 			</Attributes>
 		</Comment>
