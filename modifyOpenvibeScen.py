@@ -202,7 +202,7 @@ def modifyTrainScenario(chanFreqPairs, epochCount, scenXml):
     tree.write(scenXml)
     return
 
-def modifyTrainScenUsingSplitAndClassifierTrainer(splitStr, chanFreqPairs, epochCount, scenXml):
+def modifyTrainScenUsingSplitAndClassifiers(splitStr, classifStr, chanFreqPairs, epochCount, scenXml):
     print("---Modifying " + scenXml + " with Selected Features")
     tree = ET.parse(scenXml)
     root = tree.getroot()
@@ -217,13 +217,13 @@ def modifyTrainScenUsingSplitAndClassifierTrainer(splitStr, chanFreqPairs, epoch
                 continue
 
     # Find Id of Classifier trainer box
-    boxLast = findBox(root, "Classifier trainer")
+    boxLast = findBox(root, classifStr)
     boxLastId = boxLast.find("Identifier").text
 
     # FIRST STEP : modify existing branches in the scenario, using the first pair of features
     for splitbox in splitBoxes:
         boxId = splitbox.find("Identifier").text
-        # Find all boxes chained btw this box and the last one (classifier trainer)
+        # Find all boxes chained btw this box and the last one (classifier trainer or processor)
         if boxId is not None and boxLastId is not None:
             boxList = findChainedBoxes(root, boxId, boxLastId)
 
@@ -269,7 +269,7 @@ def modifyTrainScenUsingSplitAndClassifierTrainer(splitStr, chanFreqPairs, epoch
         for splitbox in splitBoxes:
             locOffset = 120
             boxId = splitbox.find("Identifier").text
-            # Find all boxes chained btw this split and the last (classifier trainer)
+            # Find all boxes chained btw this split and the last (classifier trainer or processor)
             if boxId is not None and boxLastId is not None:
                 boxList = findChainedBoxes(root, boxId, boxLastId)
 
@@ -280,7 +280,7 @@ def modifyTrainScenUsingSplitAndClassifierTrainer(splitStr, chanFreqPairs, epoch
 
                     pair = [chan, freq]
                     # Copy list of chained boxes (except the first (SPLIT) and
-                    # the 2 last ones (feature aggreg, classifier trainer) and chain them.
+                    # the 2 last ones (feature aggreg, classifier trainer or processor) and chain them.
                     listofBoxesToChain, nbOfOutputs = copyBoxList(root, boxList, locOffset, pair, 1, 2)
 
                     # Add an input to Feature Aggregator box in the current chain
@@ -402,7 +402,7 @@ def modifyTrainScenUsingSplitAndCsvWriter(splitStr, chanFreqPairs, epochCount, s
                             listofBoxesToChain, nbOfOutputs = copyBoxListGeneric(root, boxList, locOffset, pair, 1, 0)
                             csvWriter = findBoxId(root, listofBoxesToChain[-1])
                             oldName = csvWriter.find('Name').text.split("Feat")
-                            changeBoxName(csvWriter, str(oldName[0] + 'Feat' + str(int(oldName[1])+1) ) )
+                            changeBoxName(csvWriter, str(oldName[0] + 'Feat' + str(int(oldName[1])+ idxPair) ) )
                             linkBoxesGeneric(root, listofBoxesToChain, nbOfOutputs)
 
                             locOffset += locOffset
