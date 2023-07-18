@@ -1,7 +1,7 @@
 <OpenViBE-Scenario>
 	<FormatVersion>2</FormatVersion>
 	<Creator>OpenViBE Designer</Creator>
-	<CreatorVersion>3.3.0</CreatorVersion>
+	<CreatorVersion>3.5.0</CreatorVersion>
 	<Settings>
 		<Setting>
 			<Identifier>(0x1c0e7c81, 0x94da0a11)</Identifier>
@@ -22,7 +22,7 @@
 			<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
 			<Name>TrainingPath</Name>
 			<DefaultValue>training</DefaultValue>
-			<Value>training</Value>
+			<Value>train</Value>
 		</Setting>
 		<Setting>
 			<Identifier>(0x48f5b68c, 0xc44ba9f1)</Identifier>

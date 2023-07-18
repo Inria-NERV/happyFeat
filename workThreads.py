@@ -69,7 +69,7 @@ class Extraction(QtCore.QThread):
     over = pyqtSignal(bool, str)
 
     def __init__(self, ovScript, scenFile, signalFiles, signalFolder,
-                 parameterDict, parent=None):
+                 parameterDict, currentExtractParams, parent=None):
 
         super().__init__(parent)
         self.stop = False
@@ -78,6 +78,8 @@ class Extraction(QtCore.QThread):
         self.signalFiles = signalFiles
         self.signalFolder = signalFolder
         self.parameterDict = parameterDict.copy()
+        self.currentExtractParams = currentExtractParams
+        self.extractDict = parameterDict["ExtractionParams"][parameterDict["currentExtractParams"]].copy()
 
     def run(self):
         command = self.ovScript
@@ -86,6 +88,7 @@ class Extraction(QtCore.QThread):
 
         for signalFile in self.signalFiles:
             tstart = time.perf_counter()
+
             self.info2.emit(str("Extracting data for file " + signalFile + "..."))
 
             # Verify the existence of metadata files for each selected files,
@@ -108,10 +111,10 @@ class Extraction(QtCore.QThread):
 
             ## MODIFY THE EXTRACTION SCENARIO with entered parameters
             # /!\ after updating ARburg order and FFT size using sampfreq
-            self.parameterDict["ChannelNames"] = ";".join(electrodeList)
-            self.parameterDict["AutoRegressiveOrder"] = str(
-                timeToSamples(float(self.parameterDict["AutoRegressiveOrderTime"]), sampFreq))
-            self.parameterDict["PsdSize"] = str(freqResToPsdSize(float(self.parameterDict["FreqRes"]), sampFreq))
+            self.extractDict["ChannelNames"] = ";".join(electrodeList)
+            self.extractDict["AutoRegressiveOrder"] = str(
+                timeToSamples(float(self.extractDict["AutoRegressiveOrderTime"]), sampFreq))
+            self.extractDict["PsdSize"] = str(freqResToPsdSize(float(self.extractDict["FreqRes"]), sampFreq))
 
             # Special case : "subset of electrodes" for connectivity
             # DISABLED FOR NOW
@@ -119,32 +122,33 @@ class Extraction(QtCore.QThread):
             # if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             #     if self.parameterDict["ChannelSubset"] == "":
             #         self.parameterDict["ChannelSubset"] = self.parameterDict["ChannelNames"]
-            self.parameterDict["ChannelSubset"] = self.parameterDict["ChannelNames"]
+            self.extractDict["ChannelSubset"] = self.extractDict["ChannelNames"]
 
             # Special case : "connectivity shift", used in scenarios but not set that way
             # in the interface
-            if "ConnectivityOverlap" in self.parameterDict.keys():
-                self.parameterDict["ConnectivityShift"] = str(float(self.parameterDict["ConnectivityLength"]) * (100.0 - float(self.parameterDict["ConnectivityOverlap"])) / 100.0)
+            if "ConnectivityOverlap" in self.extractDict.keys():
+                self.extractDict["ConnectivityShift"] = str(float(self.extractDict["ConnectivityLength"]) * (100.0 - float(self.extractDict["ConnectivityOverlap"])) / 100.0)
 
             # Modify the scenario
-            modifyScenarioGeneralSettings(self.scenFile, self.parameterDict)
+            modifyScenarioGeneralSettings(self.scenFile, self.extractDict)
 
             # Special case: "connectivity metric"
-            if "ConnectivityMetric" in self.parameterDict.keys():
-                modifyConnectivityMetric(self.parameterDict["ConnectivityMetric"], self.scenFile)
+            if "ConnectivityMetric" in self.extractDict.keys():
+                modifyConnectivityMetric(self.extractDict["ConnectivityMetric"], self.scenFile)
 
             # Modify extraction scenario to use provided signal file, and rename outputs accordingly
             filename = signalFile.removesuffix(".ov")
-            outputSpect1 = str(filename + "-SPECTRUM-" + self.parameterDict["Class1"] + ".csv")
-            outputSpect2 = str(filename + "-SPECTRUM-" + self.parameterDict["Class2"] + ".csv")
-            outputConnect1 = str(filename + "-CONNECT-" + self.parameterDict["Class1"] + ".csv")
-            outputConnect2 = str(filename + "-CONNECT-" + self.parameterDict["Class2"] + ".csv")
-            outputBaseline1 = str(filename + "-SPECTRUM-" + self.parameterDict["Class1"] + "-BASELINE.csv")
-            outputBaseline2 = str(filename + "-SPECTRUM-" + self.parameterDict["Class2"] + "-BASELINE.csv")
+            outputSpect1 = str(filename + "-SPECTRUM-" + self.parameterDict["AcquisitionParams"]["Class1"] + ".csv")
+            outputSpect2 = str(filename + "-SPECTRUM-" + self.parameterDict["AcquisitionParams"]["Class2"] + ".csv")
+            outputConnect1 = str(filename + "-CONNECT-" + self.parameterDict["AcquisitionParams"]["Class1"] + ".csv")
+            outputConnect2 = str(filename + "-CONNECT-" + self.parameterDict["AcquisitionParams"]["Class2"] + ".csv")
+            outputBaseline1 = str(filename + "-SPECTRUM-" + self.parameterDict["AcquisitionParams"]["Class1"] + "-BASELINE.csv")
+            outputBaseline2 = str(filename + "-SPECTRUM-" + self.parameterDict["AcquisitionParams"]["Class2"] + "-BASELINE.csv")
             outputTrials = str(filename + "-TRIALS.csv")
             modifyExtractionIO(self.scenFile, signalFile, outputSpect1, outputSpect2,
-                               outputBaseline1, outputBaseline2, outputConnect1, outputConnect2, outputTrials)
+                               outputBaseline1, outputBaseline2, outputConnect1, outputConnect2, outputTrials, self.currentExtractParams)
 
+            # Launch OV scenario !
             p = subprocess.Popen([command, "--invisible", "--play-fast", self.scenFile],
                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
@@ -158,9 +162,10 @@ class Extraction(QtCore.QThread):
                     if "Application terminated" in str(output):
                         break
 
-            self.info.emit(True)
+            self.info.emit(True)    # send "info" signal to increment progressbar
             tstop = time.perf_counter()
             print("= Extraction from file " + filename + " finished in " + str(tstop-tstart))
+
         self.stop = True
         self.over.emit(True, "")
 
@@ -173,13 +178,14 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
     info2 = pyqtSignal(str)
     over = pyqtSignal(bool, str)
 
-    def __init__(self, analysisFiles, signalFolder, parameterDict, Features, sampFreq, parent=None):
+    def __init__(self, analysisFiles, workingFolder, parameterDict, Features, sampFreq, parent=None):
 
         super().__init__(parent)
         self.stop = False
         self.analysisFiles = analysisFiles
-        self.signalFolder = signalFolder
+        self.workingFolder = workingFolder
         self.parameterDict = parameterDict.copy()
+        self.extractDict = parameterDict["ExtractionParams"][parameterDict["currentExtractParams"]].copy()
         self.Features = Features
         self.samplingFreq = sampFreq
 
@@ -198,18 +204,14 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         for selectedFilesForViz in self.analysisFiles:
             idxFile += 1
             pipelineLabel = "SPECTRUM"
-            class1label = self.parameterDict["Class1"]
-            class2label = self.parameterDict["Class2"]
+            class1label = self.parameterDict["AcquisitionParams"]["Class1"]
+            class2label = self.parameterDict["AcquisitionParams"]["Class2"]
             selectedBasename = selectedFilesForViz
 
-            path1 = os.path.join(self.signalFolder, "analysis",
-                                 str(selectedBasename + "-" + pipelineLabel + "-" + class1label + ".csv"))
-            path2 = os.path.join(self.signalFolder, "analysis",
-                                 str(selectedBasename + "-" + pipelineLabel + "-" + class2label + ".csv"))
-            path1baseline = os.path.join(self.signalFolder, "analysis",
-                                         str(selectedBasename + "-" + pipelineLabel + "-" + class1label + "-BASELINE.csv"))
-            path2baseline = os.path.join(self.signalFolder, "analysis",
-                                         str(selectedBasename + "-" + pipelineLabel + "-" + class2label + "-BASELINE.csv"))
+            path1 = os.path.join(self.workingFolder, str(selectedBasename + "-" + pipelineLabel + "-" + class1label + ".csv"))
+            path2 = os.path.join(self. workingFolder, str(selectedBasename + "-" + pipelineLabel + "-" + class2label + ".csv"))
+            path1baseline = os.path.join(self.workingFolder, str(selectedBasename + "-" + pipelineLabel + "-" + class1label + "-BASELINE.csv"))
+            path2baseline = os.path.join(self.workingFolder, str(selectedBasename + "-" + pipelineLabel + "-" + class2label + "-BASELINE.csv"))
 
             self.info2.emit(str("Loading " + pipelineLabel + " Data for file " + str(idxFile) + " : " + selectedFilesForViz))
             [header1, data1] = load_csv_np(path1)
@@ -288,13 +290,13 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         # ----------
         # Compute the features used for visualization
         # ----------
-        trialLength = float(self.parameterDict["StimulationEpoch"])
-        trials = int(self.parameterDict["TrialNb"])
+        trialLength = float(self.extractDict["StimulationEpoch"])
+        trials = int(self.parameterDict["AcquisitionParams"]["TrialNb"])
         electrodeList = listElectrodeList[0]
         nbElectrodes = len(electrodeList)
         n_bins = listFreqBins[0]
-        winLen = float(self.parameterDict["TimeWindowLength"])
-        winShift = float(self.parameterDict["TimeWindowShift"])
+        winLen = float(self.extractDict["TimeWindowLength"])
+        winShift = float(self.extractDict["TimeWindowShift"])
 
         # For multiple runs (ie. multiple selected CSV files), we just concatenate
         # the trials from all files. Then the displayed spectral features (R²map, PSD, topography)
@@ -343,12 +345,12 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
 
         self.info2.emit("Computing statistics")
 
-        trialLengthSec = float(self.parameterDict["TrialLength"])
+        trialLengthSec = float(self.parameterDict["AcquisitionParams"]["TrialLength"])
         totalTrials = len(self.dataNp1) * trials
-        windowLength = float(self.parameterDict["TimeWindowLength"])
-        windowShift = float(self.parameterDict["TimeWindowShift"])
+        windowLength = float(self.extractDict["TimeWindowLength"])
+        windowShift = float(self.extractDict["TimeWindowShift"])
         segmentsPerTrial = round((trialLength - windowLength) / windowShift)
-        fres = float(self.parameterDict["FreqRes"])
+        fres = float(self.extractDict["FreqRes"])
 
         timeVectAtomic = [0]
         for i in range(segmentsPerTrial - 1):
@@ -407,13 +409,15 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
     info2 = pyqtSignal(str)
     over = pyqtSignal(bool, str)
 
-    def __init__(self, analysisFiles, signalFolder, parameterDict, Features, sampFreq, parent=None):
+    def __init__(self, analysisFiles, workingFolder, metaFolder, parameterDict, Features, sampFreq, parent=None):
 
         super().__init__(parent)
         self.stop = False
         self.analysisFiles = analysisFiles
-        self.signalFolder = signalFolder
+        self.workingFolder = workingFolder
+        self.metaFolder = metaFolder
         self.parameterDict = parameterDict.copy()
+        self.extractDict = parameterDict["ExtractionParams"][parameterDict["currentExtractParams"]].copy()
         self.Features = Features
         self.samplingFreq = sampFreq
 
@@ -430,20 +434,18 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         for selectedFilesForViz in self.analysisFiles:
             idxFile += 1
             pipelineLabel = "CONNECT"
-            class1label = self.parameterDict["Class1"]
-            class2label = self.parameterDict["Class2"]
+            class1label = self.parameterDict["AcquisitionParams"]["Class1"]
+            class2label = self.parameterDict["AcquisitionParams"]["Class2"]
             selectedBasename = selectedFilesForViz
 
             # First, get metadata...
-            metapath = os.path.join(self.signalFolder, str(selectedBasename + "-META.csv"))
+            metapath = os.path.join(self.metaFolder, str(selectedBasename + "-META.csv"))
             [sampFreq, electrodeList] = extractMetadata(metapath)
             listSamplingFreqs.append(sampFreq)
 
             # Now load data...
-            path1 = os.path.join(self.signalFolder, "analysis",
-                                 str(selectedBasename + "-" + pipelineLabel + "-" + class1label + ".csv"))
-            path2 = os.path.join(self.signalFolder, "analysis",
-                                 str(selectedBasename + "-" + pipelineLabel + "-" + class2label + ".csv"))
+            path1 = os.path.join(self.workingFolder, str(selectedBasename + "-" + pipelineLabel + "-" + class1label + ".csv"))
+            path2 = os.path.join(self.workingFolder, str(selectedBasename + "-" + pipelineLabel + "-" + class2label + ".csv"))
 
             self.info2.emit(str("Loading " + pipelineLabel + " Data for file " + str(idxFile) + " : " + selectedFilesForViz))
             [header1, data1] = load_csv_np(path1)
@@ -516,13 +518,13 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         # ----------
         # Compute the features used for visualization
         # ----------
-        trialLength = float(self.parameterDict["StimulationEpoch"])
-        trials = int(self.parameterDict["TrialNb"])
+        trialLength = float(self.extractDict["StimulationEpoch"])
+        trials = int(self.parameterDict["AcquisitionParams"]["TrialNb"])
         electrodeList = listElectrodeList[0]
         nbElectrodes = len(electrodeList)
         n_bins = listFreqs[0]
-        connectLength = float(self.parameterDict["ConnectivityLength"])
-        connectOverlap = float(self.parameterDict["ConnectivityOverlap"])
+        connectLength = float(self.extractDict["ConnectivityLength"])
+        connectOverlap = float(self.extractDict["ConnectivityOverlap"])
         sampFreq = listSamplingFreqs[0]
 
         # For multiple runs (ie. multiple selected CSV files), we just concatenate
@@ -546,9 +548,9 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
                 connect_cond2_final = np.concatenate((connect_cond2_final, connect_cond2))
 
         self.info2.emit("Computing statistics")
-        trialLengthSec = float(self.parameterDict["TrialLength"])
+        trialLengthSec = float(self.parameterDict["AcquisitionParams"]["TrialLength"])
         totalTrials = len(self.dataNp1) * trials
-        fres = float(self.parameterDict["FreqRes"])
+        fres = float(self.extractDict["FreqRes"])
 
         # Statistical Analysis...
         freqs_array = np.arange(0, n_bins, fres)
@@ -582,7 +584,8 @@ class TrainClassifier(QtCore.QThread):
     over = pyqtSignal(bool, str)
 
     def __init__(self, isCombinationComputing, trainingFiles,
-                 signalFolder, templateFolder, scriptFolder, ovScript,
+                 signalFolder, templateFolder,
+                 workspaceFolder, ovScript,
                  trainingSize, selectedFeats,
                  parameterDict, sampFreq, speedUp, parent=None):
 
@@ -592,7 +595,7 @@ class TrainClassifier(QtCore.QThread):
         self.trainingFiles = trainingFiles
         self.signalFolder = signalFolder
         self.templateFolder = templateFolder
-        self.scriptFolder = scriptFolder
+        self.workspaceFolder = workspaceFolder
         self.ovScript = ovScript
         self.trainingSize = trainingSize
         self.speedUp = speedUp
@@ -601,6 +604,8 @@ class TrainClassifier(QtCore.QThread):
         # or (case of mixed features) a list of 2 lists
         self.selectedFeats = selectedFeats
         self.parameterDict = parameterDict.copy()
+        self.currentExtractIdx = self.parameterDict["currentExtractParams"]
+        self.extractDict = parameterDict["ExtractionParams"][self.parameterDict["currentExtractParams"]].copy()
         self.samplingFreq = sampFreq
         self.exitText = ""
 
@@ -613,7 +618,7 @@ class TrainClassifier(QtCore.QThread):
         listSampFreq = []
         listElectrodeList = []
         for trainingFile in self.trainingFiles:
-            path = os.path.join(self.signalFolder, "training", trainingFile)
+            path = os.path.join(self.signalFolder, "train", self.currentExtractIdx, trainingFile)
             header = pd.read_csv(path, nrows=0).columns.tolist()
             listSampFreq.append(int(header[0].split(':')[1].removesuffix('Hz')))
             listElectrodeList.append(header[2:-3])
@@ -653,58 +658,58 @@ class TrainClassifier(QtCore.QThread):
                 return
 
         epochCount = [0, 0]
-        stimEpochLength = float(self.parameterDict["StimulationEpoch"])
+        stimEpochLength = float(self.extractDict["StimulationEpoch"])
         if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
-            winLength = float(self.parameterDict["TimeWindowLength"])
-            winShift = float(self.parameterDict["TimeWindowShift"])
+            winLength = float(self.extractDict["TimeWindowLength"])
+            winShift = float(self.extractDict["TimeWindowShift"])
             epochCount[0] = np.floor((stimEpochLength - winLength) / winShift) + 1
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
-            winLength = float(self.parameterDict["ConnectivityLength"])
-            overlap = float(self.parameterDict["ConnectivityOverlap"])
+            winLength = float(self.extractDict["ConnectivityLength"])
+            overlap = float(self.extractDict["ConnectivityOverlap"])
             winShift = winLength * (100.0-overlap) / 100.0
             epochCount[0] = np.floor((stimEpochLength - winLength) / winShift) + 1
         elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
-            winLength0 = float(self.parameterDict["TimeWindowLength"])
-            winShift0 = float(self.parameterDict["TimeWindowShift"])
+            winLength0 = float(self.extractDict["TimeWindowLength"])
+            winShift0 = float(self.extractDict["TimeWindowShift"])
             epochCount[0] = np.floor((stimEpochLength - winLength0) / winShift0) + 1
-            winLength1 = float(self.parameterDict["ConnectivityLength"])
-            overlap = float(self.parameterDict["ConnectivityOverlap"])
+            winLength1 = float(self.extractDict["ConnectivityLength"])
+            overlap = float(self.extractDict["ConnectivityOverlap"])
             winShift1 = winLength1 * (100.0-overlap) / 100.0
             epochCount[1] = np.floor((stimEpochLength - winLength1) / winShift1) + 1
 
         ## MODIFY THE SCENARIO with entered parameters
         # /!\ after updating ARburg order and FFT size using sampfreq
-        self.parameterDict["ChannelNames"] = ";".join(listElectrodeList[0])
-        self.parameterDict["AutoRegressiveOrder"] = str(
-            timeToSamples(float(self.parameterDict["AutoRegressiveOrderTime"]), listSampFreq[0]))
-        self.parameterDict["PsdSize"] = str(freqResToPsdSize(float(self.parameterDict["FreqRes"]), listSampFreq[0]))
+        self.extractDict["ChannelNames"] = ";".join(listElectrodeList[0])
+        self.extractDict["AutoRegressiveOrder"] = str(
+            timeToSamples(float(self.extractDict["AutoRegressiveOrderTime"]), listSampFreq[0]))
+        self.extractDict["PsdSize"] = str(freqResToPsdSize(float(self.extractDict["FreqRes"]), listSampFreq[0]))
 
         # Special case : "connectivity shift", used in scenarios but not set that way
         # in the interface
-        if "ConnectivityOverlap" in self.parameterDict.keys():
-            self.parameterDict["ConnectivityShift"] = str(float(self.parameterDict["ConnectivityLength"]) * (100.0 - float(self.parameterDict["ConnectivityOverlap"])) / 100.0)
+        if "ConnectivityOverlap" in self.extractDict.keys():
+            self.extractDict["ConnectivityShift"] = str(float(self.extractDict["ConnectivityLength"]) * (100.0 - float(self.extractDict["ConnectivityOverlap"])) / 100.0)
 
         # Case of a single feature type (power spectrum OR connectivity...)
         # RE-COPY sc2 & sc3 FROM TEMPLATE, SO THE USER CAN DO THIS MULTIPLE TIMES
         for i in [2, 3, 4, 5]:
             scenName = settings.templateScenFilenames[i]
             srcFile = os.path.join(self.templateFolder, scenName)
-            destFile = os.path.join(self.scriptFolder, "generated", scenName)
-            trainingpath = os.path.join(self.scriptFolder, "generated", "signals", "training")
+            destFile = os.path.join(self.workspaceFolder, scenName)
+            trainingpath = os.path.join(self.workspaceFolder, "signals", "train")
             print("---Copying file " + srcFile + " to " + destFile)
             copyfile(srcFile, destFile)
-            modifyScenarioGeneralSettings(destFile, self.parameterDict)
+            modifyScenarioGeneralSettings(destFile, self.extractDict)
             if i == 2:
                 # training scenarios
                 if not self.usingDualFeatures:
                     modifyTrainScenUsingSplitAndClassifiers("SPLIT", "Classifier trainer", selectedFeats, epochCount[0], destFile)
                     # Special case: "connectivity metric"
-                    if "ConnectivityMetric" in self.parameterDict.keys():
-                        modifyConnectivityMetric(self.parameterDict["ConnectivityMetric"], destFile)
+                    if "ConnectivityMetric" in self.extractDict.keys():
+                        modifyConnectivityMetric(self.extractDict["ConnectivityMetric"], destFile)
                 else:
                     modifyTrainScenUsingSplitAndClassifiers("SPLIT POWSPECTRUM", "Classifier trainer", selectedFeats, epochCount[0], destFile)
                     modifyTrainScenUsingSplitAndClassifiers("SPLIT CONNECT", "Classifier trainer", selectedFeats2, epochCount[1], destFile)
-                    modifyConnectivityMetric(self.parameterDict["ConnectivityMetric"], destFile)
+                    modifyConnectivityMetric(self.extractDict["ConnectivityMetric"], destFile)
 
             elif i == 4 and not self.usingDualFeatures and self.parameterDict["pipelineType"] == settings.optionKeys[2]:
                 # "speed up" training scenarios (ONLY CONNECTIVITY)
@@ -712,16 +717,16 @@ class TrainClassifier(QtCore.QThread):
 
             elif i == 3:
                 #  "online" scenario
-                modifyAcqScenario(destFile, self.parameterDict, True)
+                modifyAcqScenario(destFile, self.parameterDict["AcquisitionParams"], True)
                 if not self.usingDualFeatures:
                     modifyTrainScenUsingSplitAndClassifiers("SPLIT", "Classifier processor", selectedFeats, epochCount[0], destFile)
                     # Special case: "connectivity metric"
-                    if "ConnectivityMetric" in self.parameterDict.keys():
-                        modifyConnectivityMetric(self.parameterDict["ConnectivityMetric"], destFile)
+                    if "ConnectivityMetric" in self.extractDict.keys():
+                        modifyConnectivityMetric(self.extractDict["ConnectivityMetric"], destFile)
                 else:
                     modifyTrainScenUsingSplitAndClassifiers("SPLIT POWSPECTRUM", "Classifier processor", selectedFeats, epochCount[0], destFile)
                     modifyTrainScenUsingSplitAndClassifiers("SPLIT CONNECT", "Classifier processor", selectedFeats2, epochCount[1], destFile)
-                    modifyConnectivityMetric(self.parameterDict["ConnectivityMetric"], destFile)
+                    modifyConnectivityMetric(self.extractDict["ConnectivityMetric"], destFile)
 
 
 
@@ -739,18 +744,18 @@ class TrainClassifier(QtCore.QThread):
         if self.speedUp and self.parameterDict["pipelineType"] == settings.optionKeys[2]:
 
             # "First step"
-            scenFile = os.path.join(self.scriptFolder, "generated", settings.templateScenFilenames[4])
-            analysisPath = os.path.join(self.scriptFolder, "generated", "signals", "analysis")
-            trainingPath = os.path.join(self.scriptFolder, "generated", "signals", "training")
+            scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames[4])
+            analysisPath = os.path.join(self.workspaceFolder, "signals", "extract")
+            trainingPath = os.path.join(self.workspaceFolder, "signals", "train")
 
             self.info2.emit("Running first step (feature vector computation per run)")
             for run in trainingSigList:
                 # MODIFY "FIRST STEP" SCENARIO
                 runBasename = run.split("\\")[-1].removesuffix("-TRIALS.csv")
-                modifyTrainingFirstStep(runBasename, len(selectedFeats), analysisPath, trainingPath, scenFile)
+                modifyTrainingFirstStep(runBasename, len(selectedFeats), analysisPath, trainingPath, self.currentExtractIdx, scenFile)
 
                 # RUN THE SCENARIO, with "False" to ignore training results
-                success = self.runOvScenarioGeneric(os.path.join(self.scriptFolder, "generated", scenFile))
+                success = self.runOvScenarioGeneric(os.path.join(self.workspaceFolder, scenFile))
                 if not success:
                     successGlobal = False
                     self.errorMessageTrainer()
@@ -767,29 +772,29 @@ class TrainClassifier(QtCore.QThread):
                     for run in trainingSigList:
                         runBasename = run.split("\\")[-1].removesuffix("-TRIALS.csv")
                         runFeatClassCmb = str(runBasename + "-class" + str(classIdx) + "-feat" + str(feat+1) + ".csv" )
-                        if os.path.exists(os.path.join(trainingPath, runFeatClassCmb)):
-                            featFilesToMerge.append(os.path.join(trainingPath, runFeatClassCmb))
+                        if os.path.exists(os.path.join(trainingPath, self.currentExtractIdx, runFeatClassCmb)):
+                            featFilesToMerge.append(os.path.join(trainingPath, self.currentExtractIdx, runFeatClassCmb))
 
                     outCsv = mergeRunsCsv_new(featFilesToMerge)
                     compositeFiles.append(outCsv)
 
             # MODIFY "SECOND STEP" SCENARIO INPUTS & OUTPUT...
-            scenFile = os.path.join(self.scriptFolder, "generated", settings.templateScenFilenames[5])
+            scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames[5])
             newWeightsName = "classifier-weights.xml"
-            modifyTrainingSecondStep(compositeFiles, len(selectedFeats), newWeightsName, scenFile)
+            modifyTrainingSecondStep(compositeFiles, len(selectedFeats), newWeightsName, self.currentExtractIdx, scenFile)
             modifyTrainPartitions(self.trainingSize, scenFile)
 
             self.info2.emit("Finalizing Training...")
-            scenXml = os.path.join(self.scriptFolder, "generated", settings.templateScenFilenames[5])
+            scenXml = os.path.join(self.workspaceFolder, settings.templateScenFilenames[5])
             success, classifierScoreStr, accuracy = self.runClassifierScenario(scenXml)
             if not success:
                 successGlobal = False
                 self.errorMessageTrainer()
                 self.over.emit(False, self.exitText)
             else:
-                # Copy weights file to generated/classifier-weights.xml
-                newWeights = os.path.join(self.signalFolder, "training", "classifier-weights.xml")
-                origFilename = os.path.join(self.scriptFolder, "generated", "classifier-weights.xml")
+                # Copy weights file to <workspaceFolder>/classifier-weights.xml
+                newWeights = os.path.join(self.signalFolder, "train", self.currentExtractIdx, "classifier-weights.xml")
+                origFilename = os.path.join(self.workspaceFolder, "classifier-weights.xml")
                 copyfile(newWeights, origFilename)
 
                 # PREPARE GOODBYE MESSAGE...
@@ -809,17 +814,18 @@ class TrainClassifier(QtCore.QThread):
                 self.exitText = textDisplay
 
         else:
-            scenFile = os.path.join(self.scriptFolder, "generated", settings.templateScenFilenames[2])
+            scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames[2])
             modifyTrainPartitions(self.trainingSize, scenFile)
 
             # Run the first training scenario  composite file from selected items
             class1Stim = "OVTK_GDF_Left"
             class2Stim = "OVTK_GDF_Right"
             tmin = 0
-            tmax = float(self.parameterDict["StimulationEpoch"])
+            tmax = float(self.extractDict["StimulationEpoch"])
 
             if not self.isCombinationComputing:
-                compositeCsv = mergeRunsCsv(trainingSigList, self.parameterDict["Class1"], self.parameterDict["Class2"],
+                compositeCsv = mergeRunsCsv(trainingSigList, self.parameterDict["AcquisitionParams"]["Class1"],
+                                            self.parameterDict["AcquisitionParams"]["Class2"],
                                             class1Stim, class2Stim, tmin, tmax)
                 if not compositeCsv:
                     self.over.emit(False, "Error merging runs!! Most probably different list of electrodes")
@@ -830,21 +836,21 @@ class TrainClassifier(QtCore.QThread):
                 print("Composite file for training: " + compositeCsv)
                 compositeCsvBasename = os.path.basename(compositeCsv)
                 newWeightsName = "classifier-weights.xml"
-                modifyTrainIO(compositeCsvBasename, newWeightsName, scenFile)
+                modifyTrainIO(compositeCsvBasename, newWeightsName, self.currentExtractIdx, scenFile)
 
                 self.info2.emit("Running Training Scenario")
 
                 # RUN THE CLASSIFIER TRAINING SCENARIO
-                scenXml = os.path.join(self.scriptFolder, "generated", settings.templateScenFilenames[2])
+                scenXml = os.path.join(self.workspaceFolder, settings.templateScenFilenames[2])
                 success, classifierScoreStr, accuracy = self.runClassifierScenario(scenXml)
 
                 if not success:
                     self.errorMessageTrainer()
                     self.over.emit(False, self.exitText)
                 else:
-                    # Copy weights file to generated/classifier-weights.xml
-                    newWeights = os.path.join(self.signalFolder, "training", "classifier-weights.xml")
-                    origFilename = os.path.join(self.scriptFolder, "generated", "classifier-weights.xml")
+                    # Copy weights file to <workspaceFolder>/classifier-weights.xml
+                    newWeights = os.path.join(self.signalFolder, "train", self.currentExtractIdx, "classifier-weights.xml")
+                    origFilename = os.path.join(self.workspaceFolder, "classifier-weights.xml")
                     copyfile(newWeights, origFilename)
 
                     # PREPARE GOODBYE MESSAGE...
@@ -888,7 +894,8 @@ class TrainClassifier(QtCore.QThread):
                     sigList = []
                     for file in comb:
                         sigList.append(file)
-                    compositeCsv = mergeRunsCsv(sigList, self.parameterDict["Class1"], self.parameterDict["Class2"],
+                    compositeCsv = mergeRunsCsv(sigList, self.parameterDict["AcquisitionParams"]["Class1"],
+                                                self.parameterDict["AcquisitionParams"]["Class2"],
                                                 class1Stim, class2Stim, tmin, tmax)
                     if not compositeCsv:
                         self.over.emit(False, "Error merging runs!! Most probably different list of electrodes")
@@ -897,10 +904,10 @@ class TrainClassifier(QtCore.QThread):
                     print("Composite file for training: " + compositeCsv)
                     compositeCsvBasename = os.path.basename(compositeCsv)
                     newWeightsName = str("classifier-weights-" + str(idxcomb) + ".xml")
-                    modifyTrainIO(compositeCsvBasename, newWeightsName, scenFile)
+                    modifyTrainIO(compositeCsvBasename, newWeightsName, self.currentExtractIdx, scenFile)
 
                     # RUN THE CLASSIFIER TRAINING SCENARIO
-                    scenXml = os.path.join(self.scriptFolder, "generated", settings.templateScenFilenames[2])
+                    scenXml = os.path.join(self.workspaceFolder, settings.templateScenFilenames[2])
                     success, classifierScoreStrList[idxcomb], scores[idxcomb] = self.runClassifierScenario(scenXml)
                     if not success:
                         successGlobal = False
@@ -915,10 +922,10 @@ class TrainClassifier(QtCore.QThread):
                 else:
                     # Find max score
                     maxIdx = scores.index(max(scores))
-                    # Copy weights file to generated/classifier-weights.xml
-                    maxFilename = os.path.join(self.scriptFolder, "generated", "signals", "training", "classifier-weights-")
+                    # Copy weights file to <workspaceFolder>/classifier-weights.xml
+                    maxFilename = os.path.join(self.workspaceFolder, "signals", "train", "classifier-weights-")
                     maxFilename += str(str(maxIdx) + ".xml")
-                    origFilename = os.path.join(self.scriptFolder, "generated", "classifier-weights.xml")
+                    origFilename = os.path.join(self.workspaceFolder, "classifier-weights.xml")
                     copyfile(maxFilename, origFilename)
 
                     # ==========================

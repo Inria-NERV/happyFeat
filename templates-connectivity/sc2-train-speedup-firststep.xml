@@ -4,6 +4,13 @@
 	<CreatorVersion>3.5.0</CreatorVersion>
 	<Settings>
 		<Setting>
+			<Identifier>(0x63be62d3, 0xd5df2f6c)</Identifier>
+			<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
+			<Name>ExtractionIdx</Name>
+			<DefaultValue>1</DefaultValue>
+			<Value>1</Value>
+		</Setting>
+		<Setting>
 			<Identifier>(0x1c0e7c81, 0x94da0a11)</Identifier>
 			<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 			<Name>InputClass1</Name>
@@ -29,14 +36,14 @@
 			<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
 			<Name>AnalysisPath</Name>
 			<DefaultValue>analysis</DefaultValue>
-			<Value>analysis</Value>
+			<Value>extract</Value>
 		</Setting>
 		<Setting>
 			<Identifier>(0x9f4a6c0b, 0x1e0de8e9)</Identifier>
 			<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
 			<Name>TrainingPath</Name>
 			<DefaultValue>training</DefaultValue>
-			<Value>training</Value>
+			<Value>train</Value>
 		</Setting>
 	</Settings>
 	<Inputs></Inputs>
@@ -179,7 +186,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue></DefaultValue>
-					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{AnalysisPath}/$var{InputClass1}</Value>
+					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{AnalysisPath}/$var{ExtractionIdx}/$var{InputClass1}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
@@ -229,7 +236,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue></DefaultValue>
-					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{AnalysisPath}/$var{InputClass2}</Value>
+					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{AnalysisPath}/$var{ExtractionIdx}/$var{InputClass2}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>

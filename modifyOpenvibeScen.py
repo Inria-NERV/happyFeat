@@ -23,7 +23,7 @@ def modifyScenarioGeneralSettings(scenXml, parameterDict):
     tree.write(scenXml)
     return
 
-def modifyExtractionIO(scenXml, newFilename, newOutputSpect1, newOutputSpect2, newOutputBaseline1, newOutputBaseline2, newOutputConnect1, newOutputConnect2, newOutputTrials):
+def modifyExtractionIO(scenXml, newFilename, newOutputSpect1, newOutputSpect2, newOutputBaseline1, newOutputBaseline2, newOutputConnect1, newOutputConnect2, newOutputTrials, newExtractIdx):
     print("---Modifying " + scenXml + " input and output")
     tree = ET.parse(scenXml)
     root = tree.getroot()
@@ -56,6 +56,9 @@ def modifyExtractionIO(scenXml, newFilename, newOutputSpect1, newOutputSpect2, n
             elif setting.find('Name').text == "OutputTrials":
                 xmlVal = setting.find('Value')
                 xmlVal.text = newOutputTrials
+            elif setting.find('Name').text == "ExtractionIdx":
+                xmlVal = setting.find('Value')
+                xmlVal.text = newExtractIdx
 
     # WRITE NEW XML
     tree.write(scenXml)
@@ -439,7 +442,7 @@ def modifyTrainPartitions(trainParts, scenXml):
     tree.write(scenXml)
     return
 
-def modifyTrainIO(newFilename, newWeightsName, scenXml):
+def modifyTrainIO(newFilename, newWeightsName, newExtractIdx, scenXml):
     print("---Modifying " + scenXml + " input")
     tree = ET.parse(scenXml)
     root = tree.getroot()
@@ -454,6 +457,9 @@ def modifyTrainIO(newFilename, newWeightsName, scenXml):
             elif setting.find('Name').text == "OutputWeights":
                 xmlVal = setting.find('Value')
                 xmlVal.text = newWeightsName
+            elif setting.find('Name').text == "ExtractionIdx":
+                xmlVal = setting.find('Value')
+                xmlVal.text = newExtractIdx
 
     # WRITE NEW XML
     tree.write(scenXml)
@@ -573,7 +579,7 @@ def modifyConnectivityMetric(metric, scenXml):
     return
 
 
-def modifyTrainingFirstStep(runBasename, nbFeats, analysisPath, trainingPath, scenXml):
+def modifyTrainingFirstStep(runBasename, nbFeats, analysisPath, trainingPath, currentExtractId, scenXml):
     print("---Modifying " + scenXml + " outputs")
     tree = ET.parse(scenXml)
     root = tree.getroot()
@@ -590,7 +596,10 @@ def modifyTrainingFirstStep(runBasename, nbFeats, analysisPath, trainingPath, sc
                 newinput2 = str(runBasename + "-CONNECT-MI.csv")
                 xmlVal.text = newinput2
                 continue
-
+            elif setting.find('Name').text == "ExtractionIdx":
+                xmlVal = setting.find('Value')
+                xmlVal.text = currentExtractId
+                continue
 
     for feat in range(nbFeats):
 
@@ -602,7 +611,7 @@ def modifyTrainingFirstStep(runBasename, nbFeats, analysisPath, trainingPath, sc
                             if setting.find('Name').text == "Filename":
                                 xmlVal = setting.find('Value')
                                 print("       replacing " + xmlVal.text)
-                                class1featX = os.path.join(trainingPath, str(runBasename + "-class1-feat" + str(feat + 1)) + ".csv")
+                                class1featX = os.path.join(trainingPath, currentExtractId, str(runBasename + "-class1-feat" + str(feat + 1)) + ".csv")
                                 class1featX = class1featX.replace("\\", "/")
                                 xmlVal.text = str(class1featX)
                                 print("            with " + xmlVal.text)
@@ -613,7 +622,7 @@ def modifyTrainingFirstStep(runBasename, nbFeats, analysisPath, trainingPath, sc
                             if setting.find('Name').text == "Filename":
                                 xmlVal = setting.find('Value')
                                 print("       replacing " + xmlVal.text)
-                                class2featX = os.path.join(trainingPath, str(runBasename + "-class2-feat" + str(feat + 1)) + ".csv" )
+                                class2featX = os.path.join(trainingPath, currentExtractId, str(runBasename + "-class2-feat" + str(feat + 1)) + ".csv" )
                                 class2featX = class2featX.replace("\\", "/")
                                 xmlVal.text = str(class2featX)
                                 print("            with " + xmlVal.text)
@@ -622,7 +631,7 @@ def modifyTrainingFirstStep(runBasename, nbFeats, analysisPath, trainingPath, sc
     tree.write(scenXml)
     return
 
-def modifyTrainingSecondStep(compositeFiles, nbFeats, newWeightsName, scenXml):
+def modifyTrainingSecondStep(compositeFiles, nbFeats, newWeightsName, currentExtractId, scenXml):
     print("---Modifying " + scenXml + " outputs")
     tree = ET.parse(scenXml)
     root = tree.getroot()
@@ -634,6 +643,10 @@ def modifyTrainingSecondStep(compositeFiles, nbFeats, newWeightsName, scenXml):
             if setting.find('Name').text == "OutputWeights":
                 xmlVal = setting.find('Value')
                 xmlVal.text = newWeightsName
+                continue
+            if setting.find('Name').text == "ExtractionIdx":
+                xmlVal = setting.find('Value')
+                xmlVal.text = currentExtractId
 
     featAgg = []
     featAgg.append(findBox(root, "FeatAgg1") )

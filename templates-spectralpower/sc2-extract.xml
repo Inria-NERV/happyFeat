@@ -1,7 +1,7 @@
 <OpenViBE-Scenario>
 	<FormatVersion>2</FormatVersion>
 	<Creator>OpenViBE Designer</Creator>
-	<CreatorVersion>3.3.0</CreatorVersion>
+	<CreatorVersion>3.5.0</CreatorVersion>
 	<Settings>
 		<Setting>
 			<Identifier>(0xd84e1a1e, 0x3991fc6e)</Identifier>
@@ -9,6 +9,13 @@
 			<Name>EEGData</Name>
 			<DefaultValue>motor-imagery.ov</DefaultValue>
 			<Value>motor-imagery.ov</Value>
+		</Setting>
+		<Setting>
+			<Identifier>(0xa5fa3bf6, 0xac76e83e)</Identifier>
+			<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
+			<Name>ExtractionIdx</Name>
+			<DefaultValue>1</DefaultValue>
+			<Value>1</Value>
 		</Setting>
 		<Setting>
 			<Identifier>(0x28e6e7da, 0xf1d47140)</Identifier>
@@ -22,14 +29,14 @@
 			<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
 			<Name>AnalysisPath</Name>
 			<DefaultValue>analysis</DefaultValue>
-			<Value>analysis</Value>
+			<Value>extract</Value>
 		</Setting>
 		<Setting>
 			<Identifier>(0x38e0d6ef, 0x20a2bd26)</Identifier>
 			<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
 			<Name>TrainingPath</Name>
 			<DefaultValue>training</DefaultValue>
-			<Value>training</Value>
+			<Value>train</Value>
 		</Setting>
 		<Setting>
 			<Identifier>(0xe633130d, 0x97900f36)</Identifier>
@@ -138,7 +145,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue>record-[$core{date}-$core{time}].csv</DefaultValue>
-					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{AnalysisPath}/$var{OutputSpect1}</Value>
+					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{AnalysisPath}/$var{ExtractionIdx}/$var{OutputSpect1}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -209,7 +216,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue>record-[$core{date}-$core{time}].csv</DefaultValue>
-					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{TrainingPath}/$var{OutputTrials}</Value>
+					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{TrainingPath}/$var{ExtractionIdx}/$var{OutputTrials}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -280,7 +287,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue>record-[$core{date}-$core{time}].csv</DefaultValue>
-					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{AnalysisPath}/$var{OutputBaseline1}</Value>
+					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{AnalysisPath}/$var{ExtractionIdx}/$var{OutputBaseline1}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -351,7 +358,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue>record-[$core{date}-$core{time}].csv</DefaultValue>
-					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{AnalysisPath}/$var{OutputSpect2}</Value>
+					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{AnalysisPath}/$var{ExtractionIdx}/$var{OutputSpect2}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -422,7 +429,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue>record-[$core{date}-$core{time}].csv</DefaultValue>
-					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{AnalysisPath}/$var{OutputBaseline2}</Value>
+					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{AnalysisPath}/$var{ExtractionIdx}/$var{OutputBaseline2}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>

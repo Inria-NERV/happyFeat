@@ -1,7 +1,7 @@
 <OpenViBE-Scenario>
 	<FormatVersion>2</FormatVersion>
 	<Creator>OpenViBE Designer</Creator>
-	<CreatorVersion>3.3.0</CreatorVersion>
+	<CreatorVersion>3.5.0</CreatorVersion>
 	<Settings>
 		<Setting>
 			<Identifier>(0x1c0e7c81, 0x94da0a11)</Identifier>
@@ -9,6 +9,13 @@
 			<Name>EEGData</Name>
 			<DefaultValue>motor-imagery.ov</DefaultValue>
 			<Value>MI-[2022.02.02-15.51.48]-TRAINCOMPOSITE-LEFT-RIGHT.csv</Value>
+		</Setting>
+		<Setting>
+			<Identifier>(0x71625181, 0xdf304003)</Identifier>
+			<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
+			<Name>ExtractionIdx</Name>
+			<DefaultValue>1</DefaultValue>
+			<Value>1</Value>
 		</Setting>
 		<Setting>
 			<Identifier>(0x5916d702, 0x7d50cd0e)</Identifier>
@@ -22,7 +29,7 @@
 			<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
 			<Name>TrainingPath</Name>
 			<DefaultValue>training</DefaultValue>
-			<Value>training</Value>
+			<Value>train</Value>
 		</Setting>
 		<Setting>
 			<Identifier>(0x48f5b68c, 0xc44ba9f1)</Identifier>
@@ -1469,7 +1476,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue></DefaultValue>
-					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{TrainingPath}/$var{EEGData}</Value>
+					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{TrainingPath}/$var{ExtractionIdx}/$var{EEGData}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
@@ -1536,7 +1543,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename to save configuration to</Name>
 					<DefaultValue>${Path_UserData}/my-classifier.xml</DefaultValue>
-					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{TrainingPath}/$var{OutputWeights}</Value>
+					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{TrainingPath}/$var{ExtractionIdx}/$var{OutputWeights}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>

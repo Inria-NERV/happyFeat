@@ -35,7 +35,8 @@ from PyQt5.QtCore import QTimer
 from Visualization_Data import *
 from featureExtractUtils import *
 from modifyOpenvibeScen import *
-from utils import myPowerset
+from utils import *
+from workspaceMgmt import *
 from workThreads import *
 from myProgressBar import ProgressBar, ProgressBarNoInfo
 
@@ -69,9 +70,14 @@ class Features:
 
 class Dialog(QDialog):
 
-    def __init__(self, parent=None):
+    def __init__(self, workspaceFile, parent=None):
 
         super().__init__(parent)
+
+        self.scriptPath = os.path.dirname(os.path.realpath(sys.argv[0]))
+        self.workspaceFile = workspaceFile
+        self.workspaceFolder = os.path.splitext(workspaceFile)[0]
+        self.jsonfullpath = None
 
         # ---------------
         # INITIALIZATIONS
@@ -89,6 +95,7 @@ class Dialog(QDialog):
         self.ovScript = None
         self.sensorMontage = None
         self.customMontagePath = None
+        self.currentExtractParams = None
 
         self.extractTimerStart = 0
         self.extractTimerEnd = 0
@@ -108,21 +115,32 @@ class Dialog(QDialog):
         self.progressBarViz2 = None
         self.progressBarTrain = None
 
-        # GET PARAMS FROM JSON FILE
-        self.scriptPath = os.path.dirname(os.path.realpath(sys.argv[0]))
-
+        # TODO : get rid of that in the future
         if "params.json" in os.listdir(os.path.join(self.scriptPath, "generated")):
-            print("--- Using parameters from params.json...")
             self.jsonfullpath = os.path.join(self.scriptPath, "generated", "params.json")
-            with open(self.jsonfullpath) as jsonfile:
+        # # GET PARAMS FROM JSON FILE
+        # if "params.json" in os.listdir(os.path.join(self.scriptPath, "generated")):
+        #     print("--- Using parameters from params.json...")
+        #     self.jsonfullpath = os.path.join(self.scriptPath, "generated", "params.json")
+        #     with open(self.jsonfullpath) as jsonfile:
+        #         self.parameterDict = json.load(jsonfile)
+        #     self.ovScript = self.parameterDict["ovDesignerPath"]
+        #     self.sensorMontage = self.parameterDict["sensorMontage"]
+        #     self.customMontagePath = self.parameterDict["customMontagePath"]
+        # else:
+        #     # WARN and exit
+        #     myMsgBox("--- WARNING : no params.json found, please use 1-bcipipeline_qt.py first !")
+        #     self.reject()
+
+        # GET BASIC SETTINGS FROM WORKSPACE FILE
+        if self.workspaceFile:
+            print("--- Using parameters from workspace file: " + workspaceFile)
+            with open(self.workspaceFile) as jsonfile:
                 self.parameterDict = json.load(jsonfile)
             self.ovScript = self.parameterDict["ovDesignerPath"]
             self.sensorMontage = self.parameterDict["sensorMontage"]
             self.customMontagePath = self.parameterDict["customMontagePath"]
-        else:
-            # WARN and exit
-            myMsgBox("--- WARNING : no params.json found, please use 1-bcipipeline_qt.py first !")
-            self.reject()
+            self.currentExtractParams = self.parameterDict["currentExtractParams"]
 
         # -----------------------------------------------------------------------
         # CREATE INTERFACE...
@@ -142,11 +160,6 @@ class Dialog(QDialog):
         self.qActionFindOV = QAction("&Browse for OpenViBE", self)
         self.qActionFindOV.triggered.connect(lambda: self.browseForDesigner())
         self.menuOptions.addAction(self.qActionFindOV)
-
-        # # JSON params...
-        # self.qActionLoadJson = QAction("&Load param file", self)
-        # self.qActionLoadJson.triggered.connect(lambda: self.loadJsonFile())
-        # self.menuOptions.addAction(self.qActionLoadJson)
 
         # -----------------------------------------------------------------------
         # NEW! LEFT-MOST PART: Signal acquisition & Online classification parts
@@ -203,14 +216,25 @@ class Dialog(QDialog):
         self.labelExtractParams = QLabel(labelExtractParams)
         self.labelExtractParams.setAlignment(QtCore.Qt.AlignCenter)
 
-        # Copy extraction parameters from json file.
-        # First create a new dict (extractParamsDict) with defaults params...
-        self.extractParamsDict = self.getExtractionParameters()
+        # Copy extraction parameters from workspace file.
+        # create a new dict (extractParamsDict) with defaults params...
+        self.extractParamsDict = self.getDefaultExtractionParameters()
         # ... then copy from existing params file
-        if self.parameterDict:
-            for (key, elem) in enumerate(self.extractParamsDict):
-                if elem in self.parameterDict:
-                    self.extractParamsDict[elem] = self.parameterDict[elem]
+
+        if self.parameterDict["ExtractionParams"]:
+            if self.currentExtractParams and self.parameterDict["ExtractionParams"][self.currentExtractParams]:
+                # then copy its elements...
+                for (key, elem) in enumerate(self.extractParamsDict):
+                    if elem in self.parameterDict["ExtractionParams"][self.currentExtractParams]:
+                        self.extractParamsDict[elem] = self.parameterDict["ExtractionParams"][self.currentExtractParams][elem]
+            else:
+                # take last extraction scheme...
+                for extractionInstance in self.parameterDict["ExtractionParams"].keys():
+                    self.currentExtractParams = extractionInstance
+                # then copy its elements...
+                for (key, elem) in enumerate(self.extractParamsDict):
+                    if elem in self.parameterDict["ExtractionParams"][self.currentExtractParams]:
+                        self.extractParamsDict[elem] = self.parameterDict["ExtractionParams"][self.currentExtractParams][elem]
 
         extractParametersLayout = QHBoxLayout()
         self.layoutExtractLabels = QVBoxLayout()
@@ -239,7 +263,7 @@ class Dialog(QDialog):
                 self.layoutExtractLineEdits.addWidget(metricCombo)
             else:
                 lineEditExtractTemp = QLineEdit()
-                lineEditExtractTemp.setText(self.parameterDict[paramId])
+                lineEditExtractTemp.setText(self.extractParamsDict[paramId])
                 self.layoutExtractLineEdits.addWidget(lineEditExtractTemp)
 
         # Label + un-editable list of parameters for reminder
@@ -256,6 +280,10 @@ class Dialog(QDialog):
             self.expParamListWidget.insertPlainText(settings.paramIdText[paramId] + ": \t" + str(paramVal) + "\n")
             minHeight += 16
         self.expParamListWidget.setMinimumHeight(minHeight)
+
+        # Update button
+        self.btn_updateExtractParams = QPushButton("Update with current extraction params")
+        self.btn_updateExtractParams.clicked.connect(lambda: self.updateExtractParameters())
 
         # Extraction button
         self.btn_runExtractionScenario = QPushButton("Extract Features and Trials")
@@ -282,6 +310,7 @@ class Dialog(QDialog):
         self.layoutExtract.addWidget(self.labelReminder)
         self.layoutExtract.addWidget(self.expParamListWidget)
         # self.layoutExtract.addWidget(self.designerWidget)
+        self.layoutExtract.addWidget(self.btn_updateExtractParams)
         self.layoutExtract.addWidget(self.btn_runExtractionScenario)
 
         # Add separator...
@@ -576,7 +605,7 @@ class Dialog(QDialog):
         if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             self.qvTrainingLayout.addLayout(self.speedUpLayout)
         self.qvTrainingLayout.addWidget(self.btn_selectFeatures)
-        self.qvTrainingLayout.addWidget(self.btn_allCombinations)
+        # self.qvTrainingLayout.addWidget(self.btn_allCombinations)  #disabled for now
         self.dlgLayout.addLayout(self.layoutTrain, 1)
 
         # display initial layout
@@ -584,18 +613,22 @@ class Dialog(QDialog):
         self.btn_loadFilesForViz.setEnabled(True)
         self.enablePlotBtns(False)
 
-        self.refreshLists(os.path.join(self.scriptPath, "generated", "signals"))
+        self.refreshLists(os.path.join(self.workspaceFolder, "signals"), self.currentExtractParams)
 
         # Timing loop every 4s to get files in working folder
         self.filesRefreshTimer = QtCore.QTimer(self)
         self.filesRefreshTimer.setSingleShot(False)
         self.filesRefreshTimer.setInterval(4000)  # in milliseconds
-        self.filesRefreshTimer.timeout.connect(lambda: self.refreshLists(os.path.join(self.scriptPath, "generated", "signals")))
+        self.filesRefreshTimer.timeout.connect(lambda: self.refreshLists(os.path.join(self.workspaceFolder, "signals"), self.currentExtractParams))
         self.filesRefreshTimer.start()
 
     # -----------------------------------------------------------------------
     # CLASS METHODS
     # -----------------------------------------------------------------------
+    def setWorkspace(self, wsFile):
+        self.workspaceFile = wsFile
+        return
+
     def enablePlotBtns(self, myBool):
         # ----------
         # Update status of buttons used for plotting
@@ -622,13 +655,13 @@ class Dialog(QDialog):
 
         self.show()
 
-    def refreshLists(self, workingFolder):
+    def refreshLists(self, workingFolder, currentExtractFolder):
         # ----------
         # Refresh all lists. Called once at the init, then once every timer click (see init method)
         # ----------
         self.refreshSignalList(self.fileListWidget, workingFolder)
-        self.refreshAvailableFilesForVizList(workingFolder)
-        self.refreshAvailableTrainSignalList(workingFolder)
+        self.refreshAvailableFilesForVizList(workingFolder, currentExtractFolder)
+        self.refreshAvailableTrainSignalList(workingFolder, currentExtractFolder)
         return
 
     def refreshSignalList(self, listwidget, workingFolder):
@@ -658,7 +691,7 @@ class Dialog(QDialog):
                 listwidget.addItem(filename)
         return
 
-    def refreshAvailableFilesForVizList(self, signalFolder):
+    def refreshAvailableFilesForVizList(self, signalFolder, currentExtractFolder):
         # ----------
         # Refresh available CSV spectrum files.
         # Only mention current class (set in parameters), and check that both classes are present
@@ -677,9 +710,9 @@ class Dialog(QDialog):
         if suffix2:
             suffixFinal += suffix2
 
-        workingFolder = os.path.join(signalFolder, "analysis")
-        class1label = self.parameterDict["Class1"]
-        class2label = self.parameterDict["Class2"]
+        workingFolder = os.path.join(signalFolder, "extract", currentExtractFolder)
+        class1label = self.parameterDict["AcquisitionParams"]["Class1"]
+        class2label = self.parameterDict["AcquisitionParams"]["Class2"]
 
         # first get a list of all csv files in workingfolder that match the condition
         availableCsvs = []
@@ -719,12 +752,12 @@ class Dialog(QDialog):
 
         return
 
-    def refreshAvailableTrainSignalList(self, signalFolder):
+    def refreshAvailableTrainSignalList(self, signalFolder, currentExtractFolder):
         # ----------
         # Refresh available training files.
         # ----------
 
-        workingFolder = os.path.join(signalFolder, "training")
+        workingFolder = os.path.join(signalFolder, "train", currentExtractFolder)
 
         # first get a list of all csv files in workingfolder that match the condition
         availableTrainSigs = []
@@ -755,6 +788,9 @@ class Dialog(QDialog):
         # return True if params where changed from last known config
         # ----------
         changed = False
+        alreadyExists = False
+        newId = None
+        newDict = self.parameterDict["ExtractionParams"][self.currentExtractParams].copy()
 
         # Retrieve param id from label...
         for idx in range(self.layoutExtractLabels.count()):
@@ -770,35 +806,45 @@ class Dialog(QDialog):
                 paramValue = self.layoutExtractLineEdits.itemAt(idx).widget().text()
                 paramId = list(settings.paramIdText.keys())[list(settings.paramIdText.values()).index(paramLabel)]
 
-            if paramId in self.parameterDict:
-                if self.parameterDict[paramId] != paramValue:
-                    changed = True
-                    self.parameterDict[paramId] = paramValue
-            else:
-                # first time the extraction parameters are written
+            if self.parameterDict["ExtractionParams"][self.currentExtractParams][paramId] != paramValue:
                 changed = True
-                self.parameterDict[paramId] = paramValue
+                newDict[paramId] = paramValue
 
+        # update json file with new entry and update "current extraction" index
         if changed:
-            # update json file
+            # find if it's the same as an already existing configuration
+            for key in self.parameterDict["ExtractionParams"].keys():
+                tempDict = self.parameterDict["ExtractionParams"][key]
+                if newDict == tempDict:
+                    self.parameterDict["currentExtractParams"] = key
+                    saveSpecificField(self.workspaceFile, self.parameterDict, "currentExtractParams")
+                    self.currentExtractParams = key
+                    alreadyExists = True
+                    break
+
+            if not alreadyExists:
+                # find last idx of extraction parameters
+                for key in self.parameterDict["ExtractionParams"].keys():
+                    newId = key
+                newId = str( int(newId) + 1)
+                # save new extraction parameters dict in self.parameterDict
+                self.parameterDict["ExtractionParams"][newId] = newDict
+                self.parameterDict["currentExtractParams"] = newId
+                saveSpecificField(self.workspaceFile, self.parameterDict, "ExtractionParams")
+                saveSpecificField(self.workspaceFile, self.parameterDict, "currentExtractParams")
+                # create new folder for future extracted files
+                os.mkdir(os.path.join(self.workspaceFolder, "signals", "extract", newId))
+                os.mkdir(os.path.join(self.workspaceFolder, "signals", "train", newId))
+                self.currentExtractParams = newId
+
+            # Manually refresh lists
+            self.refreshLists(os.path.join(self.workspaceFolder, "signals"), self.currentExtractParams)
+
+            # TODO : remove that in the future?
             with open(self.jsonfullpath, "w") as outfile:
                 json.dump(self.parameterDict, outfile, indent=4)
 
-        return changed
-
-    def deleteWorkFiles(self):
-        # ----------
-        # Remove work files in folders "signals", "signals/analysis" and "signal/training"
-        # ----------
-        path1 = os.path.join(self.scriptPath, "generated", "signals", "analysis")
-        path2 = os.path.join(self.scriptPath, "generated", "signals", "training")
-        for file in os.listdir(path1):
-            if file.endswith('.csv'):
-                os.remove(os.path.join(path1, file))
-        for file in os.listdir(path2):
-            if file.endswith('.csv') or file.endswith('.xml'):
-                os.remove(os.path.join(path2, file))
-        return
+        return changed, alreadyExists, newId
 
     def runAcquisitionScenario(self):
         # ----------
@@ -807,8 +853,8 @@ class Dialog(QDialog):
         # set in GUI 1
         # ----------
 
-        signalFolder = os.path.join(self.scriptPath, "generated", "signals")
-        scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[0])
+        signalFolder = os.path.join(self.workspaceFolder, "signals")
+        scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames[0])
 
         # disable this part of the GUI...
         self.enableAcquisitionGui(False)
@@ -842,15 +888,14 @@ class Dialog(QDialog):
             return
 
         # Update extraction parameters, and delete work files if necessary
-        if self.updateExtractParameters():
-            self.deleteWorkFiles()
+        [changed, alreadyExists, newId] = self.updateExtractParameters()
 
         # Populate list of selected signal files...
         signalFiles = []
         for selectedItem in self.fileListWidget.selectedItems():
             signalFiles.append(selectedItem.text() )
-        signalFolder = os.path.join(self.scriptPath, "generated", "signals")
-        scenFile = os.path.join(self.scriptPath, "generated", settings.templateScenFilenames[1])
+        signalFolder = os.path.join(self.workspaceFolder, "signals")
+        scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames[1])
 
         # create progress bar window...
         self.progressBarExtract = ProgressBar("Feature extraction",
@@ -865,11 +910,11 @@ class Dialog(QDialog):
         self.filesRefreshTimer.stop()
 
         # Instantiate the thread...
-        self.extractThread = Extraction(self.ovScript, scenFile, signalFiles, signalFolder, self.parameterDict)
+        self.extractThread = Extraction(self.ovScript, scenFile, signalFiles, signalFolder, self.parameterDict, self.currentExtractParams)
         # Signal: Extraction work thread finished one file of the selected list.
         # Refresh the viz&train file lists to make it available + increment progress bar
         self.extractThread.info.connect(self.progressBarExtract.increment)
-        self.extractThread.info.connect(lambda : self.refreshLists(os.path.join(self.scriptPath, "generated", "signals")))
+        self.extractThread.info.connect(lambda : self.refreshLists(os.path.join(self.workspaceFolder, "signals"), self.currentExtractParams))
         self.extractThread.info2.connect(self.progressBarExtract.changeLabel)
         # Signal: Extraction work thread finished
         self.extractThread.over.connect(self.extraction_over)
@@ -912,20 +957,20 @@ class Dialog(QDialog):
         analysisFiles = []
         for selectedItem in self.availableFilesForVizList.selectedItems():
             analysisFiles.append(selectedItem.text().removesuffix(suffix))
-        signalFolder = os.path.join(self.scriptPath, "generated", "signals")
-
+        workingFolder = os.path.join(self.workspaceFolder, "signals", "extract", self.currentExtractParams)
+        metaFolder = os.path.join(self.workspaceFolder, "signals")
         # deactivate this part of the GUI + the extraction (or else we might have sync issues)
         self.enableExtractionGui(False)
         self.enableVizGui(False)
 
         # Instantiate the thread...
         if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
-            self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, signalFolder, self.parameterDict, self.Features, self.samplingFreq)
+            self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq)
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
-            self.loadFilesForVizThread = LoadFilesForVizConnectivity(analysisFiles, signalFolder, self.parameterDict, self.Features, self.samplingFreq)
+            self.loadFilesForVizThread = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features, self.samplingFreq)
         elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
-            self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, signalFolder, self.parameterDict, self.Features, self.samplingFreq)
-            self.loadFilesForVizThread2 = LoadFilesForVizConnectivity(analysisFiles, signalFolder, self.parameterDict, self.Features2, self.samplingFreq)
+            self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq)
+            self.loadFilesForVizThread2 = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features2, self.samplingFreq)
 
         # create progress bar window...
         self.progressBarViz = ProgressBar("Feature Visualization", "Loading data from Csv files...",
@@ -1032,10 +1077,10 @@ class Dialog(QDialog):
                 trainingParamDict["pipelineType"] = settings.optionKeys[1]
                 trainingFeats = self.selectedFeats[0]
 
-        signalFolder = os.path.join(self.scriptPath, "generated", "signals")
+        signalFolder = os.path.join(self.workspaceFolder, "signals")
         pipelineType = trainingParamDict["pipelineType"]
         templateFolder = os.path.join(self.scriptPath, settings.optionsTemplatesDir[pipelineType])
-        scriptsFolder = self.scriptPath
+        workspaceFolder = self.workspaceFolder
 
         # deactivate this part of the GUI (+ the extraction part)
         self.enableExtractionGui(False)
@@ -1052,7 +1097,8 @@ class Dialog(QDialog):
                 enableSpeedUp = True
 
         self.trainClassThread = TrainClassifier(combiComp, self.trainingFiles,
-                                                signalFolder, templateFolder, scriptsFolder, self.ovScript,
+                                                signalFolder, templateFolder, workspaceFolder,
+                                                self.ovScript,
                                                 trainingSize, trainingFeats,
                                                 trainingParamDict, self.samplingFreq, enableSpeedUp)
 
@@ -1107,7 +1153,7 @@ class Dialog(QDialog):
         self.trainingFiles = []
         for selectedItem in self.fileListWidgetTrain.selectedItems():
             self.trainingFiles.append(selectedItem.text())
-        signalFolder = os.path.join(self.scriptPath, "generated", "signals")
+        signalFolder = os.path.join(self.workspaceFolder, "signals")
         pipelineType = self.parameterDict["pipelineType"]
         templateFolder = os.path.join(self.scriptPath, settings.optionsTemplatesDir[pipelineType])
         scriptsFolder = self.scriptPath
@@ -1167,9 +1213,10 @@ class Dialog(QDialog):
 
         self.progressBarTrain.finish()
         if success:
-            textGoodbye = str("Classifier weights were written in:\n\tgenerated/classifier-weights.xml\n")
-            textGoodbye += str("If those results are satisfying, you can now open in the OV Designer:"
-                               + "\n\tgenerated/sc3-online.xml in the Designer")
+            textGoodbye = str("Classifier weights were written in:\n\t")
+            textGoodbye += self.workspaceFolder + str("/classifier-weights.xml\n")
+            textGoodbye += str("If those results are satisfying, you can now open in the OV Designer:\n\t") \
+                           + self.workspaceFolder + str("/sc3-online.xml in the Designer")
 
             textDisplayed = str(resultsText + "\n\n" + textGoodbye)
             msg = QMessageBox()
@@ -1247,7 +1294,7 @@ class Dialog(QDialog):
         print(newDict)
         return newDict
 
-    def getExtractionParameters(self):
+    def getDefaultExtractionParameters(self):
         # ----------
         # Get "extraction" parameters from the JSON parameters
         # A bit artisanal, but we'll see if we keep that...
@@ -1277,12 +1324,12 @@ class Dialog(QDialog):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             print("TimeFreq for sensor: " + self.electrodePsd.text())
 
-            tmin = float(self.parameterDict['StimulationDelay'])
-            tmax = float(self.parameterDict['StimulationEpoch'])
+            tmin = float(self.parameterDict["ExtractionParams"][self.currentExtractParams]['StimulationDelay'])
+            tmax = float(self.parameterDict["ExtractionParams"][self.currentExtractParams]['StimulationEpoch'])
             fmin = int(self.userFmin.text())
             fmax = int(self.userFmax.text())
-            class1 = self.parameterDict["Class1"]
-            class2 = self.parameterDict["Class2"]
+            class1 = self.parameterDict["AcquisitionParams"]["Class1"]
+            class2 = self.parameterDict["AcquisitionParams"]["Class2"]
 
             qt_plot_tf(features.timefreq_cond1, features.timefreq_cond2,
                        features.time_array, features.freqs_array,
@@ -1296,8 +1343,8 @@ class Dialog(QDialog):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             fmin = int(self.userFmin.text())
             fmax = int(self.userFmax.text())
-            class1 = self.parameterDict["Class1"]
-            class2 = self.parameterDict["Class2"]
+            class1 = self.parameterDict["AcquisitionParams"]["Class1"]
+            class2 = self.parameterDict["AcquisitionParams"]["Class2"]
             # TODO : change
             metricLabel = "Average Node Strength"
             #qt_plot_metric(features.power_cond1, features.power_cond2,
@@ -1314,8 +1361,8 @@ class Dialog(QDialog):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             fmin = int(self.userFmin.text())
             fmax = int(self.userFmax.text())
-            class1 = self.parameterDict["Class1"]
-            class2 = self.parameterDict["Class2"]
+            class1 = self.parameterDict["AcquisitionParams"]["Class1"]
+            class2 = self.parameterDict["AcquisitionParams"]["Class2"]
             # qt_plot_psd(features.power_cond1, features.power_cond2,
             #            features.freqs_array, features.electrodes_final,
             #            self.electrodePsd.text(),
@@ -1361,8 +1408,8 @@ class Dialog(QDialog):
 
     def btnConnectSpect(self, features, title):
         qt_plot_connectSpectrum(features.connect_cond1, features.connect_cond2,
-                                self.userChan1.text(), self.userChan2.text(), features.electrodes_orig,
-                                features.fres, self.parameterDict["Class1"], self.parameterDict["Class2"], title)
+                                self.userChan1.text(), self.userChan2.text(), features.electrodes_orig, features.fres,
+                                self.parameterDict["AcquisitionParams"]["Class1"], self.parameterDict["AcquisitionParams"]["Class2"], title)
 
     def btnConnectMatrices(self, features, title):
         if self.userFmin.text().isdigit() \
@@ -1377,7 +1424,8 @@ class Dialog(QDialog):
         qt_plot_connectMatrices(features.connect_cond1, features.connect_cond2,
                                 int(self.userFmin.text()), int(self.userFmax.text()),
                                 features.electrodes_orig,
-                                self.parameterDict["Class1"], self.parameterDict["Class2"], title)
+                                self.parameterDict["AcquisitionParams"]["Class1"],
+                                self.parameterDict["AcquisitionParams"]["Class2"], title)
 
     def btnConnectome(self, features, title):
         if self.percentStrong.text().isdigit() \
@@ -1400,7 +1448,8 @@ class Dialog(QDialog):
                                     int(self.percentStrong.text()),
                                     int(self.userFmin.text()), int(self.userFmax.text()),
                                     features.electrodes_orig,
-                                    self.parameterDict["Class1"], self.parameterDict["Class2"], title)
+                                    self.parameterDict["AcquisitionParams"]["Class1"],
+                                    self.parameterDict["AcquisitionParams"]["Class2"], title)
 
     def btnAddPair(self, selectedFeats, layout):
         if len(selectedFeats) == 0:
@@ -1440,15 +1489,8 @@ class Dialog(QDialog):
             self.ovScript = newPath
 
         # TODO : add some check, to verify that it's an OpenViBE exec..? how..?
-        #
-
-        # TODO : update json file
-        # ...
+        saveSpecificField(self.workspaceFile, self.parameterDict, "ovDesignerPath")
         return
-
-    def updateJsonFile(self):
-        with open(self.jsonfullpath, "w") as outfile:
-            json.dump(self.parameterDict, outfile, indent=4)
 
 # ------------------------------------------------------
 # STATIC FUNCTIONS
@@ -1624,14 +1666,33 @@ def qt_plot_strongestConnectome(connect1, connect2, percentStrong, fmin, fmax, e
     plt.show()
 
 
-def myMsgBox(text):
-    msg = QMessageBox()
-    msg.setText(text)
-    msg.exec_()
-    return
-
-
+# main entry point...
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    dlg = Dialog()
+
+    # Check that a workspace file has been provided
+    if len(sys.argv) == 1:
+        myMsgBox("NEED WORKSPACE FILE !!")
+        # TODO
+        sys.exit(-1)
+
+    elif len(sys.argv) == 2:
+        # Check that workspace file exists, is a json file, and contains HappyFeatVersion field...
+        workspaceFolder = "workspace"
+        workspaceFile = sys.argv[1]
+        currScriptFolder = os.path.dirname(os.path.abspath(sys.argv[0]))
+        fullWorkspacePath = os.path.join(currScriptFolder, workspaceFolder, workspaceFile)
+        if not os.path.exists(fullWorkspacePath):
+            myMsgBox("NEED WORKSPACE FILE !!")
+            # TODO
+            sys.exit(-1)
+        with open(fullWorkspacePath, "r") as wp:
+            workDict = json.load(wp)
+            if not "HappyFeatVersion" in workDict:
+                myMsgBox("INVALID WORKSPACE FILE !!")
+                # TODO
+                sys.exit(-1)
+
+    dlg = Dialog(fullWorkspacePath)
+    # dlg.setWorkspace(fullWorkspacePath)
     sys.exit(app.exec_())

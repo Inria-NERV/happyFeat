@@ -22,14 +22,14 @@
 			<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 			<Name>AnalysisPath</Name>
 			<DefaultValue>0</DefaultValue>
-			<Value>analysis</Value>
+			<Value>extract</Value>
 		</Setting>
 		<Setting>
 			<Identifier>(0x2e3456d7, 0x634e13ab)</Identifier>
 			<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 			<Name>TrainingPath</Name>
 			<DefaultValue>0</DefaultValue>
-			<Value>training</Value>
+			<Value>train</Value>
 		</Setting>
 	</Settings>
 	<Inputs></Inputs>

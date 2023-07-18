@@ -11,6 +11,13 @@
 			<Value>Test-[2022.05.05-15.36.18]-TRAINCOMPOSITE.csv</Value>
 		</Setting>
 		<Setting>
+			<Identifier>(0x45257998, 0xfa799ef9)</Identifier>
+			<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
+			<Name>ExtractionIdx</Name>
+			<DefaultValue>1</DefaultValue>
+			<Value>1</Value>
+		</Setting>
+		<Setting>
 			<Identifier>(0x5916d702, 0x7d50cd0e)</Identifier>
 			<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
 			<Name>SignalsPath</Name>
@@ -22,7 +29,7 @@
 			<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
 			<Name>TrainingPath</Name>
 			<DefaultValue>training</DefaultValue>
-			<Value>training</Value>
+			<Value>train</Value>
 		</Setting>
 		<Setting>
 			<Identifier>(0x48f5b68c, 0xc44ba9f1)</Identifier>
@@ -673,7 +680,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue></DefaultValue>
-					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{TrainingPath}/$var{EEGData}</Value>
+					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{TrainingPath}/$var{ExtractionIdx}/$var{EEGData}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
@@ -2630,7 +2637,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename to save configuration to</Name>
 					<DefaultValue>${Path_UserData}/my-classifier.xml</DefaultValue>
-					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{TrainingPath}/$var{OutputWeights}</Value>
+					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{TrainingPath}/$var{ExtractionIdx}/$var{OutputWeights}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
