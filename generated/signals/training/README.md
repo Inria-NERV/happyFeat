@@ -1,3 +1,0 @@
-# GENERATED SCENARIOS, SIGNALS, PARAMETERS, ETC!
-
-You'll find it all here. 
