@@ -400,29 +400,21 @@ if __name__ == '__main__':
         # Dlg exit success
         if not dlg.getLaunch():
             # No further operation
-            text = "Thanks for using the generation script!\nYour scenarios are in \n\t" + os.getcwd() + "\\generated\\"
-            text += "\n\nYou can also run the Analysis/Training app:\n\t" + os.getcwd() + "2-featureExtractionInterface.py"
+            text = "Thanks for using the generation script!"
             myMsgBox(text)
             sys.exit(0)
         else:
-            # Get current script path, and openvibe Designer from params.json
-            scriptPath = os.path.dirname(os.path.realpath(sys.argv[0]))
-            print(scriptPath)
-            jsonfullpath = os.path.join(scriptPath, "generated", "params.json")
-            with open(jsonfullpath) as jsonfile:
-                parameterDict = json.load(jsonfile)
-
-            # Launch Openvibe with acq scenario
-            acqScen = os.path.join(os.getcwd(), "generated", settings.templateScenFilenames[0])
-            command = parameterDict["ovDesignerPath"]
-            threadOV = Thread(target=launchOpenvibe, args=(command, acqScen))
-            threadOV.start()
+            # # Launch Openvibe with acq scenario
+            # acqScen = os.path.join(os.getcwd(), "generated", settings.templateScenFilenames[0])
+            # command = parameterDict["ovDesignerPath"]
+            # threadOV = Thread(target=launchOpenvibe, args=(command, acqScen))
+            # threadOV.start()
 
             # Launch offline extraction interface
             threadFeat = Thread(target=featureExtractionThread, args=[fullWorkspacePath])
             threadFeat.start()
 
-            threadOV.join()
+            # threadOV.join()
             threadFeat.join()
 
             sys.exit(0)
