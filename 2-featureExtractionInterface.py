@@ -116,8 +116,8 @@ class Dialog(QDialog):
         self.progressBarTrain = None
 
         # TODO : get rid of that in the future
-        if "params.json" in os.listdir(os.path.join(self.scriptPath, "generated")):
-            self.jsonfullpath = os.path.join(self.scriptPath, "generated", "params.json")
+        # if "params.json" in os.listdir(os.path.join(self.scriptPath, "generated")):
+        #     self.jsonfullpath = os.path.join(self.scriptPath, "generated", "params.json")
         # # GET PARAMS FROM JSON FILE
         # if "params.json" in os.listdir(os.path.join(self.scriptPath, "generated")):
         #     print("--- Using parameters from params.json...")
