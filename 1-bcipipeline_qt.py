@@ -278,7 +278,7 @@ class Dialog(QDialog):
             self.parameterDict["ExtractionParams"]["1"][key] = str(val)
             self.parameterDict[key] = str(val)
 
-        self.parameterDict["currentExtractParams"] = "1"
+        self.parameterDict["currentExtractId"] = "1"
         print(self.parameterDict)
 
         # WRITE JSON PARAMETERS FILE
@@ -291,13 +291,14 @@ class Dialog(QDialog):
             # TODO !! manage error
             myMsgBox("Missing workspace file!!")
         else:
-            saveSpecificField(self.workspace, self.parameterDict, "ovDesignerPath")
-            saveSpecificField(self.workspace, self.parameterDict, "pipelineType")
-            saveSpecificField(self.workspace, self.parameterDict, "sensorMontage")
-            saveSpecificField(self.workspace, self.parameterDict, "customMontagePath")
-            saveSpecificField(self.workspace, self.parameterDict, "AcquisitionParams")
-            saveSpecificField(self.workspace, self.parameterDict, "ExtractionParams")
-            saveSpecificField(self.workspace, self.parameterDict, "currentExtractParams")
+            setKeyValue(self.workspace, "ovDesignerPath", self.parameterDict["ovDesignerPath"])
+            setKeyValue(self.workspace, "pipelineType", self.parameterDict["pipelineType"])
+            setKeyValue(self.workspace, "sensorMontage", self.parameterDict["sensorMontage"])
+            setKeyValue(self.workspace, "customMontagePath", self.parameterDict["customMontagePath"])
+            setKeyValue(self.workspace, "AcquisitionParams", self.parameterDict["AcquisitionParams"])
+            setKeyValue(self.workspace, "ExtractionParams", self.parameterDict["ExtractionParams"])
+            setKeyValue(self.workspace, "currentExtractId", self.parameterDict["currentExtractId"])
+            setKeyValue(self.workspace, "ExtractedSignalFiles", {"1": None})
 
         # GENERATE (list of files in settings.templateScenFilenames)
         #   SC1 (ACQ/MONITOR)

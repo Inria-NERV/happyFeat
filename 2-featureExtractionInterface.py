@@ -95,7 +95,7 @@ class Dialog(QDialog):
         self.ovScript = None
         self.sensorMontage = None
         self.customMontagePath = None
-        self.currentExtractParams = None
+        self.currentExtractId = None
 
         self.extractTimerStart = 0
         self.extractTimerEnd = 0
@@ -115,23 +115,6 @@ class Dialog(QDialog):
         self.progressBarViz2 = None
         self.progressBarTrain = None
 
-        # TODO : get rid of that in the future
-        # if "params.json" in os.listdir(os.path.join(self.scriptPath, "generated")):
-        #     self.jsonfullpath = os.path.join(self.scriptPath, "generated", "params.json")
-        # # GET PARAMS FROM JSON FILE
-        # if "params.json" in os.listdir(os.path.join(self.scriptPath, "generated")):
-        #     print("--- Using parameters from params.json...")
-        #     self.jsonfullpath = os.path.join(self.scriptPath, "generated", "params.json")
-        #     with open(self.jsonfullpath) as jsonfile:
-        #         self.parameterDict = json.load(jsonfile)
-        #     self.ovScript = self.parameterDict["ovDesignerPath"]
-        #     self.sensorMontage = self.parameterDict["sensorMontage"]
-        #     self.customMontagePath = self.parameterDict["customMontagePath"]
-        # else:
-        #     # WARN and exit
-        #     myMsgBox("--- WARNING : no params.json found, please use 1-bcipipeline_qt.py first !")
-        #     self.reject()
-
         # GET BASIC SETTINGS FROM WORKSPACE FILE
         if self.workspaceFile:
             print("--- Using parameters from workspace file: " + workspaceFile)
@@ -140,7 +123,7 @@ class Dialog(QDialog):
             self.ovScript = self.parameterDict["ovDesignerPath"]
             self.sensorMontage = self.parameterDict["sensorMontage"]
             self.customMontagePath = self.parameterDict["customMontagePath"]
-            self.currentExtractParams = self.parameterDict["currentExtractParams"]
+            self.currentExtractId = self.parameterDict["currentExtractId"]
 
         # -----------------------------------------------------------------------
         # CREATE INTERFACE...
@@ -222,19 +205,19 @@ class Dialog(QDialog):
         # ... then copy from existing params file
 
         if self.parameterDict["ExtractionParams"]:
-            if self.currentExtractParams and self.parameterDict["ExtractionParams"][self.currentExtractParams]:
+            if self.currentExtractId and self.parameterDict["ExtractionParams"][self.currentExtractId]:
                 # then copy its elements...
                 for (key, elem) in enumerate(self.extractParamsDict):
-                    if elem in self.parameterDict["ExtractionParams"][self.currentExtractParams]:
-                        self.extractParamsDict[elem] = self.parameterDict["ExtractionParams"][self.currentExtractParams][elem]
+                    if elem in self.parameterDict["ExtractionParams"][self.currentExtractId]:
+                        self.extractParamsDict[elem] = self.parameterDict["ExtractionParams"][self.currentExtractId][elem]
             else:
                 # take last extraction scheme...
                 for extractionInstance in self.parameterDict["ExtractionParams"].keys():
-                    self.currentExtractParams = extractionInstance
+                    self.currentExtractId = extractionInstance
                 # then copy its elements...
                 for (key, elem) in enumerate(self.extractParamsDict):
-                    if elem in self.parameterDict["ExtractionParams"][self.currentExtractParams]:
-                        self.extractParamsDict[elem] = self.parameterDict["ExtractionParams"][self.currentExtractParams][elem]
+                    if elem in self.parameterDict["ExtractionParams"][self.currentExtractId]:
+                        self.extractParamsDict[elem] = self.parameterDict["ExtractionParams"][self.currentExtractId][elem]
 
         extractParametersLayout = QHBoxLayout()
         self.layoutExtractLabels = QVBoxLayout()
@@ -613,13 +596,13 @@ class Dialog(QDialog):
         self.btn_loadFilesForViz.setEnabled(True)
         self.enablePlotBtns(False)
 
-        self.refreshLists(os.path.join(self.workspaceFolder, "signals"), self.currentExtractParams)
+        self.refreshLists(os.path.join(self.workspaceFolder, "signals"), self.currentExtractId)
 
         # Timing loop every 4s to get files in working folder
         self.filesRefreshTimer = QtCore.QTimer(self)
         self.filesRefreshTimer.setSingleShot(False)
         self.filesRefreshTimer.setInterval(4000)  # in milliseconds
-        self.filesRefreshTimer.timeout.connect(lambda: self.refreshLists(os.path.join(self.workspaceFolder, "signals"), self.currentExtractParams))
+        self.filesRefreshTimer.timeout.connect(lambda: self.refreshLists(os.path.join(self.workspaceFolder, "signals"), self.currentExtractId))
         self.filesRefreshTimer.start()
 
     # -----------------------------------------------------------------------
@@ -790,7 +773,7 @@ class Dialog(QDialog):
         changed = False
         alreadyExists = False
         newId = None
-        newDict = self.parameterDict["ExtractionParams"][self.currentExtractParams].copy()
+        newDict = self.parameterDict["ExtractionParams"][self.currentExtractId].copy()
 
         # Retrieve param id from label...
         for idx in range(self.layoutExtractLabels.count()):
@@ -806,7 +789,7 @@ class Dialog(QDialog):
                 paramValue = self.layoutExtractLineEdits.itemAt(idx).widget().text()
                 paramId = list(settings.paramIdText.keys())[list(settings.paramIdText.values()).index(paramLabel)]
 
-            if self.parameterDict["ExtractionParams"][self.currentExtractParams][paramId] != paramValue:
+            if self.parameterDict["ExtractionParams"][self.currentExtractId][paramId] != paramValue:
                 changed = True
                 newDict[paramId] = paramValue
 
@@ -816,9 +799,9 @@ class Dialog(QDialog):
             for key in self.parameterDict["ExtractionParams"].keys():
                 tempDict = self.parameterDict["ExtractionParams"][key]
                 if newDict == tempDict:
-                    self.parameterDict["currentExtractParams"] = key
-                    saveSpecificField(self.workspaceFile, self.parameterDict, "currentExtractParams")
-                    self.currentExtractParams = key
+                    self.parameterDict["currentExtractId"] = key
+                    setKeyValue(self.workspaceFile, "currentExtractId", self.parameterDict["currentExtractId"])
+                    self.currentExtractId = key
                     alreadyExists = True
                     break
 
@@ -829,20 +812,22 @@ class Dialog(QDialog):
                 newId = str( int(newId) + 1)
                 # save new extraction parameters dict in self.parameterDict
                 self.parameterDict["ExtractionParams"][newId] = newDict
-                self.parameterDict["currentExtractParams"] = newId
-                saveSpecificField(self.workspaceFile, self.parameterDict, "ExtractionParams")
-                saveSpecificField(self.workspaceFile, self.parameterDict, "currentExtractParams")
+                self.parameterDict["currentExtractId"] = newId
+                setKeyValue(self.workspaceFile, "ExtractionParams", self.parameterDict["ExtractionParams"])
+                setKeyValue(self.workspaceFile, "currentExtractId", self.parameterDict["currentExtractId"])
                 # create new folder for future extracted files
-                os.mkdir(os.path.join(self.workspaceFolder, "signals", "extract", newId))
-                os.mkdir(os.path.join(self.workspaceFolder, "signals", "train", newId))
-                self.currentExtractParams = newId
+                if not os.path.exists(os.path.join(self.workspaceFolder, "signals", "extract", newId)):
+                    os.mkdir(os.path.join(self.workspaceFolder, "signals", "extract", newId))
+                if not os.path.exists(os.path.join(self.workspaceFolder, "signals", "train", newId)):
+                    os.mkdir(os.path.join(self.workspaceFolder, "signals", "train", newId))
+                self.currentExtractId = newId
 
             # Manually refresh lists
-            self.refreshLists(os.path.join(self.workspaceFolder, "signals"), self.currentExtractParams)
+            self.refreshLists(os.path.join(self.workspaceFolder, "signals"), self.currentExtractId)
 
             # TODO : remove that in the future?
-            with open(self.jsonfullpath, "w") as outfile:
-                json.dump(self.parameterDict, outfile, indent=4)
+            # with open(self.jsonfullpath, "w") as outfile:
+            #    json.dump(self.parameterDict, outfile, indent=4)
 
         return changed, alreadyExists, newId
 
@@ -897,10 +882,42 @@ class Dialog(QDialog):
         signalFolder = os.path.join(self.workspaceFolder, "signals")
         scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames[1])
 
+        # For each selected signal file, check if extraction has already been done
+        # => in .hfw file, at current extract idx, entry exists
+        # + extract files exist in corresponding folder
+        extractedFiles = loadExtractedFiles(self.workspaceFile, self.currentExtractId)
+        redundantFiles = []
+        for file in signalFiles:
+            if file in extractedFiles:
+                # File was found in the list in .hfw config file.
+                # Let's see if all extracted files really exist...
+                if self.checkExistenceExtractFiles(file):
+                    redundantFiles.append(file)
+
+        if len(redundantFiles) > 0:
+            for file in redundantFiles:
+                retval = myYesNoToAllBox("File " + file + " was already extracted with entered parameters.\nRe-run extraction?")
+                if retval == QMessageBox.No:
+                    signalFiles.remove(file)
+                    if len(signalFiles) == 0:
+                        return
+                    else:
+                        continue
+                if retval == QMessageBox.NoToAll:
+                    signalFiles = []
+                    return
+                if retval == QMessageBox.YesToAll:
+                    break
+
+        # Add extracted files to .hfw config file
+        # TODO : put somewhere else, AFTER extraction has succeeded...
+        for file in signalFiles:
+            addExtractedFile(self.workspaceFile, self.currentExtractId, file)
+
         # create progress bar window...
         self.progressBarExtract = ProgressBar("Feature extraction",
                                               str("Extracting data for file "+signalFiles[0]+"..."),
-                                              len(self.fileListWidget.selectedItems()))
+                                              len(signalFiles))
 
         # deactivate this part of the GUI
         self.enableExtractionGui(False)
@@ -910,11 +927,11 @@ class Dialog(QDialog):
         self.filesRefreshTimer.stop()
 
         # Instantiate the thread...
-        self.extractThread = Extraction(self.ovScript, scenFile, signalFiles, signalFolder, self.parameterDict, self.currentExtractParams)
+        self.extractThread = Extraction(self.ovScript, scenFile, signalFiles, signalFolder, self.parameterDict, self.currentExtractId)
         # Signal: Extraction work thread finished one file of the selected list.
         # Refresh the viz&train file lists to make it available + increment progress bar
         self.extractThread.info.connect(self.progressBarExtract.increment)
-        self.extractThread.info.connect(lambda : self.refreshLists(os.path.join(self.workspaceFolder, "signals"), self.currentExtractParams))
+        self.extractThread.info.connect(lambda : self.refreshLists(os.path.join(self.workspaceFolder, "signals"), self.currentExtractId))
         self.extractThread.info2.connect(self.progressBarExtract.changeLabel)
         # Signal: Extraction work thread finished
         self.extractThread.over.connect(self.extraction_over)
@@ -957,7 +974,7 @@ class Dialog(QDialog):
         analysisFiles = []
         for selectedItem in self.availableFilesForVizList.selectedItems():
             analysisFiles.append(selectedItem.text().removesuffix(suffix))
-        workingFolder = os.path.join(self.workspaceFolder, "signals", "extract", self.currentExtractParams)
+        workingFolder = os.path.join(self.workspaceFolder, "signals", "extract", self.currentExtractId)
         metaFolder = os.path.join(self.workspaceFolder, "signals")
         # deactivate this part of the GUI + the extraction (or else we might have sync issues)
         self.enableExtractionGui(False)
@@ -1324,8 +1341,8 @@ class Dialog(QDialog):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             print("TimeFreq for sensor: " + self.electrodePsd.text())
 
-            tmin = float(self.parameterDict["ExtractionParams"][self.currentExtractParams]['StimulationDelay'])
-            tmax = float(self.parameterDict["ExtractionParams"][self.currentExtractParams]['StimulationEpoch'])
+            tmin = float(self.parameterDict["ExtractionParams"][self.currentExtractId]['StimulationDelay'])
+            tmax = float(self.parameterDict["ExtractionParams"][self.currentExtractId]['StimulationEpoch'])
             fmin = int(self.userFmin.text())
             fmax = int(self.userFmax.text())
             class1 = self.parameterDict["AcquisitionParams"]["Class1"]
@@ -1489,8 +1506,41 @@ class Dialog(QDialog):
             self.ovScript = newPath
 
         # TODO : add some check, to verify that it's an OpenViBE exec..? how..?
-        saveSpecificField(self.workspaceFile, self.parameterDict, "ovDesignerPath")
+        setKeyValue(self.workspaceFile, "ovDesignerPath", self.parameterDict["ovDesignerPath"])
         return
+
+    def checkExistenceExtractFiles(self, file):
+        extractFolder = os.path.join(self.workspaceFolder, "signals", "extract", self.currentExtractId)
+        if not os.path.exists(extractFolder):
+            return False
+
+        class1 = self.parameterDict["AcquisitionParams"]["Class1"]
+        class2 = self.parameterDict["AcquisitionParams"]["Class2"]
+        if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
+            or self.parameterDict["pipelineType"] == settings.optionKeys[3] :
+            # PSD
+            metric = "SPECTRUM"
+            extractFile1 = str(os.path.splitext(file)[0] + "-" + metric + "-" + class1 + ".csv")
+            extractFile2 = str(os.path.splitext(file)[0] + "-" + metric + "-" + class2 + ".csv")
+            extractFile1Path = os.path.join(extractFolder, extractFile1)
+            extractFile2Path = os.path.join(extractFolder, extractFile1)
+            if not os.path.exists(extractFile1Path) or not os.path.exists(extractFile2Path):
+                return False
+
+        if self.parameterDict["pipelineType"] == settings.optionKeys[2] \
+            or self.parameterDict["pipelineType"] == settings.optionKeys[3] :
+            # CONNECT
+            metric = "CONNECT"
+            extractFile1 = str(os.path.splitext(file)[0] + "-" + metric + "-" + class1 + ".csv")
+            extractFile2 = str(os.path.splitext(file)[0] + "-" + metric + "-" + class2 + ".csv")
+            extractFile1Path = os.path.join(extractFolder, extractFile1)
+            extractFile2Path = os.path.join(extractFolder, extractFile1)
+            if not os.path.exists(extractFile1Path) or not os.path.exists(extractFile2Path):
+                return False
+
+        # TODO Also check for TRIALS and META files
+
+        return True
 
 # ------------------------------------------------------
 # STATIC FUNCTIONS
