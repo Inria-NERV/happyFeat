@@ -77,13 +77,27 @@ def writeCompositeCsv(filename, rawData, class1Stim, class2Stim, channelList, tm
             # Process the data and reconstruct CSV file
             currentTime = 0
 
+            # skipEpoch if no stimulation is found at the start
+            # this can happen if stimulations are "sent twice" (weird openvibe bug...)
+            skipEpoch = False
             for row in rawData:
                 # copy row data, then we'll modify stuff
                 dataToWrite = ["" for x in range(np.shape(row)[0])]
+
                 if currentEpoch != int(row[1]):
                     currentEpoch = int(row[1])
                     timeOffset = round(timeOffset + 0.5, 8)  # arbitrary, to create a gap between trials
                     newEpoch = True
+                    # check if there's something (not nan) in the last rows, where the stimulations should be
+                    if isinstance(row[-3], str):
+                        skipEpoch = False
+                    # if not, entirely skip this epoch
+                    else:
+                        skipEpoch = True
+
+                if skipEpoch:
+                    continue
+
 
                 # Time field
                 dataToWrite[0] = str(currentTime + timeOffset)
