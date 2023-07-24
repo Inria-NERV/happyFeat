@@ -260,6 +260,8 @@ class Dialog(QDialog):
         # self.parameterDict["ChannelNames"] = electrodes
         self.parameterDict["ovDesignerPath"] = self.ovScript
 
+        self.parameterDict["Sessions"] = {}
+
         # Acquisition parameters, set in this GUI...
         self.parameterDict["AcquisitionParams"] = {}
         for i in range(len(self.paramWidgets)):
@@ -270,21 +272,10 @@ class Dialog(QDialog):
                 self.parameterDict[param] = self.paramWidgets[i].text()
 
         # Write default parameters for selected pipeline
-        self.parameterDict["ExtractionParams"] = {}
-        self.parameterDict["ExtractionParams"]["1"] = {}
         extractParamDict = settings.pipelineExtractSettings[self.parameterDict["pipelineType"]].copy()
-        for idx, (key, val) in enumerate(extractParamDict.items()):
-            # TODO : remove duplication... (done to make params.json and workspace file coexist)
-            self.parameterDict["ExtractionParams"]["1"][key] = str(val)
-            self.parameterDict[key] = str(val)
 
-        self.parameterDict["currentExtractId"] = "1"
+        self.parameterDict["currentSessionId"] = "1"
         print(self.parameterDict)
-
-        # WRITE JSON PARAMETERS FILE
-        jsonfullpath = os.path.join(os.getcwd(), self.workspaceFolder, self.jsonfilename)
-        with open(jsonfullpath, "w") as outfile:
-            json.dump(self.parameterDict, outfile, indent=4)
 
         # WRITE WORKSPACE FILE
         if not self.workspace:
@@ -296,10 +287,14 @@ class Dialog(QDialog):
             setKeyValue(self.workspace, "sensorMontage", self.parameterDict["sensorMontage"])
             setKeyValue(self.workspace, "customMontagePath", self.parameterDict["customMontagePath"])
             setKeyValue(self.workspace, "AcquisitionParams", self.parameterDict["AcquisitionParams"])
-            setKeyValue(self.workspace, "ExtractionParams", self.parameterDict["ExtractionParams"])
-            setKeyValue(self.workspace, "currentExtractId", self.parameterDict["currentExtractId"])
-            setKeyValue(self.workspace, "ExtractedSignalFiles", {"1": None})
+            setKeyValue(self.workspace, "currentSessionId", self.parameterDict["currentSessionId"])
+            newSession(self.workspace, self.parameterDict, "1", extractParamDict)
 
+        # WRITE JSON PARAMETERS FILE
+        # TODO : REMOVE
+        jsonfullpath = os.path.join(os.getcwd(), self.workspaceFolder, self.jsonfilename)
+        with open(jsonfullpath, "w") as outfile:
+            json.dump(self.parameterDict, outfile, indent=4)
         # GENERATE (list of files in settings.templateScenFilenames)
         #   SC1 (ACQ/MONITOR)
         #   SC2 (FEATURE EXT)

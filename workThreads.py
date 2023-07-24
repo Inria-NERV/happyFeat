@@ -69,7 +69,7 @@ class Extraction(QtCore.QThread):
     over = pyqtSignal(bool, str)
 
     def __init__(self, ovScript, scenFile, signalFiles, signalFolder,
-                 parameterDict, currentExtractId, parent=None):
+                 parameterDict, currentSessionId, parent=None):
 
         super().__init__(parent)
         self.stop = False
@@ -78,8 +78,8 @@ class Extraction(QtCore.QThread):
         self.signalFiles = signalFiles
         self.signalFolder = signalFolder
         self.parameterDict = parameterDict.copy()
-        self.currentExtractId = currentExtractId
-        self.extractDict = parameterDict["ExtractionParams"][parameterDict["currentExtractId"]].copy()
+        self.currentSessionId = currentSessionId
+        self.extractDict = parameterDict["Sessions"][currentSessionId]["ExtractionParams"].copy()
 
     def run(self):
         command = self.ovScript
@@ -146,7 +146,7 @@ class Extraction(QtCore.QThread):
             outputBaseline2 = str(filename + "-SPECTRUM-" + self.parameterDict["AcquisitionParams"]["Class2"] + "-BASELINE.csv")
             outputTrials = str(filename + "-TRIALS.csv")
             modifyExtractionIO(self.scenFile, signalFile, outputSpect1, outputSpect2,
-                               outputBaseline1, outputBaseline2, outputConnect1, outputConnect2, outputTrials, self.currentExtractId)
+                               outputBaseline1, outputBaseline2, outputConnect1, outputConnect2, outputTrials, self.currentSessionId)
 
             # Launch OV scenario !
             p = subprocess.Popen([command, "--invisible", "--play-fast", self.scenFile],
@@ -185,7 +185,7 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         self.analysisFiles = analysisFiles
         self.workingFolder = workingFolder
         self.parameterDict = parameterDict.copy()
-        self.extractDict = parameterDict["ExtractionParams"][parameterDict["currentExtractId"]].copy()
+        self.extractDict = parameterDict["Sessions"][parameterDict["currentSessionId"]]["ExtractionParams"].copy()
         self.Features = Features
         self.samplingFreq = sampFreq
 
@@ -417,7 +417,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         self.workingFolder = workingFolder
         self.metaFolder = metaFolder
         self.parameterDict = parameterDict.copy()
-        self.extractDict = parameterDict["ExtractionParams"][parameterDict["currentExtractId"]].copy()
+        self.extractDict = parameterDict["Sessions"][parameterDict["currentSessionId"]]["ExtractionParams"].copy()
         self.Features = Features
         self.samplingFreq = sampFreq
 
@@ -604,8 +604,8 @@ class TrainClassifier(QtCore.QThread):
         # or (case of mixed features) a list of 2 lists
         self.selectedFeats = selectedFeats
         self.parameterDict = parameterDict.copy()
-        self.currentExtractId = self.parameterDict["currentExtractId"]
-        self.extractDict = parameterDict["ExtractionParams"][self.parameterDict["currentExtractId"]].copy()
+        self.currentSessionId = self.parameterDict["currentSessionId"]
+        self.extractDict = parameterDict["Sessions"][self.parameterDict["currentSessionId"]]["ExtractionParams"].copy()
         self.samplingFreq = sampFreq
         self.exitText = ""
 
@@ -618,7 +618,7 @@ class TrainClassifier(QtCore.QThread):
         listSampFreq = []
         listElectrodeList = []
         for trainingFile in self.trainingFiles:
-            path = os.path.join(self.signalFolder, "train", self.currentExtractId, trainingFile)
+            path = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", trainingFile)
             header = pd.read_csv(path, nrows=0).columns.tolist()
             listSampFreq.append(int(header[0].split(':')[1].removesuffix('Hz')))
             listElectrodeList.append(header[2:-3])
@@ -695,7 +695,7 @@ class TrainClassifier(QtCore.QThread):
             scenName = settings.templateScenFilenames[i]
             srcFile = os.path.join(self.templateFolder, scenName)
             destFile = os.path.join(self.workspaceFolder, scenName)
-            trainingpath = os.path.join(self.workspaceFolder, "signals", "train")
+            trainingpath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train")
             print("---Copying file " + srcFile + " to " + destFile)
             copyfile(srcFile, destFile)
             modifyScenarioGeneralSettings(destFile, self.extractDict)
@@ -745,14 +745,14 @@ class TrainClassifier(QtCore.QThread):
 
             # "First step"
             scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames[4])
-            analysisPath = os.path.join(self.workspaceFolder, "signals", "extract")
-            trainingPath = os.path.join(self.workspaceFolder, "signals", "train")
+            analysisPath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "extract")
+            trainingPath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train")
 
             self.info2.emit("Running first step (feature vector computation per run)")
             for run in trainingSigList:
                 # MODIFY "FIRST STEP" SCENARIO
                 runBasename = run.split("\\")[-1].removesuffix("-TRIALS.csv")
-                modifyTrainingFirstStep(runBasename, len(selectedFeats), analysisPath, trainingPath, self.currentExtractId, scenFile)
+                modifyTrainingFirstStep(runBasename, len(selectedFeats), analysisPath, trainingPath, self.currentSessionId, scenFile)
 
                 # RUN THE SCENARIO, with "False" to ignore training results
                 success = self.runOvScenarioGeneric(os.path.join(self.workspaceFolder, scenFile))
@@ -772,8 +772,8 @@ class TrainClassifier(QtCore.QThread):
                     for run in trainingSigList:
                         runBasename = run.split("\\")[-1].removesuffix("-TRIALS.csv")
                         runFeatClassCmb = str(runBasename + "-class" + str(classIdx) + "-feat" + str(feat+1) + ".csv" )
-                        if os.path.exists(os.path.join(trainingPath, self.currentExtractId, runFeatClassCmb)):
-                            featFilesToMerge.append(os.path.join(trainingPath, self.currentExtractId, runFeatClassCmb))
+                        if os.path.exists(os.path.join(trainingPath, self.currentSessionId, runFeatClassCmb)):
+                            featFilesToMerge.append(os.path.join(trainingPath, self.currentSessionId, runFeatClassCmb))
 
                     outCsv = mergeRunsCsv_new(featFilesToMerge)
                     compositeFiles.append(outCsv)
@@ -781,7 +781,7 @@ class TrainClassifier(QtCore.QThread):
             # MODIFY "SECOND STEP" SCENARIO INPUTS & OUTPUT...
             scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames[5])
             newWeightsName = "classifier-weights.xml"
-            modifyTrainingSecondStep(compositeFiles, len(selectedFeats), newWeightsName, self.currentExtractId, scenFile)
+            modifyTrainingSecondStep(compositeFiles, len(selectedFeats), newWeightsName, self.currentSessionId, scenFile)
             modifyTrainPartitions(self.trainingSize, scenFile)
 
             self.info2.emit("Finalizing Training...")
@@ -793,7 +793,7 @@ class TrainClassifier(QtCore.QThread):
                 self.over.emit(False, self.exitText)
             else:
                 # Copy weights file to <workspaceFolder>/classifier-weights.xml
-                newWeights = os.path.join(self.signalFolder, "train", self.currentExtractId, "classifier-weights.xml")
+                newWeights = os.path.join(self.signalFolder, "sessions", self.currentSessionId, "train", "classifier-weights.xml")
                 origFilename = os.path.join(self.workspaceFolder, "classifier-weights.xml")
                 copyfile(newWeights, origFilename)
 
@@ -836,7 +836,7 @@ class TrainClassifier(QtCore.QThread):
                 print("Composite file for training: " + compositeCsv)
                 compositeCsvBasename = os.path.basename(compositeCsv)
                 newWeightsName = "classifier-weights.xml"
-                modifyTrainIO(compositeCsvBasename, newWeightsName, self.currentExtractId, scenFile)
+                modifyTrainIO(compositeCsvBasename, newWeightsName, self.currentSessionId, scenFile)
 
                 self.info2.emit("Running Training Scenario")
 
@@ -849,7 +849,7 @@ class TrainClassifier(QtCore.QThread):
                     self.over.emit(False, self.exitText)
                 else:
                     # Copy weights file to <workspaceFolder>/classifier-weights.xml
-                    newWeights = os.path.join(self.signalFolder, "train", self.currentExtractId, "classifier-weights.xml")
+                    newWeights = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", "classifier-weights.xml")
                     origFilename = os.path.join(self.workspaceFolder, "classifier-weights.xml")
                     copyfile(newWeights, origFilename)
 
@@ -904,7 +904,7 @@ class TrainClassifier(QtCore.QThread):
                     print("Composite file for training: " + compositeCsv)
                     compositeCsvBasename = os.path.basename(compositeCsv)
                     newWeightsName = str("classifier-weights-" + str(idxcomb) + ".xml")
-                    modifyTrainIO(compositeCsvBasename, newWeightsName, self.currentExtractId, scenFile)
+                    modifyTrainIO(compositeCsvBasename, newWeightsName, self.currentSessionId, scenFile)
 
                     # RUN THE CLASSIFIER TRAINING SCENARIO
                     scenXml = os.path.join(self.workspaceFolder, settings.templateScenFilenames[2])
@@ -923,7 +923,7 @@ class TrainClassifier(QtCore.QThread):
                     # Find max score
                     maxIdx = scores.index(max(scores))
                     # Copy weights file to <workspaceFolder>/classifier-weights.xml
-                    maxFilename = os.path.join(self.workspaceFolder, "signals", "train", "classifier-weights-")
+                    maxFilename = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", "classifier-weights-")
                     maxFilename += str(str(maxIdx) + ".xml")
                     origFilename = os.path.join(self.workspaceFolder, "classifier-weights.xml")
                     copyfile(maxFilename, origFilename)

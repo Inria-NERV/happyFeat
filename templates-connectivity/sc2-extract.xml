@@ -419,7 +419,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue>record-[$core{date}-$core{time}].csv</DefaultValue>
-					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{TrainingPath}/$var{ExtractionIdx}/$var{OutputTrials}</Value>
+					<Value>${Player_ScenarioDirectory}/sessions/$var{ExtractionIdx}/$var{TrainingPath}/$var{OutputTrials}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -490,7 +490,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue>record-[$core{date}-$core{time}].csv</DefaultValue>
-					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{AnalysisPath}/$var{ExtractionIdx}/$var{OutputConnect1}</Value>
+					<Value>${Player_ScenarioDirectory}/sessions/$var{ExtractionIdx}/$var{AnalysisPath}/$var{OutputConnect1}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -561,7 +561,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue>record-[$core{date}-$core{time}].csv</DefaultValue>
-					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{AnalysisPath}/$var{ExtractionIdx}/$var{OutputBaseline1}</Value>
+					<Value>${Player_ScenarioDirectory}/sessions/$var{ExtractionIdx}/$var{AnalysisPath}/$var{OutputBaseline1}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -636,7 +636,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue>record-[$core{date}-$core{time}].csv</DefaultValue>
-					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{AnalysisPath}/$var{ExtractionIdx}/$var{OutputConnect2}</Value>
+					<Value>${Player_ScenarioDirectory}/sessions/$var{ExtractionIdx}/$var{AnalysisPath}/$var{OutputConnect2}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -707,7 +707,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue>record-[$core{date}-$core{time}].csv</DefaultValue>
-					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{AnalysisPath}/$var{ExtractionIdx}/$var{OutputBaseline2}</Value>
+					<Value>${Player_ScenarioDirectory}/sessions/$var{ExtractionIdx}/$var{AnalysisPath}/$var{OutputBaseline2}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>

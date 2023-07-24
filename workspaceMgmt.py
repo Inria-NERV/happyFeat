@@ -19,27 +19,36 @@ def setKeyValue(jsonFile, key, value):
     currentDict[key] = value
     writeJson(jsonFile, currentDict)
 
-def loadExtractedFiles(jsonFile, extractIdx):
+def loadExtractedFiles(jsonFile, sessionId):
     currentDict = {}
     with open(jsonFile, "r") as myjson:
         currentDict = json.load(myjson)
-    if currentDict["ExtractedSignalFiles"][extractIdx]:
-        return currentDict["ExtractedSignalFiles"][extractIdx]
+    if currentDict["Sessions"][sessionId]:
+        return currentDict["Sessions"][sessionId]["ExtractedSignalFiles"]
     else:
         return []
 
-def addExtractedFile(jsonFile, extractIdx, filename):
+def addExtractedFile(jsonFile, sessionId, filename):
     currentDict = {}
     with open(jsonFile, "r+") as myjson:
         currentDict = json.load(myjson)
+    currentDict["Sessions"][sessionId]["ExtractedSignalFiles"].append(filename)
+    writeJson(jsonFile, currentDict)
 
-    if extractIdx not in currentDict["ExtractedSignalFiles"]:
-        currentDict["ExtractedSignalFiles"][extractIdx] = [filename]
+def newSession(jsonFile, paramDict, newId, newParamDict):
+    paramDict["Sessions"][newId] = {"ExtractionParams": newParamDict,
+                                    "ExtractedSignalFiles": [],
+                                    "TrainingAttempts": []}
+    with open(jsonFile, "r+") as myjson:
+        currentDict = json.load(myjson)
+
+    if "Sessions" in currentDict:
+        sessionsDict = currentDict["Sessions"]
     else:
-        if not currentDict["ExtractedSignalFiles"][extractIdx]:
-            currentDict["ExtractedSignalFiles"][extractIdx] = [filename]
-        elif filename not in currentDict["ExtractedSignalFiles"][extractIdx]:
-            currentDict["ExtractedSignalFiles"][extractIdx].append(filename)
+        currentDict["Sessions"] = {}
+        sessionsDict = currentDict["Sessions"]
 
+    sessionsDict[newId] = paramDict["Sessions"][newId]
+    currentDict["Sessions"] = sessionsDict
     writeJson(jsonFile, currentDict)
 

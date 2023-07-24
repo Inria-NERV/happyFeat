@@ -237,7 +237,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename to save configuration to</Name>
 					<DefaultValue>${Path_UserData}/my-classifier.xml</DefaultValue>
-					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{TrainingPath}/$var{ExtractionIdx}/$var{OutputWeights}</Value>
+					<Value>${Player_ScenarioDirectory}/sessions/$var{ExtractionIdx}/$var{TrainingPath}/$var{OutputWeights}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>

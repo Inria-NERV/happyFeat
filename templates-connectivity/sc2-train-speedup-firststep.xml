@@ -186,7 +186,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue></DefaultValue>
-					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{AnalysisPath}/$var{ExtractionIdx}/$var{InputClass1}</Value>
+					<Value>${Player_ScenarioDirectory}/sessions/$var{ExtractionIdx}/$var{AnalysisPath}/$var{InputClass1}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
@@ -236,7 +236,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue></DefaultValue>
-					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{AnalysisPath}/$var{ExtractionIdx}/$var{InputClass2}</Value>
+					<Value>${Player_ScenarioDirectory}/sessions/$var{ExtractionIdx}/$var{AnalysisPath}/$var{InputClass2}</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
@@ -547,7 +547,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue>record-[$core{date}-$core{time}].csv</DefaultValue>
-					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{TrainingPath}/class1feats.csv</Value>
+					<Value>${Player_ScenarioDirectory}/sessions/$var{ExtractionIdx}/$var{TrainingPath}/class1feats.csv</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -618,7 +618,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue>record-[$core{date}-$core{time}].csv</DefaultValue>
-					<Value>${Player_ScenarioDirectory}/$var{SignalsPath}/$var{TrainingPath}/class2feats.csv</Value>
+					<Value>${Player_ScenarioDirectory}/sessions/$var{ExtractionIdx}/$var{TrainingPath}/class2feats.csv</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>

@@ -85,13 +85,13 @@ class Dialog(QDialog):
                 if "HappyFeatVersion" in workDict:
                     pathToCheck = os.path.join(self.workspaceFolder, os.path.splitext(chosenWorkspace)[0])
                     if os.path.exists(pathToCheck):
-                        pathToCheck = os.path.join(pathToCheck, "signals")
-                        if os.path.exists(pathToCheck):
-                            pathToCheck1 = os.path.join(pathToCheck, "extract")
-                            pathToCheck2 = os.path.join(pathToCheck, "train")
-                            if os.path.exists(pathToCheck1) and os.path.exists(pathToCheck2):
-                                pathToCheck1 = os.path.join(pathToCheck1, "1")
-                                pathToCheck2 = os.path.join(pathToCheck2, "1")
+                        pathToCheck1 = os.path.join(pathToCheck, "signals")
+                        pathToCheck2 = os.path.join(pathToCheck, "sessions")
+                        if os.path.exists(pathToCheck1) and os.path.exists(pathToCheck2):
+                            pathToCheck2 = os.path.join(pathToCheck2, "1")
+                            if os.path.exists(pathToCheck2):
+                                pathToCheck1 = os.path.join(pathToCheck2, "extract")
+                                pathToCheck2 = os.path.join(pathToCheck2, "train")
                                 if os.path.exists(pathToCheck1) and os.path.exists(pathToCheck2):
                                     validWs = True
         
@@ -132,14 +132,14 @@ class Dialog(QDialog):
                 os.mkdir(os.path.join(fullWorkspaceFolder, workspaceName))
             if not os.path.exists(os.path.join(fullWorkspaceFolder, workspaceName, "signals")):
                 os.mkdir(os.path.join(fullWorkspaceFolder, workspaceName, "signals"))
-            if not os.path.exists(os.path.join(fullWorkspaceFolder, workspaceName, "signals", "extract")):
-                os.mkdir(os.path.join(fullWorkspaceFolder, workspaceName, "signals", "extract"))
-            if not os.path.exists(os.path.join(fullWorkspaceFolder, workspaceName, "signals", "train")):
-                os.mkdir(os.path.join(fullWorkspaceFolder, workspaceName, "signals", "train"))
-            if not os.path.exists(os.path.join(fullWorkspaceFolder, workspaceName, "signals", "extract", "1")):
-                os.mkdir(os.path.join(fullWorkspaceFolder, workspaceName, "signals", "extract", "1"))
-            if not os.path.exists(os.path.join(fullWorkspaceFolder, workspaceName, "signals", "train", "1")):
-                os.mkdir(os.path.join(fullWorkspaceFolder, workspaceName, "signals", "train", "1"))
+            if not os.path.exists(os.path.join(fullWorkspaceFolder, workspaceName, "sessions")):
+                os.mkdir(os.path.join(fullWorkspaceFolder, workspaceName, "sessions"))
+            if not os.path.exists(os.path.join(fullWorkspaceFolder, workspaceName, "sessions", "1")):
+                os.mkdir(os.path.join(fullWorkspaceFolder, workspaceName, "sessions", "1"))
+            if not os.path.exists(os.path.join(fullWorkspaceFolder, workspaceName, "sessions", "1", "extract")):
+                os.mkdir(os.path.join(fullWorkspaceFolder, workspaceName, "sessions", "1", "extract"))
+            if not os.path.exists(os.path.join(fullWorkspaceFolder, workspaceName, "sessions", "1", "train")):
+                os.mkdir(os.path.join(fullWorkspaceFolder, workspaceName, "sessions", "1", "train"))
             # Launch GUI 1 (metric and acquisition parameters)
             self.launchAcqGui = True
             self.accept()

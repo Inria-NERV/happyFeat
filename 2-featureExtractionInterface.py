@@ -95,7 +95,7 @@ class Dialog(QDialog):
         self.ovScript = None
         self.sensorMontage = None
         self.customMontagePath = None
-        self.currentExtractId = None
+        self.currentSessionId = None
 
         self.extractTimerStart = 0
         self.extractTimerEnd = 0
@@ -123,7 +123,7 @@ class Dialog(QDialog):
             self.ovScript = self.parameterDict["ovDesignerPath"]
             self.sensorMontage = self.parameterDict["sensorMontage"]
             self.customMontagePath = self.parameterDict["customMontagePath"]
-            self.currentExtractId = self.parameterDict["currentExtractId"]
+            self.currentSessionId = self.parameterDict["currentSessionId"]
 
         # -----------------------------------------------------------------------
         # CREATE INTERFACE...
@@ -204,21 +204,16 @@ class Dialog(QDialog):
         self.extractParamsDict = self.getDefaultExtractionParameters()
         # ... then copy from existing params file
 
-        if self.parameterDict["ExtractionParams"]:
-            if self.currentExtractId and self.parameterDict["ExtractionParams"][self.currentExtractId]:
-                # then copy its elements...
-                for (key, elem) in enumerate(self.extractParamsDict):
-                    if elem in self.parameterDict["ExtractionParams"][self.currentExtractId]:
-                        self.extractParamsDict[elem] = self.parameterDict["ExtractionParams"][self.currentExtractId][elem]
-            else:
-                # take last extraction scheme...
-                for extractionInstance in self.parameterDict["ExtractionParams"].keys():
-                    self.currentExtractId = extractionInstance
-                # then copy its elements...
-                for (key, elem) in enumerate(self.extractParamsDict):
-                    if elem in self.parameterDict["ExtractionParams"][self.currentExtractId]:
-                        self.extractParamsDict[elem] = self.parameterDict["ExtractionParams"][self.currentExtractId][elem]
+        # special case: if current session id does not exist, load the "last" one
+        if not self.parameterDict["Sessions"][self.currentSessionId]:
+            for sessionId in self.parameterDict["Sessions"].keys():
+                self.currentSessionId = sessionId
 
+        for (key, elem) in enumerate(self.extractParamsDict):
+            if elem in self.parameterDict["Sessions"][self.currentSessionId]["ExtractionParams"]:
+                self.extractParamsDict[elem] = self.parameterDict["Sessions"][self.currentSessionId]["ExtractionParams"][elem]
+
+        # Create layouts...
         extractParametersLayout = QHBoxLayout()
         self.layoutExtractLabels = QVBoxLayout()
         self.layoutExtractLineEdits = QVBoxLayout()
@@ -246,7 +241,7 @@ class Dialog(QDialog):
                 self.layoutExtractLineEdits.addWidget(metricCombo)
             else:
                 lineEditExtractTemp = QLineEdit()
-                lineEditExtractTemp.setText(self.extractParamsDict[paramId])
+                lineEditExtractTemp.setText(str(self.extractParamsDict[paramId]))
                 self.layoutExtractLineEdits.addWidget(lineEditExtractTemp)
 
         # Label + un-editable list of parameters for reminder
@@ -272,18 +267,6 @@ class Dialog(QDialog):
         self.btn_runExtractionScenario = QPushButton("Extract Features and Trials")
         self.btn_runExtractionScenario.clicked.connect(lambda: self.runExtractionScenario())
         self.btn_runExtractionScenario.setStyleSheet("font-weight: bold")
-
-        # NOTE : THIS HAS BEEN MOVED TO "OPTIONS" MENU IN TOP BAR
-        # # TODO : keep this part ? OPENVIBE DESIGNER FINDER
-        # self.btn_browseOvScript = QPushButton("Browse for OpenViBE designer script")
-        # self.btn_browseOvScript.clicked.connect(lambda: self.browseForDesigner())
-        # self.designerWidget = QWidget()
-        # layout_designer_h = QHBoxLayout(self.designerWidget)
-        # self.designerTextBox = QLineEdit()
-        # self.designerTextBox.setText(str(self.ovScript))
-        # self.designerTextBox.setEnabled(False)
-        # layout_designer_h.addWidget(self.designerTextBox)
-        # layout_designer_h.addWidget(self.btn_browseOvScript)
 
         # Arrange all widgets in the layout
         self.layoutExtract.addWidget(self.labelFeatExtract)
@@ -596,13 +579,13 @@ class Dialog(QDialog):
         self.btn_loadFilesForViz.setEnabled(True)
         self.enablePlotBtns(False)
 
-        self.refreshLists(os.path.join(self.workspaceFolder, "signals"), self.currentExtractId)
+        self.refreshLists(self.currentSessionId)
 
         # Timing loop every 4s to get files in working folder
         self.filesRefreshTimer = QtCore.QTimer(self)
         self.filesRefreshTimer.setSingleShot(False)
         self.filesRefreshTimer.setInterval(4000)  # in milliseconds
-        self.filesRefreshTimer.timeout.connect(lambda: self.refreshLists(os.path.join(self.workspaceFolder, "signals"), self.currentExtractId))
+        self.filesRefreshTimer.timeout.connect(lambda: self.refreshLists(self.currentSessionId))
         self.filesRefreshTimer.start()
 
     # -----------------------------------------------------------------------
@@ -638,23 +621,25 @@ class Dialog(QDialog):
 
         self.show()
 
-    def refreshLists(self, workingFolder, currentExtractFolder):
+    def refreshLists(self, currentSessionId):
+        # TODO : remove currentsessionid, replace with self.currentsessionid ??
         # ----------
         # Refresh all lists. Called once at the init, then once every timer click (see init method)
         # ----------
-        self.refreshSignalList(self.fileListWidget, workingFolder)
-        self.refreshAvailableFilesForVizList(workingFolder, currentExtractFolder)
-        self.refreshAvailableTrainSignalList(workingFolder, currentExtractFolder)
+        self.refreshSignalList(self.fileListWidget, self.workspaceFolder)
+        self.refreshAvailableFilesForVizList(self.workspaceFolder, currentSessionId)
+        self.refreshAvailableTrainSignalList(self.workspaceFolder, currentSessionId)
         return
 
     def refreshSignalList(self, listwidget, workingFolder):
         # ----------
         # Refresh list of available signal (.ov) files
         # ----------
+        signalFolder = os.path.join(workingFolder, "signals")
 
         # first get a list of all files in workingfolder that match the condition
         filelist = []
-        for filename in os.listdir(workingFolder):
+        for filename in os.listdir(signalFolder):
             if filename.endswith(".ov"):
                 filelist.append(filename)
 
@@ -674,12 +659,11 @@ class Dialog(QDialog):
                 listwidget.addItem(filename)
         return
 
-    def refreshAvailableFilesForVizList(self, signalFolder, currentExtractFolder):
+    def refreshAvailableFilesForVizList(self, workspaceFolder, currentSessionId):
         # ----------
         # Refresh available CSV spectrum files.
         # Only mention current class (set in parameters), and check that both classes are present
         # ----------
-
         suffix1 = None
         suffix2 = None
         if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
@@ -693,7 +677,7 @@ class Dialog(QDialog):
         if suffix2:
             suffixFinal += suffix2
 
-        workingFolder = os.path.join(signalFolder, "extract", currentExtractFolder)
+        workingFolder = os.path.join(workspaceFolder, "sessions", currentSessionId, "extract")
         class1label = self.parameterDict["AcquisitionParams"]["Class1"]
         class2label = self.parameterDict["AcquisitionParams"]["Class2"]
 
@@ -735,12 +719,12 @@ class Dialog(QDialog):
 
         return
 
-    def refreshAvailableTrainSignalList(self, signalFolder, currentExtractFolder):
+    def refreshAvailableTrainSignalList(self, workspaceFolder, currentSessionId):
         # ----------
         # Refresh available training files.
         # ----------
 
-        workingFolder = os.path.join(signalFolder, "train", currentExtractFolder)
+        workingFolder = os.path.join(workspaceFolder, "sessions", currentSessionId, "train")
 
         # first get a list of all csv files in workingfolder that match the condition
         availableTrainSigs = []
@@ -773,7 +757,7 @@ class Dialog(QDialog):
         changed = False
         alreadyExists = False
         newId = None
-        newDict = self.parameterDict["ExtractionParams"][self.currentExtractId].copy()
+        newDict = self.parameterDict["Sessions"][self.currentSessionId]["ExtractionParams"].copy()
 
         # Retrieve param id from label...
         for idx in range(self.layoutExtractLabels.count()):
@@ -789,45 +773,43 @@ class Dialog(QDialog):
                 paramValue = self.layoutExtractLineEdits.itemAt(idx).widget().text()
                 paramId = list(settings.paramIdText.keys())[list(settings.paramIdText.values()).index(paramLabel)]
 
-            if self.parameterDict["ExtractionParams"][self.currentExtractId][paramId] != paramValue:
+            if self.parameterDict["Sessions"][self.currentSessionId]["ExtractionParams"][paramId] != paramValue:
                 changed = True
                 newDict[paramId] = paramValue
 
         # update json file with new entry and update "current extraction" index
         if changed:
             # find if it's the same as an already existing configuration
-            for key in self.parameterDict["ExtractionParams"].keys():
-                tempDict = self.parameterDict["ExtractionParams"][key]
+            for session in self.parameterDict["Sessions"].keys():
+                tempDict = self.parameterDict["Sessions"][session]["ExtractionParams"]
                 if newDict == tempDict:
-                    self.parameterDict["currentExtractId"] = key
-                    setKeyValue(self.workspaceFile, "currentExtractId", self.parameterDict["currentExtractId"])
-                    self.currentExtractId = key
+                    self.parameterDict["currentSessionId"] = session
+                    setKeyValue(self.workspaceFile, "currentSessionId", self.parameterDict["currentSessionId"])
+                    self.currentSessionId = session
                     alreadyExists = True
                     break
 
             if not alreadyExists:
                 # find last idx of extraction parameters
-                for key in self.parameterDict["ExtractionParams"].keys():
-                    newId = key
+                for session in self.parameterDict["Sessions"].keys():
+                    newId = session
                 newId = str( int(newId) + 1)
                 # save new extraction parameters dict in self.parameterDict
-                self.parameterDict["ExtractionParams"][newId] = newDict
-                self.parameterDict["currentExtractId"] = newId
-                setKeyValue(self.workspaceFile, "ExtractionParams", self.parameterDict["ExtractionParams"])
-                setKeyValue(self.workspaceFile, "currentExtractId", self.parameterDict["currentExtractId"])
+                self.parameterDict["currentSessionId"] = newId
+                # write parameters in json file
+                newSession(self.workspaceFile, self.parameterDict, newId, newDict)
+                setKeyValue(self.workspaceFile, "currentSessionId", self.parameterDict["currentSessionId"])
                 # create new folder for future extracted files
-                if not os.path.exists(os.path.join(self.workspaceFolder, "signals", "extract", newId)):
-                    os.mkdir(os.path.join(self.workspaceFolder, "signals", "extract", newId))
-                if not os.path.exists(os.path.join(self.workspaceFolder, "signals", "train", newId)):
-                    os.mkdir(os.path.join(self.workspaceFolder, "signals", "train", newId))
-                self.currentExtractId = newId
+                if not os.path.exists(os.path.join(self.workspaceFolder, "sessions", newId)):
+                    os.mkdir(os.path.join(self.workspaceFolder, "sessions", newId))
+                if not os.path.exists(os.path.join(self.workspaceFolder, "sessions", newId, "extract")):
+                    os.mkdir(os.path.join(self.workspaceFolder, "sessions", newId, "extract"))
+                if not os.path.exists(os.path.join(self.workspaceFolder, "sessions", newId, "train")):
+                    os.mkdir(os.path.join(self.workspaceFolder, "sessions", newId, "train"))
+                self.currentSessionId = newId
 
             # Manually refresh lists
-            self.refreshLists(os.path.join(self.workspaceFolder, "signals"), self.currentExtractId)
-
-            # TODO : remove that in the future?
-            # with open(self.jsonfullpath, "w") as outfile:
-            #    json.dump(self.parameterDict, outfile, indent=4)
+            self.refreshLists(self.currentSessionId)
 
         return changed, alreadyExists, newId
 
@@ -885,7 +867,7 @@ class Dialog(QDialog):
         # For each selected signal file, check if extraction has already been done
         # => in .hfw file, at current extract idx, entry exists
         # + extract files exist in corresponding folder
-        extractedFiles = loadExtractedFiles(self.workspaceFile, self.currentExtractId)
+        extractedFiles = loadExtractedFiles(self.workspaceFile, self.currentSessionId)
         redundantFiles = []
         for file in signalFiles:
             if file in extractedFiles:
@@ -912,7 +894,7 @@ class Dialog(QDialog):
         # Add extracted files to .hfw config file
         # TODO : put somewhere else, AFTER extraction has succeeded...
         for file in signalFiles:
-            addExtractedFile(self.workspaceFile, self.currentExtractId, file)
+            addExtractedFile(self.workspaceFile, self.currentSessionId, file)
 
         # create progress bar window...
         self.progressBarExtract = ProgressBar("Feature extraction",
@@ -927,11 +909,11 @@ class Dialog(QDialog):
         self.filesRefreshTimer.stop()
 
         # Instantiate the thread...
-        self.extractThread = Extraction(self.ovScript, scenFile, signalFiles, signalFolder, self.parameterDict, self.currentExtractId)
+        self.extractThread = Extraction(self.ovScript, scenFile, signalFiles, signalFolder, self.parameterDict, self.currentSessionId)
         # Signal: Extraction work thread finished one file of the selected list.
         # Refresh the viz&train file lists to make it available + increment progress bar
         self.extractThread.info.connect(self.progressBarExtract.increment)
-        self.extractThread.info.connect(lambda : self.refreshLists(os.path.join(self.workspaceFolder, "signals"), self.currentExtractId))
+        self.extractThread.info.connect(lambda : self.refreshLists(self.currentSessionId))
         self.extractThread.info2.connect(self.progressBarExtract.changeLabel)
         # Signal: Extraction work thread finished
         self.extractThread.over.connect(self.extraction_over)
@@ -974,7 +956,7 @@ class Dialog(QDialog):
         analysisFiles = []
         for selectedItem in self.availableFilesForVizList.selectedItems():
             analysisFiles.append(selectedItem.text().removesuffix(suffix))
-        workingFolder = os.path.join(self.workspaceFolder, "signals", "extract", self.currentExtractId)
+        workingFolder = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "extract")
         metaFolder = os.path.join(self.workspaceFolder, "signals")
         # deactivate this part of the GUI + the extraction (or else we might have sync issues)
         self.enableExtractionGui(False)
@@ -1341,8 +1323,8 @@ class Dialog(QDialog):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             print("TimeFreq for sensor: " + self.electrodePsd.text())
 
-            tmin = float(self.parameterDict["ExtractionParams"][self.currentExtractId]['StimulationDelay'])
-            tmax = float(self.parameterDict["ExtractionParams"][self.currentExtractId]['StimulationEpoch'])
+            tmin = float(self.parameterDict["Sessions"][self.currentSessionId]["ExtractionParams"]['StimulationDelay'])
+            tmax = float(self.parameterDict["Sessions"][self.currentSessionId]["ExtractionParams"]['StimulationEpoch'])
             fmin = int(self.userFmin.text())
             fmax = int(self.userFmax.text())
             class1 = self.parameterDict["AcquisitionParams"]["Class1"]
@@ -1510,7 +1492,7 @@ class Dialog(QDialog):
         return
 
     def checkExistenceExtractFiles(self, file):
-        extractFolder = os.path.join(self.workspaceFolder, "signals", "extract", self.currentExtractId)
+        extractFolder = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "extract")
         if not os.path.exists(extractFolder):
             return False
 
@@ -1538,7 +1520,17 @@ class Dialog(QDialog):
             if not os.path.exists(extractFile1Path) or not os.path.exists(extractFile2Path):
                 return False
 
-        # TODO Also check for TRIALS and META files
+        trainFolder = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train")
+        if not os.path.exists(trainFolder):
+            return False
+        trialsFile = os.path.join(trainFolder, str(os.path.splitext(file)[0] + "-TRIALS.csv"))
+        if not os.path.exists(trialsFile):
+            return False
+
+        signalsFolder = os.path.join(self.workspaceFolder, "signals")
+        metaFile = os.path.join(signalsFolder, str(os.path.splitext(file)[0] + "-META.csv"))
+        if not os.path.exists(metaFile):
+            return False
 
         return True
 
@@ -1722,8 +1714,9 @@ if __name__ == '__main__':
 
     # Check that a workspace file has been provided
     if len(sys.argv) == 1:
-        myMsgBox("NEED WORKSPACE FILE !!")
-        # TODO
+        print("\tError: missing argument.\n\tPlease call this interface with a workspace file (.hfw).")
+        print("\tEx: python 2-featureExtractionInterface myworkspace.hfw")
+        print("\t(use happyfeat_welcome to initialize new workspaces)")
         sys.exit(-1)
 
     elif len(sys.argv) == 2:
@@ -1733,14 +1726,15 @@ if __name__ == '__main__':
         currScriptFolder = os.path.dirname(os.path.abspath(sys.argv[0]))
         fullWorkspacePath = os.path.join(currScriptFolder, workspaceFolder, workspaceFile)
         if not os.path.exists(fullWorkspacePath):
-            myMsgBox("NEED WORKSPACE FILE !!")
-            # TODO
+            print("\tError: can't open workspace file.")
+            print("\tPlease check that \"workspace\" folder exists, and that your .hfw file is within.")
+            print("\t(use happyfeat_welcome to initialize new workspaces)")
             sys.exit(-1)
         with open(fullWorkspacePath, "r") as wp:
             workDict = json.load(wp)
             if not "HappyFeatVersion" in workDict:
-                myMsgBox("INVALID WORKSPACE FILE !!")
-                # TODO
+                print("\tError: invalid workspace file.")
+                # TODO: more checks...
                 sys.exit(-1)
 
     dlg = Dialog(fullWorkspacePath)
