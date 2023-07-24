@@ -587,7 +587,7 @@ class TrainClassifier(QtCore.QThread):
                  signalFolder, templateFolder,
                  workspaceFolder, ovScript,
                  trainingSize, selectedFeats,
-                 parameterDict, sampFreq, speedUp, parent=None):
+                 parameterDict, sampFreq, currentAttempt, speedUp, parent=None):
 
         super().__init__(parent)
         self.stop = False
@@ -598,6 +598,7 @@ class TrainClassifier(QtCore.QThread):
         self.workspaceFolder = workspaceFolder
         self.ovScript = ovScript
         self.trainingSize = trainingSize
+        self.currentAttempt = currentAttempt
         self.speedUp = speedUp
 
         # selectedFeats is either a list of feats. of interest
@@ -786,7 +787,7 @@ class TrainClassifier(QtCore.QThread):
 
             self.info2.emit("Finalizing Training...")
             scenXml = os.path.join(self.workspaceFolder, settings.templateScenFilenames[5])
-            success, classifierScoreStr, accuracy = self.runClassifierScenario(scenXml)
+            success, classifierOutputStr, accuracy = self.runClassifierScenario(scenXml)
             if not success:
                 successGlobal = False
                 self.errorMessageTrainer()
@@ -796,6 +797,8 @@ class TrainClassifier(QtCore.QThread):
                 newWeights = os.path.join(self.signalFolder, "sessions", self.currentSessionId, "train", "classifier-weights.xml")
                 origFilename = os.path.join(self.workspaceFolder, "classifier-weights.xml")
                 copyfile(newWeights, origFilename)
+
+                self.currentAttempt["Score"] = accuracy
 
                 # PREPARE GOODBYE MESSAGE...
                 textFeats = str("")
@@ -809,11 +812,13 @@ class TrainClassifier(QtCore.QThread):
                         "\t" + "Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
 
                 textDisplay = textFeats
-                textDisplay += str("\n" + classifierScoreStr)
+                textDisplay += str("\n" + classifierOutputStr)
 
                 self.exitText = textDisplay
 
         else:
+            # ORIGINAL VERSION - NOT SPED UP
+            # USING "CLASSIC" COMPOSITE FILE BUILDING + RUNNING TRAIN SCEN ON IT
             scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames[2])
             modifyTrainPartitions(self.trainingSize, scenFile)
 
@@ -823,6 +828,7 @@ class TrainClassifier(QtCore.QThread):
             tmin = 0
             tmax = float(self.extractDict["StimulationEpoch"])
 
+            # Train on accumulation of all selected trials
             if not self.isCombinationComputing:
                 compositeCsv = mergeRunsCsv(trainingSigList, self.parameterDict["AcquisitionParams"]["Class1"],
                                             self.parameterDict["AcquisitionParams"]["Class2"],
@@ -831,18 +837,21 @@ class TrainClassifier(QtCore.QThread):
                     self.over.emit(False, "Error merging runs!! Most probably different list of electrodes")
                     return
 
-                self.info.emit(True)
-
                 print("Composite file for training: " + compositeCsv)
                 compositeCsvBasename = os.path.basename(compositeCsv)
                 newWeightsName = "classifier-weights.xml"
                 modifyTrainIO(compositeCsvBasename, newWeightsName, self.currentSessionId, scenFile)
 
+                # write composite file name in structure for future saving in workspace
+                self.currentAttempt["CompositeFile"] = compositeCsvBasename
+
+                # increment progressbar
+                self.info.emit(True)
                 self.info2.emit("Running Training Scenario")
 
                 # RUN THE CLASSIFIER TRAINING SCENARIO
                 scenXml = os.path.join(self.workspaceFolder, settings.templateScenFilenames[2])
-                success, classifierScoreStr, accuracy = self.runClassifierScenario(scenXml)
+                success, classifierOutputStr, accuracy = self.runClassifierScenario(scenXml)
 
                 if not success:
                     self.errorMessageTrainer()
@@ -852,6 +861,9 @@ class TrainClassifier(QtCore.QThread):
                     newWeights = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", "classifier-weights.xml")
                     origFilename = os.path.join(self.workspaceFolder, "classifier-weights.xml")
                     copyfile(newWeights, origFilename)
+
+                    # write score in workspace structure for future reporting
+                    self.currentAttempt["Score"] = accuracy
 
                     # PREPARE GOODBYE MESSAGE...
                     textFeats = str("")
@@ -874,17 +886,18 @@ class TrainClassifier(QtCore.QThread):
                                 "\t" + "Channel " + str(selectedFeats2[i][0]) + " at " + str(selectedFeats2[i][1]) + " Hz\n")
 
                     textDisplay = textFeats
-                    textDisplay += str("\n" + classifierScoreStr)
+                    textDisplay += str("\n" + classifierOutputStr)
 
                     self.exitText = textDisplay
 
+            # Train on combinations of selected trials
             else:
                 # Create list of files from selected items
                 combinationsList = list(myPowerset(trainingSigList))
                 sigIdxList = range(len(trainingSigList))
                 combIdx = list(myPowerset(sigIdxList))
                 scores = [0 for x in range(len(combIdx))]
-                classifierScoreStrList = ["" for x in range(len(combIdx))]
+                classifierOutputStrList = ["" for x in range(len(combIdx))]
 
                 successGlobal = True
                 for idxcomb, comb in enumerate(combinationsList):
@@ -908,7 +921,7 @@ class TrainClassifier(QtCore.QThread):
 
                     # RUN THE CLASSIFIER TRAINING SCENARIO
                     scenXml = os.path.join(self.workspaceFolder, settings.templateScenFilenames[2])
-                    success, classifierScoreStrList[idxcomb], scores[idxcomb] = self.runClassifierScenario(scenXml)
+                    success, classifierOutputStrList[idxcomb], scores[idxcomb] = self.runClassifierScenario(scenXml)
                     if not success:
                         successGlobal = False
                         self.errorMessageTrainer()
@@ -959,7 +972,7 @@ class TrainClassifier(QtCore.QThread):
                     for j in combIdx[maxIdx]:
                         maxIdxStr.append(str(j))
                     textScore += str("\nMax is combination [" + ','.join(maxIdxStr) + "] with " + str(max(scores)) + "%\n")
-                    textScore += classifierScoreStrList[maxIdx]
+                    textScore += classifierOutputStrList[maxIdx]
 
                     textDisplay = textFeats
                     textDisplay = str(textDisplay + "\n" + textScore)
@@ -986,10 +999,10 @@ class TrainClassifier(QtCore.QThread):
         # - channels in list
         n_bins = int((sampFreq / 2) + 1)
         for idx, feat in enumerate(inputSelectedFeats):
-            if feat.text() == "":
+            if feat == "":
                 errMsg = str("Pair " + str(idx + 1) + " is empty...")
                 return None, errMsg
-            [chan, freqstr] = feat.text().split(";")
+            [chan, freqstr] = feat.split(";")
             if chan not in electrodeList:
                 errMsg = str("Channel in pair " + str(idx + 1) + " (" + str(chan) + ") is not in the list...")
                 return None, errMsg
@@ -1003,7 +1016,7 @@ class TrainClassifier(QtCore.QThread):
                     errMsg = str(
                         "Frequency in pair " + str(idx + 1) + " (" + str(freq) + ") is not in the acceptable range...")
                     return None, errMsg
-            selectedFeats.append(feat.text().split(";"))
+            selectedFeats.append(feat.split(";"))
             print(feat)
 
         return selectedFeats, errMsg
@@ -1044,7 +1057,7 @@ class TrainClassifier(QtCore.QThread):
         # Read console output to detect end of process
         # and prompt user with classification score. Quite artisanal but works
         success = True
-        classifierScoreStr = ""
+        classifierOutputStr = ""
         activateScoreMsgBox = False
         while True:
             output = p.stdout.readline()
@@ -1056,7 +1069,7 @@ class TrainClassifier(QtCore.QThread):
                     success = False
                     return success, None, None
                 if "Application terminated" in str(output):
-                    classifierScoreStr = str(classifierScoreStr + "\n")
+                    classifierOutputStr = str(classifierOutputStr + "\n")
                     break
                 if "Cross-validation test" in str(output):
                     activateScoreMsgBox = True
@@ -1064,11 +1077,10 @@ class TrainClassifier(QtCore.QThread):
                     stringToWrite = str(output).replace("\\r\\n\'", "")
                     if "trainer>" in stringToWrite:
                         stringToWrite = stringToWrite.split("trainer> ")
-                        classifierScoreStr = str(classifierScoreStr + stringToWrite[1] + "\n")
-
+                        classifierOutputStr = str(classifierOutputStr + stringToWrite[1] + "\n")
 
         if activateScoreMsgBox:
-            lines = classifierScoreStr.splitlines()
+            lines = classifierOutputStr.splitlines()
 
             target_1_True_Negative = float(lines[2].split()[2])
             target_1_False_Positive = float(lines[2].split()[3])
@@ -1120,7 +1132,7 @@ class TrainClassifier(QtCore.QThread):
         # Read console output to detect end of process
         # and prompt user with classification score. Quite artisanal but works
         success = True
-        classifierScoreStr = ""
+        outputStr = ""
         activateScoreMsgBox = False
         while True:
             output = p.stdout.readline()
@@ -1132,7 +1144,7 @@ class TrainClassifier(QtCore.QThread):
                     success = False
                     return success
                 if "Application terminated" in str(output):
-                    classifierScoreStr = str(classifierScoreStr + "\n")
+                    outputStr = str(outputStr + "\n")
                     break
 
         return success

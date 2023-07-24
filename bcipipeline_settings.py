@@ -6,7 +6,7 @@ global optionKeys
 optionKeys = ["",
               "PowSpectrumGraz",
               "Connectivity",
-              "PowSpectrumConnect"]
+              "Psd+Connect"]
 
 global optionsComboText
 optionsComboText = {optionKeys[0]: "",

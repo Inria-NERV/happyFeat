@@ -96,6 +96,7 @@ class Dialog(QDialog):
         self.sensorMontage = None
         self.customMontagePath = None
         self.currentSessionId = None
+        self.currentAttempt = None
 
         self.extractTimerStart = 0
         self.extractTimerEnd = 0
@@ -545,11 +546,11 @@ class Dialog(QDialog):
         self.lastTrainingResults.insertPlainText("No training attempts yet...")
 
         # Select / all combinations buttons...
-        self.btn_selectFeatures = QPushButton("TRAIN CLASSIFIER")
+        self.btn_trainClassif = QPushButton("TRAIN CLASSIFIER")
         self.btn_allCombinations = QPushButton("FIND BEST COMBINATION")
-        self.btn_selectFeatures.clicked.connect(lambda: self.btnSelectFeatures())
+        self.btn_trainClassif.clicked.connect(lambda: self.btnTrainClassif())
         self.btn_allCombinations.clicked.connect(lambda: self.btnAllCombinations())
-        self.btn_selectFeatures.setStyleSheet("font-weight: bold")
+        self.btn_trainClassif.setStyleSheet("font-weight: bold")
         self.btn_allCombinations.setStyleSheet("font-weight: bold")
 
         # Connectivity: allow to enable/disable "Speed up" training"
@@ -570,7 +571,7 @@ class Dialog(QDialog):
         self.qvTrainingLayout.addWidget(self.lastTrainingResults)
         if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             self.qvTrainingLayout.addLayout(self.speedUpLayout)
-        self.qvTrainingLayout.addWidget(self.btn_selectFeatures)
+        self.qvTrainingLayout.addWidget(self.btn_trainClassif)
         # self.qvTrainingLayout.addWidget(self.btn_allCombinations)  #disabled for now
         self.dlgLayout.addLayout(self.layoutTrain, 1)
 
@@ -1018,7 +1019,7 @@ class Dialog(QDialog):
         # Viz work thread2 is over, so we only kill the progress bar
         self.progressBarViz2.finish()
 
-    def btnSelectFeatures(self):
+    def btnTrainClassif(self):
         # ----------
         # Callback from button :
         # Select features in fields, check if they're correctly formatted,
@@ -1056,30 +1057,58 @@ class Dialog(QDialog):
         for selectedItem in self.fileListWidgetTrain.selectedItems():
             self.trainingFiles.append(selectedItem.text())
 
-        # IMPORTANT !
+        # Initialize structure for reporting results in workspace file...
+        self.currentAttempt = {"SignalFiles": self.trainingFiles,
+                               "CompositeFile": None, "Features": None, "Score": ""}
+
+        # LOAD TRAINING FEATURES
+        # /!\ IMPORTANT !
         # When using "mixed" pipeline, if one of the two feature lists is empty, we use
         # the Training scenario template from the pipeline with the non-empty feature (got it?)
         # ex: if feats(connectivity) is empty, then we use the "powerspectrum" template.
         trainingParamDict = self.parameterDict.copy()
-        trainingFeats = self.selectedFeats
+        listFeats = []
         if self.parameterDict["pipelineType"] != settings.optionKeys[3]:
-            trainingFeats = self.selectedFeats[0]
+            for featWidget in self.selectedFeats[0]:
+                listFeats.append(featWidget.text())
+            self.currentAttempt["Features"] = {self.parameterDict["pipelineType"]: listFeats}
         else:
-            trainingFeats = self.selectedFeats
+            # save which features have been selected for which features. Include cases in which
+            # features for only one of the two metrics have been selected
             if len(self.selectedFeats[0]) < 1:
                 # no powspectum feature = use connectivity pipeline's training template
                 trainingParamDict["pipelineType"] = settings.optionKeys[2]
                 # copy the selected feats to the first list, for processing in the thread...
-                trainingFeats = self.selectedFeats[1]
+                for featWidget in self.selectedFeats[1]:
+                    listFeats.append(featWidget.text())
+                self.currentAttempt["Features"] = {settings.optionKeys[2]: listFeats}
             elif len(self.selectedFeats[1]) < 1:
                 # no connectivity feature = use powspectrum pipeline's training template
                 trainingParamDict["pipelineType"] = settings.optionKeys[1]
-                trainingFeats = self.selectedFeats[0]
+                for featWidget in self.selectedFeats[0]:
+                    listFeats.append(featWidget.text())
+                self.currentAttempt["Features"] = {settings.optionKeys[1]: listFeats}
+            else:
+                # save both features
+                listFeats = [[], []]
+                for metric in [0, 1]:
+                    for featWidget in self.selectedFeats[metric]:
+                        listFeats[metric].append(featWidget.text())
+                self.currentAttempt["Features"] = {settings.optionKeys[1]: listFeats[0],
+                                                   settings.optionKeys[2]: listFeats[1]}
 
-        signalFolder = os.path.join(self.workspaceFolder, "signals")
-        pipelineType = trainingParamDict["pipelineType"]
-        templateFolder = os.path.join(self.scriptPath, settings.optionsTemplatesDir[pipelineType])
-        workspaceFolder = self.workspaceFolder
+        # Check if training with such parameters has already been attempted
+        alreadyAttempted, attemptId, score = \
+            checkIfTrainingAlreadyDone(self.workspaceFile, self.currentSessionId,
+                                       self.currentAttempt["SignalFiles"],
+                                       self.currentAttempt["Features"])
+        if alreadyAttempted:
+            message = str("Training was already attempted with an accuracy of " + score)
+            message += str("\n   Run it again?")
+            retVal = myOkCancelBox(message)
+            if retVal == QMessageBox.Cancel:
+                self.currentAttempt = {}
+                return
 
         # deactivate this part of the GUI (+ the extraction part)
         self.enableExtractionGui(False)
@@ -1090,16 +1119,20 @@ class Dialog(QDialog):
 
         # Instantiate the thread...
         combiComp = False
+        signalFolder = os.path.join(self.workspaceFolder, "signals")
+        pipelineType = trainingParamDict["pipelineType"]
+        templateFolder = os.path.join(self.scriptPath, settings.optionsTemplatesDir[pipelineType])
         enableSpeedUp = False
         if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             if self.enableSpeedUp.isChecked():
                 enableSpeedUp = True
 
         self.trainClassThread = TrainClassifier(combiComp, self.trainingFiles,
-                                                signalFolder, templateFolder, workspaceFolder,
+                                                signalFolder, templateFolder, self.workspaceFolder,
                                                 self.ovScript,
-                                                trainingSize, trainingFeats,
-                                                trainingParamDict, self.samplingFreq, enableSpeedUp)
+                                                trainingSize, listFeats,
+                                                trainingParamDict, self.samplingFreq,
+                                                self.currentAttempt, enableSpeedUp)
 
         # Signal: Training work thread finished one step
         # Increment progress bar + change its label
@@ -1212,6 +1245,20 @@ class Dialog(QDialog):
 
         self.progressBarTrain.finish()
         if success:
+            # Add training attempt in workspace file
+            alreadyDone, attemptId, dummy = \
+                checkIfTrainingAlreadyDone(self.workspaceFile, self.currentSessionId,
+                                           self.currentAttempt["SignalFiles"],
+                                           self.currentAttempt["Features"])
+            if alreadyDone:
+                replaceTrainingAttempt(self.workspaceFile, self.currentSessionId, attemptId,
+                                       self.currentAttempt["SignalFiles"], self.currentAttempt["CompositeFile"],
+                                       self.currentAttempt["Features"], self.currentAttempt["Score"])
+            else:
+                addTrainingAttempt(self.workspaceFile, self.currentSessionId,
+                                       self.currentAttempt["SignalFiles"], self.currentAttempt["CompositeFile"],
+                                       self.currentAttempt["Features"], self.currentAttempt["Score"])
+
             textGoodbye = str("Classifier weights were written in:\n\t")
             textGoodbye += self.workspaceFolder + str("/classifier-weights.xml\n")
             textGoodbye += str("If those results are satisfying, you can now open in the OV Designer:\n\t") \
@@ -1266,7 +1313,7 @@ class Dialog(QDialog):
         # Training part...
         self.btn_addPair.setEnabled(myBool)
         self.btn_removePair.setEnabled(myBool)
-        self.btn_selectFeatures.setEnabled(myBool)
+        self.btn_trainClassif.setEnabled(myBool)
         self.btn_allCombinations.setEnabled(myBool)
         for listOfFeatures in self.selectedFeats:
             for item in listOfFeatures:
