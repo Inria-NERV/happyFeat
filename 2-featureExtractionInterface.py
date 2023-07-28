@@ -599,10 +599,6 @@ class Dialog(QDialog):
     # -----------------------------------------------------------------------
     # CLASS METHODS
     # -----------------------------------------------------------------------
-    def setWorkspace(self, wsFile):
-        self.workspaceFile = wsFile
-        return
-
     def enablePlotBtns(self, myBool):
         # ----------
         # Update status of buttons used for plotting
@@ -1827,5 +1823,4 @@ if __name__ == '__main__':
                 sys.exit(-1)
 
     dlg = Dialog(fullWorkspacePath)
-    # dlg.setWorkspace(fullWorkspacePath)
     sys.exit(app.exec_())
