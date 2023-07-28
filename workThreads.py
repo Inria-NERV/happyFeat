@@ -587,7 +587,8 @@ class TrainClassifier(QtCore.QThread):
                  signalFolder, templateFolder,
                  workspaceFolder, ovScript,
                  trainingSize, selectedFeats,
-                 parameterDict, sampFreq, currentAttempt, speedUp, parent=None):
+                 parameterDict, sampFreq, currentAttempt, attemptId,
+                 speedUp, parent=None):
 
         super().__init__(parent)
         self.stop = False
@@ -599,6 +600,7 @@ class TrainClassifier(QtCore.QThread):
         self.ovScript = ovScript
         self.trainingSize = trainingSize
         self.currentAttempt = currentAttempt
+        self.attemptId = attemptId
         self.speedUp = speedUp
 
         # selectedFeats is either a list of feats. of interest
@@ -781,7 +783,7 @@ class TrainClassifier(QtCore.QThread):
 
             # MODIFY "SECOND STEP" SCENARIO INPUTS & OUTPUT...
             scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames[5])
-            newWeightsName = "classifier-weights.xml"
+            newWeightsName = str("classifier-weights-" + self.attemptId + ".xml")
             modifyTrainingSecondStep(compositeFiles, len(selectedFeats), newWeightsName, self.currentSessionId, scenFile)
             modifyTrainPartitions(self.trainingSize, scenFile)
 
@@ -794,7 +796,8 @@ class TrainClassifier(QtCore.QThread):
                 self.over.emit(False, self.exitText)
             else:
                 # Copy weights file to <workspaceFolder>/classifier-weights.xml
-                newWeights = os.path.join(self.signalFolder, "sessions", self.currentSessionId, "train", "classifier-weights.xml")
+                newWeights = os.path.join(self.signalFolder, "sessions", self.currentSessionId, \
+                                          "train", str("classifier-weights-" + self.attemptId + ".xml"))
                 origFilename = os.path.join(self.workspaceFolder, "classifier-weights.xml")
                 copyfile(newWeights, origFilename)
 
@@ -839,7 +842,7 @@ class TrainClassifier(QtCore.QThread):
 
                 print("Composite file for training: " + compositeCsv)
                 compositeCsvBasename = os.path.basename(compositeCsv)
-                newWeightsName = "classifier-weights.xml"
+                newWeightsName = str("classifier-weights-" + self.attemptId + ".xml")
                 modifyTrainIO(compositeCsvBasename, newWeightsName, self.currentSessionId, scenFile)
 
                 # write composite file name in structure for future saving in workspace
@@ -858,7 +861,8 @@ class TrainClassifier(QtCore.QThread):
                     self.over.emit(False, self.exitText)
                 else:
                     # Copy weights file to <workspaceFolder>/classifier-weights.xml
-                    newWeights = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", "classifier-weights.xml")
+                    newWeights = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", \
+                                              str("classifier-weights-" + self.attemptId + ".xml"))
                     origFilename = os.path.join(self.workspaceFolder, "classifier-weights.xml")
                     copyfile(newWeights, origFilename)
 
@@ -916,7 +920,7 @@ class TrainClassifier(QtCore.QThread):
 
                     print("Composite file for training: " + compositeCsv)
                     compositeCsvBasename = os.path.basename(compositeCsv)
-                    newWeightsName = str("classifier-weights-" + str(idxcomb) + ".xml")
+                    newWeightsName = str("classifier-weights-" + self.attemptId + "-comb-" + str(idxcomb) + ".xml")
                     modifyTrainIO(compositeCsvBasename, newWeightsName, self.currentSessionId, scenFile)
 
                     # RUN THE CLASSIFIER TRAINING SCENARIO
@@ -936,8 +940,8 @@ class TrainClassifier(QtCore.QThread):
                     # Find max score
                     maxIdx = scores.index(max(scores))
                     # Copy weights file to <workspaceFolder>/classifier-weights.xml
-                    maxFilename = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", "classifier-weights-")
-                    maxFilename += str(str(maxIdx) + ".xml")
+                    maxFilename = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", str("classifier-weights-" + self.attemptId))
+                    maxFilename += str("-comb-" + str(maxIdx) + ".xml")
                     origFilename = os.path.join(self.workspaceFolder, "classifier-weights.xml")
                     copyfile(maxFilename, origFilename)
 

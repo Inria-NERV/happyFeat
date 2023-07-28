@@ -19,6 +19,8 @@ from PyQt5.QtWidgets import QCheckBox
 from PyQt5.QtWidgets import QFormLayout
 from PyQt5.QtWidgets import QLineEdit
 from PyQt5.QtWidgets import QListWidget
+from PyQt5.QtWidgets import QTreeWidget
+from PyQt5.QtWidgets import QTreeWidgetItem
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtWidgets import QFrame
@@ -533,17 +535,21 @@ class Dialog(QDialog):
         self.fileListWidgetTrain = QListWidget()
         self.fileListWidgetTrain.setSelectionMode(QListWidget.MultiSelection)
 
-        # Label + un-editable plain text for last results
+        # Label + QTreeWidget for training results
         labelLastResults = str("--- Last Training Results ---")
         self.labelLastResults = QLabel(labelLastResults)
         self.labelLastResults.setAlignment(QtCore.Qt.AlignCenter)
 
-        self.lastTrainingResults = QPlainTextEdit()
-        self.lastTrainingResults.setReadOnly(True)
-        self.lastTrainingResults.setStyleSheet("background-color: rgb(200,200,200)")
+        self.lastTrainingResults = QTreeWidget()
+        self.lastTrainingResults.setColumnCount(3)
+        self.lastTrainingResults.setHeaderLabels(['#', 'Score', 'Feats (expand for details)'])
+        self.lastTrainingResults.setColumnWidth(0, 30)
+        self.lastTrainingResults.setColumnWidth(1, 60)
         minHeightTrainResults = 30
         self.lastTrainingResults.setMinimumHeight(minHeightTrainResults)
-        self.lastTrainingResults.insertPlainText("No training attempts yet...")
+
+        # Update training results from config file
+        self.updateTrainingAttemptsTree()
 
         # Select / all combinations buttons...
         self.btn_trainClassif = QPushButton("TRAIN CLASSIFIER")
@@ -580,13 +586,14 @@ class Dialog(QDialog):
         self.btn_loadFilesForViz.setEnabled(True)
         self.enablePlotBtns(False)
 
-        self.refreshLists(self.currentSessionId)
+        self.refreshLists()
+        self.updateTrainingAttemptsTree()
 
         # Timing loop every 4s to get files in working folder
         self.filesRefreshTimer = QtCore.QTimer(self)
         self.filesRefreshTimer.setSingleShot(False)
         self.filesRefreshTimer.setInterval(4000)  # in milliseconds
-        self.filesRefreshTimer.timeout.connect(lambda: self.refreshLists(self.currentSessionId))
+        self.filesRefreshTimer.timeout.connect(lambda: self.refreshLists())
         self.filesRefreshTimer.start()
 
     # -----------------------------------------------------------------------
@@ -622,14 +629,13 @@ class Dialog(QDialog):
 
         self.show()
 
-    def refreshLists(self, currentSessionId):
-        # TODO : remove currentsessionid, replace with self.currentsessionid ??
+    def refreshLists(self):
         # ----------
         # Refresh all lists. Called once at the init, then once every timer click (see init method)
         # ----------
         self.refreshSignalList(self.fileListWidget, self.workspaceFolder)
-        self.refreshAvailableFilesForVizList(self.workspaceFolder, currentSessionId)
-        self.refreshAvailableTrainSignalList(self.workspaceFolder, currentSessionId)
+        self.refreshAvailableFilesForVizList(self.workspaceFolder, self.currentSessionId)
+        self.refreshAvailableTrainSignalList(self.workspaceFolder, self.currentSessionId)
         return
 
     def refreshSignalList(self, listwidget, workingFolder):
@@ -810,7 +816,8 @@ class Dialog(QDialog):
                 self.currentSessionId = newId
 
             # Manually refresh lists
-            self.refreshLists(self.currentSessionId)
+            self.refreshLists()
+            self.updateTrainingAttemptsTree()
 
         return changed, alreadyExists, newId
 
@@ -914,7 +921,7 @@ class Dialog(QDialog):
         # Signal: Extraction work thread finished one file of the selected list.
         # Refresh the viz&train file lists to make it available + increment progress bar
         self.extractThread.info.connect(self.progressBarExtract.increment)
-        self.extractThread.info.connect(lambda : self.refreshLists(self.currentSessionId))
+        self.extractThread.info.connect(lambda : self.refreshLists())
         self.extractThread.info2.connect(self.progressBarExtract.changeLabel)
         # Signal: Extraction work thread finished
         self.extractThread.over.connect(self.extraction_over)
@@ -1103,8 +1110,9 @@ class Dialog(QDialog):
                                        self.currentAttempt["SignalFiles"],
                                        self.currentAttempt["Features"])
         if alreadyAttempted:
-            message = str("Training was already attempted with an accuracy of " + score)
-            message += str("\n   Run it again?")
+            message = str("Training was already attempted (id " + attemptId + ") ")
+            message += str("\nwith an accuracy of " + score + " \%")
+            message += str("\n\tRun it again?")
             retVal = myOkCancelBox(message)
             if retVal == QMessageBox.Cancel:
                 self.currentAttempt = {}
@@ -1132,7 +1140,7 @@ class Dialog(QDialog):
                                                 self.ovScript,
                                                 trainingSize, listFeats,
                                                 trainingParamDict, self.samplingFreq,
-                                                self.currentAttempt, enableSpeedUp)
+                                                self.currentAttempt, attemptId, enableSpeedUp)
 
         # Signal: Training work thread finished one step
         # Increment progress bar + change its label
@@ -1259,6 +1267,8 @@ class Dialog(QDialog):
                                        self.currentAttempt["SignalFiles"], self.currentAttempt["CompositeFile"],
                                        self.currentAttempt["Features"], self.currentAttempt["Score"])
 
+            self.updateTrainingAttemptsTree()
+
             textGoodbye = str("Classifier weights were written in:\n\t")
             textGoodbye += self.workspaceFolder + str("/classifier-weights.xml\n")
             textGoodbye += str("If those results are satisfying, you can now open in the OV Designer:\n\t") \
@@ -1270,8 +1280,6 @@ class Dialog(QDialog):
             msg.setStyleSheet("QLabel{min-width: 1200px;}")
             msg.setWindowTitle("Classifier Training Score")
             msg.exec_()
-            self.lastTrainingResults.clear()
-            self.lastTrainingResults.appendPlainText(resultsText)
         else:
             myMsgBox(resultsText)
         self.enableGui(True)
@@ -1580,6 +1588,40 @@ class Dialog(QDialog):
             return False
 
         return True
+
+    def updateTrainingAttemptsTree(self):
+        # Update training results from config file
+        self.lastTrainingResults.clear()
+        resultsDict = getTrainingResults(self.workspaceFile, self.currentSessionId)
+        attempts = []
+        if resultsDict:
+            for attemptId in resultsDict.keys():
+                attempts.append(attemptId)
+                attemptItem = QTreeWidgetItem(self.lastTrainingResults)
+                attemptItem.setText(0, attemptId)
+                attemptItem.setText(1, resultsDict[attemptId]["Score"])
+                firstFeatWritten = False
+                for metricType in resultsDict[attemptId]["Features"]:
+                    for featPair in resultsDict[attemptId]["Features"][metricType]:
+                        featItem = QTreeWidgetItem(None)
+                        tempString = str(metricType + " " + featPair)
+                        featItem.setText(2, tempString)
+                        attemptItem.addChild(featItem)
+                        # add first feat to parent row, then user will need to
+                        # expand row to see more...
+                        if not firstFeatWritten:
+                            dispFeat = featPair
+                            if len(resultsDict[attemptId]["Features"][metricType]) > 1:
+                                dispFeat += str(" + others...")
+                            attemptItem.setText(2, dispFeat)
+                            firstFeatWritten = True
+                for file in resultsDict[attemptId]["SignalFiles"]:
+                    fileItem = QTreeWidgetItem(None)
+                    fileItem.setText(2, file)
+                    attemptItem.addChild(fileItem)
+
+        # collapse all items
+        self.lastTrainingResults.collapseAll()
 
 # ------------------------------------------------------
 # STATIC FUNCTIONS

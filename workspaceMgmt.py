@@ -36,9 +36,17 @@ def addExtractedFile(jsonFile, sessionId, filename):
     writeJson(jsonFile, currentDict)
 
 def checkIfTrainingAlreadyDone(jsonFile, sessionId, listFiles, listFeatures):
+    # Checks if a training has already been attempted with such
+    # parameters.
+    # Returns:
+    # - result (bool) : true/false
+    # - idx (str) : if result is true, idx of attempt, if false, lastidx+1
+    # - score (str) : if result is true, score of attempt, if false, None
     currentDict = {}
     with open(jsonFile, "r+") as myjson:
         currentDict = json.load(myjson)
+    if currentDict["Sessions"][sessionId]["TrainingAttempts"] == {}:
+        return False, "1", None
     for idx in currentDict["Sessions"][sessionId]["TrainingAttempts"]:
         attempt = currentDict["Sessions"][sessionId]["TrainingAttempts"][idx]
         if set(listFiles) == set(attempt["SignalFiles"]):
@@ -46,7 +54,7 @@ def checkIfTrainingAlreadyDone(jsonFile, sessionId, listFiles, listFeatures):
                 if all([set(listFeatures[item]) == set(attempt["Features"][item]) for item in listFeatures]):
                     score = attempt["Score"]
                     return True, idx, score
-    return False, None, None
+    return False, str(int(idx)+1), None
 
 def addTrainingAttempt(jsonFile, sessionId, listFiles, compositeFile, listFeatures, score):
     currentDict = {}
@@ -72,6 +80,13 @@ def replaceTrainingAttempt(jsonFile, sessionId, attemptId, listFiles, compositeF
                        "Score": str(score)}
     currentDict["Sessions"][sessionId]["TrainingAttempts"][attemptId] = newTrainAttempt
     writeJson(jsonFile, currentDict)
+
+def getTrainingResults(jsonFile, sessionId):
+    currentDict = {}
+    with open(jsonFile, "r") as myjson:
+        currentDict = json.load(myjson)
+
+    return currentDict["Sessions"][sessionId]["TrainingAttempts"]
 
 def newSession(jsonFile, paramDict, newId, newParamDict):
     paramDict["Sessions"][newId] = {"ExtractionParams": newParamDict,
