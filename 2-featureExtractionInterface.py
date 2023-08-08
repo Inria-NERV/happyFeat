@@ -766,7 +766,7 @@ class Dialog(QDialog):
         for idx in range(self.layoutExtractLabels.count()):
             paramLabel = self.layoutExtractLabels.itemAt(idx).widget().text()
             # special case : combobox for connectivity metric
-            if paramLabel == "Connectivity Metric":
+            if paramLabel == "Connectivity Estimator":
                 paramValue = None
                 for k, v in settings.connectMetricsComboText.items():
                     if v == self.layoutExtractLineEdits.itemAt(idx).widget().currentText():

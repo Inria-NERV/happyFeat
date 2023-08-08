@@ -30,16 +30,16 @@ templateScenFilenames = ["sc1-monitor-acq.xml",
                          "mi-stimulations.lua"]
 
 global connectMetrics
-connectMetrics = ["MagnitudeSquaredCoherence",
-                  "ImaginaryCoherence",
+connectMetrics = [#"MagnitudeSquaredCoherence",
+                  #"ImaginaryCoherence",
                   "Coherence",
                   "AbsImaginaryCoherence"]
 
 global connectMetricsComboText
-connectMetricsComboText = { connectMetrics[0]: "Magnitude Squared Coh.",
-                            connectMetrics[1]: "Imag(Coh.)",
-                            connectMetrics[2]: "abs(Coh.)",
-                            connectMetrics[3]: "abs(Imag(Coh.))"}
+connectMetricsComboText = { #connectMetrics[0]: "Magnitude Squared Coh.",
+                            #connectMetrics[1]: "Imag(Coh.)",
+                            connectMetrics[0]: "abs(Coh.)",
+                            connectMetrics[1]: "abs(Imag(Coh.))"}
 
 global pipelineAcqSettings
 pipelineAcqSettings = { "TrialNb": 20,
@@ -110,15 +110,15 @@ paramIdText = {"TrialNb": "Nb Trials per class",
                "FeedbackLength": "Feedback time (s) (online scenario)",
                "StimulationEpoch": "Epoch of Interest (EOI) (s)",
                "StimulationDelay": "EOI offset (s)",
-               "TimeWindowLength": "Sliding Window (Burg) (s)",
-               "TimeWindowShift": "Window Shift (Burg) (s)",
+               "TimeWindowLength": "Sliding Window (PSD) (s)",
+               "TimeWindowShift": "Window Shift (PSD) (s)",
                "AutoRegressiveOrder": "AR Burg Order (samples)",
                "AutoRegressiveOrderTime": "Auto-regressive estim. length (s)",
                "PsdSize": "FFT Size",
                "FreqRes": "Frequency resolution (ratio)",
-               "ConnectivityMetric": "Connectivity Metric",
-               "ConnectivityLength": "Length of a connectivity measure (s)",
-               "ConnectivityOverlap": "Overlap btw. connectivity measures (%)",
+               "ConnectivityMetric": "Connectivity Estimator",
+               "ConnectivityLength": "Sliding Window (Connect.) (s)",
+               "ConnectivityOverlap": "Window overlap (Connect.) (%)",
                "ConnectivityMethod": "Method used for connectivity (Burg or Welch)",
                "WelchLength": "Length of a Connectivity estimation (s)",
                "WelchOverlap": "Connectivity estimation overlapping (%)",

@@ -69,6 +69,10 @@ class Dialog(QDialog):
         self.show()
 
     def loadExistingWorkspace(self):
+        if not self.workspaceListWidget.selectedItems():
+            myMsgBox("Please select a workspace...")
+            return
+
         chosenWorkspace = self.workspaceListWidget.selectedItems()[0].text()
         if not chosenWorkspace:
             myMsgBox("Please select a workspace...")

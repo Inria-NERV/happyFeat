@@ -338,10 +338,8 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
                 power_cond2_baseline_final = np.concatenate((power_cond2_baseline_final, power_cond2_baseline))
                 timefreq_cond1_final = np.concatenate((timefreq_cond1_final, timefreq_cond1))
                 timefreq_cond2_final = np.concatenate((timefreq_cond2_final, timefreq_cond2))
-                timefreq_cond1_baseline_final = np.concatenate((timefreq_cond1_baseline_final, timefreq_cond1_baseline),
-                                                               axis=2)
-                timefreq_cond2_baseline_final = np.concatenate((timefreq_cond2_baseline_final, timefreq_cond2_baseline),
-                                                               axis=2)
+                timefreq_cond1_baseline_final = np.concatenate((timefreq_cond1_baseline_final, timefreq_cond1_baseline))
+                timefreq_cond2_baseline_final = np.concatenate((timefreq_cond2_baseline_final, timefreq_cond2_baseline))
 
         self.info2.emit("Computing statistics")
 
