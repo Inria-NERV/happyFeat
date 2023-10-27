@@ -2,7 +2,10 @@ site_name: HappyFeat Documentation
 site_url: https://happyfeat.readthedocs.io
 
 theme:
-  features:
-    - navigation.sections
-    
-    
+  name: readthedocs
+
+nav:
+  - Installation: user_guide/install.md
+  - Getting started: user_guide/start_workspace.md
+  - Using HappyFeat: user_guide/using_hf.md
+  - Using HappyFeat in BCI experiments: user_guide/bci_hf.md
