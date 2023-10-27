@@ -1,0 +1,80 @@
+# Workspaces
+
+In order to keep track of parameters used for acquisition and feature extraction 
+but also results from classification training attempts, HappyFeat uses a system of **workspaces** and **sessions**.
+
+Workspaces are managed in the folder `<HappyFeat_install>/workspace>`. They consist of a configuration file 
+(such as `<HappyFeat_install>/workspace/myWorkspace.hfw`) and a folder with the same basename (such as 
+`<HappyFeat_install>/workspace/myWorkspace`).
+
+The configuration file contains all useful information, parameters, and manipulations (extractions, training attempts) that have 
+been realised since the creation of the workspace. It uses the JSON format, which is easily manipulated and human-readable.
+
+The associated folder contains:
+
+- *OpenViBE* scenarios relevant to the ongoing analysis, using user-defined parameters which are set in HappyFeat's GUIs. These are not meant to be manipulated by the user, as they are automatically generated and modified along the differents processing steps of HappyFeat, but can nonetheless be loaded in the *OpenViBE designer* application for verification purposes.
+- a `signals` folder, in which EEG signals of interest are stored (either directly from acquisitions when using HappyFeat in a real life 
+experiment, or copied/pasted from an existing database in the case of offline analysis)
+- a `sessions` folder, containing files obtained from the processing steps of HappyFeat (feature extraction, training attempts...) and used by 
+the software for further analysis or displaying results.
+
+## HappyFeat's extraction & training "sessions"
+
+Along with *workspaces*, HappyFeat uses *sessions* to manage extractions & training attempts and keep track of everything.
+
+A *session* is a set of extraction parameters, and is defined by:
+
+- intermediate working files generated during feature extraction, using this set of parameters,
+- training attempts & their results, once again using this set of parameters.
+
+*Sessions'* information are kept in the workspace's configuration file. Working files are managed in the 
+`<currentWorkspace>/sessions/<number>` folder (each numbered folder corresponding to a *session*). 
+
+## Managing Workspaces
+
+Users may create and manage workspaces in any way they find fitting. However, we strongly advise to use one workspace per set of EEG signal files. A few examples:
+
+- one workspace = one experimental session made up of multiple EEG runs acquired the same day with the same subject, 
+- one workspace = all EEG runs for one subject, across multiple days
+- one workspace = a set of signal files (or runs) from previous acquisitions, all gathered together to test & compare different metrics
+
+This allows to efficiently organize BCI experiments, avoiding mix-ups between files and other mistakes...
+
+Below is an example of workspace file tree, with 2 subjects *sub01* (2 BCI experiments) and *sub12* (one experiment), :
+
+```
+workspace/
+├─ sub01-ses01/
+│  ├─ sessions
+│  │  ├─ 1
+│  │  ├─ 2
+│  │  ├─ ...
+│  ├─ signals
+│  │  ├─ sub01-ses01-MI-01.ov
+│  │  ├─ sub01-ses01-MI-02.ov
+│  │  ├─ sub01-ses01-MI-03.ov
+│  │  ├─ ...
+├─ sub01-ses02/
+│  ├─ sessions
+│  │  ├─ 1
+│  │  ├─ 2
+│  │  ├─ ...
+│  ├─ signals
+│  │  ├─ sub01-ses02-MI-01.ov
+│  │  ├─ sub01-ses02-MI-02.ov
+│  │  ├─ sub01-ses02-MI-03.ov
+│  │  ├─ ...
+├─ sub12-ses01/
+│  ├─ sessions
+│  │  ├─ 1
+│  │  ├─ 2
+│  │  ├─ ...
+│  ├─ signals
+│  │  ├─ sub12-ses01-MI-01.ov
+│  │  ├─ sub12-ses01-MI-02.ov
+│  │  ├─ sub12-ses01-MI-03.ov
+│  │  ├─ ...
+├─ sub01-ses01.hfw
+├─ sub01-ses02.hfw
+├─ sub12-ses01.hfw
+``` 

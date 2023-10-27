@@ -2,10 +2,26 @@ site_name: HappyFeat Documentation
 site_url: https://happyfeat.readthedocs.io
 
 theme:
-  name: readthedocs
+  name: material
+  logo: img/brain_icon_vect.png
+  features:
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.sections
 
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  
 nav:
-  - Installation: user_guide/install.md
-  - Getting started: user_guide/start_workspace.md
-  - Using HappyFeat: user_guide/using_hf.md
-  - Using HappyFeat in BCI experiments: user_guide/bci_hf.md
+  - Home: index.md
+  - User Guide:
+    - Installation: user_guide/install.md
+    - Getting started: user_guide/start.md
+    - Workspaces: user_guide/workspaces.md
+    - Using HappyFeat: user_guide/using_hf.md
+    - Feature Extraction: user_guide/extract.md
+    - Visualizations & analysis: user_guide/visualize.md
+    - Training the classifier: user_guide/train.md
+    - Using HappyFeat in BCI experiments: user_guide/bci_hf.md
