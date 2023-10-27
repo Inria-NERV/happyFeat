@@ -1,2 +1,8 @@
 site_name: HappyFeat Documentation
 site_url: https://happyfeat.readthedocs.io
+
+theme:
+  features:
+    - navigation.sections
+    
+    
