@@ -8,6 +8,8 @@ theme:
     - navigation.instant
     - navigation.instant.prefetch
     - navigation.sections
+    - navigation.footer
+    - search.suggest
 
 markdown_extensions:
   - admonition
@@ -25,3 +27,15 @@ nav:
     - Visualizations & analysis: user_guide/visualize.md
     - Training the classifier: user_guide/train.md
     - Using HappyFeat in BCI experiments: user_guide/bci_hf.md
+    
+plugins:
+  - search
+  
+extra:
+  social:
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/nerv_lab
+    - icon: fontawesome/brands/github
+      link: https://github.com/Inria-NERV/happyFeat
+      
+repo_url: https://github.com/Inria-NERV/happyFeat
