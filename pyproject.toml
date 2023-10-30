@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "happyfeat_NEWPACKAGE"
+version = "0.0.1"
+authors = [
+  { name="Inria NERV", email="adesbois@inria.fr" },
+]
+description = "ex. package for HappyFeat"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: Microsoft :: Windows",
+	"Operating System :: POSIX :: Linux",
+]
+dependencies = [
+"shutils>=0.1.0",
+"mne>=0.23.0",
+"numpy>=1.21.1",
+"pandas>=1.3.1",
+"PyQt5>=5.15.6",
+"statsmodels>=0.13.1",
+"scipy>=1.7.1",
+"spectrum>=0.8.0",
+"matplotlib>=3.4.2",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/Inria-NERV/happyFeat"
+
+[project.gui-scripts]
+happyfeat = "happyfeat_welcome:main"
