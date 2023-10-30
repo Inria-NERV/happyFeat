@@ -25,11 +25,10 @@ from PyQt5.QtWidgets import QLineEdit
 
 from PyQt5.QtGui import QFont
 
-from modifyOpenvibeScen import *
-import bcipipeline_settings as settings
-from utils import *
-import workspaceMgmt
-from workspaceMgmt import *
+from libs.modifyOpenvibeScen import *
+import libs.bcipipeline_settings as settings
+from libs.utils import *
+import libs.workspaceMgmt as workspaceMgmt
 
 import featureExtractionInterface as featExtractApp
 
@@ -312,13 +311,13 @@ class Dialog(QDialog):
             # TODO !! manage error
             myMsgBox("Missing workspace file!!")
         else:
-            setKeyValue(self.workspace, "ovDesignerPath", self.parameterDict["ovDesignerPath"])
-            setKeyValue(self.workspace, "pipelineType", self.parameterDict["pipelineType"])
-            setKeyValue(self.workspace, "sensorMontage", self.parameterDict["sensorMontage"])
-            setKeyValue(self.workspace, "customMontagePath", self.parameterDict["customMontagePath"])
-            setKeyValue(self.workspace, "AcquisitionParams", self.parameterDict["AcquisitionParams"])
-            setKeyValue(self.workspace, "currentSessionId", self.parameterDict["currentSessionId"])
-            newSession(self.workspace, self.parameterDict, "1", extractParamDict)
+            workspaceMgmt.setKeyValue(self.workspace, "ovDesignerPath", self.parameterDict["ovDesignerPath"])
+            workspaceMgmt.setKeyValue(self.workspace, "pipelineType", self.parameterDict["pipelineType"])
+            workspaceMgmt.setKeyValue(self.workspace, "sensorMontage", self.parameterDict["sensorMontage"])
+            workspaceMgmt.setKeyValue(self.workspace, "customMontagePath", self.parameterDict["customMontagePath"])
+            workspaceMgmt.setKeyValue(self.workspace, "AcquisitionParams", self.parameterDict["AcquisitionParams"])
+            workspaceMgmt.setKeyValue(self.workspace, "currentSessionId", self.parameterDict["currentSessionId"])
+            workspaceMgmt.newSession(self.workspace, self.parameterDict, "1", extractParamDict)
 
         # GENERATE (list of files in settings.templateScenFilenames)
         #   SC1 (ACQ/MONITOR)

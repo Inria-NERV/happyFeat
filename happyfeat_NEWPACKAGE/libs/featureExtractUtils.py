@@ -1,4 +1,4 @@
-from Statistical_analysis import *
+from .Statistical_analysis import *
 import pandas as pd
 import csv
 import numpy as np

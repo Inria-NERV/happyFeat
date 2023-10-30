@@ -3,7 +3,7 @@ import pandas as pd
 import subprocess
 from shutil import copyfile
 
-from modifyOpenvibeScen import *
+from .modifyOpenvibeScen import *
 
 def generateMetadata(ovFile, openvibeDesigner):
     # Make a copy of Openvibe scenario, for safe modification...

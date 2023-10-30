@@ -9,15 +9,14 @@ from importlib import resources
 from PyQt5 import QtCore
 from PyQt5.QtCore import pyqtSignal
 
-from mergeRunsCsv import mergeRunsCsv, mergeRunsCsv_new
-from extractMetaData import extractMetadata, generateMetadata
-from modifyOpenvibeScen import *
-from Visualization_Data import *
-from featureExtractUtils import *
-from utils import *
+from .mergeRunsCsv import mergeRunsCsv, mergeRunsCsv_new
+from .extractMetaData import extractMetadata, generateMetadata
+from .modifyOpenvibeScen import *
+from .Visualization_Data import *
+from .featureExtractUtils import *
+from .utils import *
 
-import bcipipeline_settings as settings
-
+from .bcipipeline_settings import *
 
 # ------------------------------------------------------
 # CLASSES FOR LONG-RUNNING OPERATIONS IN THREADS
@@ -627,7 +626,7 @@ class TrainClassifier(QtCore.QThread):
         self.samplingFreq = sampFreq
         self.exitText = ""
 
-        self.usingDualFeatures = self.parameterDict["pipelineType"] == settings.optionKeys[3]
+        self.usingDualFeatures = self.parameterDict["pipelineType"] == optionKeys[3]
 
     def run(self):
         # Get electrodes lists and sampling freqs, and check that they match
@@ -677,16 +676,16 @@ class TrainClassifier(QtCore.QThread):
 
         epochCount = [0, 0]
         stimEpochLength = float(self.extractDict["StimulationEpoch"])
-        if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
+        if self.parameterDict["pipelineType"] == optionKeys[1]:
             winLength = float(self.extractDict["TimeWindowLength"])
             winShift = float(self.extractDict["TimeWindowShift"])
             epochCount[0] = np.floor((stimEpochLength - winLength) / winShift) + 1
-        elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+        elif self.parameterDict["pipelineType"] == optionKeys[2]:
             winLength = float(self.extractDict["ConnectivityLength"])
             overlap = float(self.extractDict["ConnectivityOverlap"])
             winShift = winLength * (100.0-overlap) / 100.0
             epochCount[0] = np.floor((stimEpochLength - winLength) / winShift) + 1
-        elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+        elif self.parameterDict["pipelineType"] == optionKeys[3]:
             winLength0 = float(self.extractDict["TimeWindowLength"])
             winShift0 = float(self.extractDict["TimeWindowShift"])
             epochCount[0] = np.floor((stimEpochLength - winLength0) / winShift0) + 1
@@ -710,7 +709,7 @@ class TrainClassifier(QtCore.QThread):
         # Case of a single feature type (power spectrum OR connectivity...)
         # RE-COPY sc2 & sc3 FROM TEMPLATE, SO THE USER CAN DO THIS MULTIPLE TIMES
         for i in [2, 3, 4, 5]:
-            scenName = settings.templateScenFilenames[i]
+            scenName = templateScenFilenames[i]
             with resources.path(self.templateFolder, scenName) as srcFile:
                 destFile = os.path.join(self.workspaceFolder, scenName)
                 print("---Copying file " + str(srcFile) + " to " + str(destFile))
@@ -729,7 +728,7 @@ class TrainClassifier(QtCore.QThread):
                     modifyTrainScenUsingSplitAndClassifiers("SPLIT CONNECT", "Classifier trainer", selectedFeats2, epochCount[1], destFile)
                     modifyConnectivityMetric(self.extractDict["ConnectivityMetric"], destFile)
 
-            elif i == 4 and not self.usingDualFeatures and self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+            elif i == 4 and not self.usingDualFeatures and self.parameterDict["pipelineType"] == optionKeys[2]:
                 # "speed up" training scenarios (ONLY CONNECTIVITY)
                 modifyTrainScenUsingSplitAndCsvWriter("SPLIT", selectedFeats, epochCount[0], destFile, trainingpath)
 
@@ -759,10 +758,10 @@ class TrainClassifier(QtCore.QThread):
         # When all runs have been processed that way, we aggregate all feature vectors (per class, per
         # feat), and feed those composite files to the feature aggregators and classifier trainer (in
         # scenario sc2-train-speedup-finalize.xml)
-        if self.speedUp and self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+        if self.speedUp and self.parameterDict["pipelineType"] == optionKeys[2]:
 
             # "First step"
-            scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames[4])
+            scenFile = os.path.join(self.workspaceFolder, templateScenFilenames[4])
             analysisPath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "extract")
             trainingPath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train")
 
@@ -797,13 +796,13 @@ class TrainClassifier(QtCore.QThread):
                     compositeFiles.append(outCsv)
 
             # MODIFY "SECOND STEP" SCENARIO INPUTS & OUTPUT...
-            scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames[5])
+            scenFile = os.path.join(self.workspaceFolder, templateScenFilenames[5])
             newWeightsName = str("classifier-weights-" + self.attemptId + ".xml")
             modifyTrainingSecondStep(compositeFiles, len(selectedFeats), newWeightsName, self.currentSessionId, scenFile)
             modifyTrainPartitions(self.trainingSize, scenFile)
 
             self.info2.emit("Finalizing Training...")
-            scenXml = os.path.join(self.workspaceFolder, settings.templateScenFilenames[5])
+            scenXml = os.path.join(self.workspaceFolder, templateScenFilenames[5])
             success, classifierOutputStr, accuracy = self.runClassifierScenario(scenXml)
             if not success:
                 successGlobal = False
@@ -837,7 +836,7 @@ class TrainClassifier(QtCore.QThread):
         else:
             # ORIGINAL VERSION - NOT SPED UP
             # USING "CLASSIC" COMPOSITE FILE BUILDING + RUNNING TRAIN SCEN ON IT
-            scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames[2])
+            scenFile = os.path.join(self.workspaceFolder, templateScenFilenames[2])
             modifyTrainPartitions(self.trainingSize, scenFile)
 
             # Run the first training scenario  composite file from selected items
@@ -867,7 +866,7 @@ class TrainClassifier(QtCore.QThread):
             self.info2.emit("Running Training Scenario")
 
             # RUN THE CLASSIFIER TRAINING SCENARIO
-            scenXml = os.path.join(self.workspaceFolder, settings.templateScenFilenames[2])
+            scenXml = os.path.join(self.workspaceFolder, templateScenFilenames[2])
             success, classifierOutputStr, accuracy = self.runClassifierScenario(scenXml)
 
             if not success:

@@ -18,9 +18,9 @@ from PyQt5.QtWidgets import QPushButton
 from PyQt5.QtWidgets import QInputDialog
 from PyQt5.QtGui import QFont
 
-import workspaceMgmt
-from workspaceMgmt import *
-from utils import *
+import libs.workspaceMgmt as workspaceMgmt
+from libs.workspaceMgmt import *
+from libs.utils import *
 
 import bcipipeline_setup as bciSetup
 import featureExtractionInterface as featExtractApp

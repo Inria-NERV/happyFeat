@@ -34,15 +34,15 @@ from PyQt5.QtWidgets import QAction
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QTimer
 
-from Visualization_Data import *
-from featureExtractUtils import *
-from modifyOpenvibeScen import *
-from utils import *
-from workspaceMgmt import *
-from workThreads import *
-from myProgressBar import ProgressBar, ProgressBarNoInfo
+from libs.Visualization_Data import *
+from libs.featureExtractUtils import *
+from libs.modifyOpenvibeScen import *
+from libs.utils import *
+from libs.workspaceMgmt import *
+from libs.workThreads import *
+from libs.myProgressBar import ProgressBar, ProgressBarNoInfo
 
-import bcipipeline_settings as settings
+import libs.bcipipeline_settings as settings
 
 class Features:
     Rsigned = []
