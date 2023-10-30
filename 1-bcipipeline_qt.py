@@ -36,7 +36,6 @@ class Dialog(QDialog):
 
         # GENERAL SETTINGS (WORKSPACES, TEMPLATES...)
         self.scriptPath = os.path.dirname(os.path.realpath(sys.argv[0]))
-        self.jsonfilename = "params.json"
         self.launchTrue = False
 
         self.workspace = workspace
@@ -301,11 +300,6 @@ class Dialog(QDialog):
             setKeyValue(self.workspace, "currentSessionId", self.parameterDict["currentSessionId"])
             newSession(self.workspace, self.parameterDict, "1", extractParamDict)
 
-        # WRITE JSON PARAMETERS FILE
-        # TODO : REMOVE
-        jsonfullpath = os.path.join(os.getcwd(), self.workspaceFolder, self.jsonfilename)
-        with open(jsonfullpath, "w") as outfile:
-            json.dump(self.parameterDict, outfile, indent=4)
         # GENERATE (list of files in settings.templateScenFilenames)
         #   SC1 (ACQ/MONITOR)
         #   SC2 (FEATURE EXT)
