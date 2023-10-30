@@ -17,6 +17,7 @@ from PyQt5.QtWidgets import QPushButton
 from PyQt5.QtWidgets import QInputDialog
 from PyQt5.QtGui import QFont
 
+import workspaceMgmt
 from workspaceMgmt import *
 from utils import *
 
@@ -103,7 +104,7 @@ class Dialog(QDialog):
         self.workspacesFolder = QFileDialog.getExistingDirectory(self, "Select directory", str(directory), QFileDialog.ShowDirsOnly)
         self.WsTextBox.setText(self.workspacesFolder)
         self.updateWorkspaceList()
-        self.updateCfgFile(self.userConfig, "lastWorkspacePath", self.workspacesFolder)
+        workspaceMgmt.setKeyValue(self.userConfig, "lastWorkspacePath", self.workspacesFolder)
         return
 
     def updateWorkspaceList(self):
@@ -113,15 +114,6 @@ class Dialog(QDialog):
             if workspaceName.endswith(".hfw"):
                 workspaceList.append(workspaceName)
                 self.workspaceListWidget.addItem(workspaceList[-1])
-
-    def updateCfgFile(self, cfgfile, key, value):
-        dict= {}
-        with open(cfgfile, "r") as cfg:
-            dict = json.load(cfg)
-
-        dict[key] = value
-        with open(cfgfile, "w") as cfg:
-            json.dump(dict, cfg, indent=4)
 
     def loadExistingWorkspace(self):
         if not self.workspaceListWidget.selectedItems():
@@ -157,7 +149,7 @@ class Dialog(QDialog):
             myMsgBox("Selected workspace is invalid.\nPlease make sure all subfolders exist...")
             return
 
-        self.selectedWorkspace = chosenWorkspace
+        self.selectedWorkspace = fullWorkspacePath
         self.launchMainGui = True
         self.accept()
 
@@ -182,7 +174,7 @@ class Dialog(QDialog):
 
             # Initialize a workspace file in the workspace folder
             initializeNewWorkspace(fullWorkspacePath)
-            self.selectedWorkspace = str(workspaceName+self.workspaceExtension)
+            self.selectedWorkspace = fullWorkspacePath
 
             # Create folder tree for new workspace
             if not os.path.exists(os.path.join(self.workspacesFolder, workspaceName)):
