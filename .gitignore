@@ -4,12 +4,14 @@
 *.ov
 classifier-weights*
 
-generated/*.xml
-generated/*.lua
-generated/*.json
-
 venv/
 __pycache__/
-screenshots/
-_old/
+screenshots*
+_old*
 .idea/
+
+workspace/*.hfw
+
+site/
+build/
+dist/
