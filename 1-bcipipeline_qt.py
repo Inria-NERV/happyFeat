@@ -6,6 +6,7 @@ from shutil import copyfile
 import json
 from threading import Thread
 import pandas as pd
+from importlib import resources
 
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QApplication
@@ -26,6 +27,7 @@ from PyQt5.QtGui import QFont
 from modifyOpenvibeScen import *
 import bcipipeline_settings as settings
 from utils import *
+import workspaceMgmt
 from workspaceMgmt import *
 
 class Dialog(QDialog):
@@ -35,18 +37,27 @@ class Dialog(QDialog):
         super().__init__(parent)
 
         # GENERAL SETTINGS (WORKSPACES, TEMPLATES...)
-        self.scriptPath = os.path.dirname(os.path.realpath(sys.argv[0]))
         self.launchTrue = False
-
-        self.workspace = workspace
-        self.workspaceFolder = os.path.splitext(self.workspace)[0]
-        # Create all work folders
-        if not os.path.exists(self.workspaceFolder):
+        self.ovScript = None    # to be r/w in config.json
+        self.customMontagePath = None
+        self.templateFolder = None
+        self.workspace = workspace  # fullpath of the .hfw file
+        self.workspaceFolder = os.path.splitext(self.workspace)[0]  # only the folder (still fullpath)
+        if not os.path.exists(self.workspace) or not os.path.exists(self.workspaceFolder):
             myMsgBox("Specified workspace does not exist. Please use the \"Welcome\" GUI first!")
             self.reject()
 
-        self.templateFolder = None
-        self.ovScript = "C:\\openvibe-3.5.0-64bit\\bin\\openvibe-designer.exe"  # TODO : set to None in release version
+        # Get user's config
+        self.userConfig = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json')
+        if not os.path.exists(self.userConfig):
+            myMsgBox("General config file config.json not found! Please use happyfeat_welcome.py script.")
+            self.reject()
+        with open(self.userConfig, "r+") as userCfg:
+            currentCfg = json.load(userCfg)
+            if "lastWorkspacePath" in currentCfg:
+                self.workspacesFolder = currentCfg["lastWorkspacePath"]
+            if "ovScript" in currentCfg:
+                self.ovScript = currentCfg["ovScript"]
 
         # SCENARIO PARAMETERS...
         self.parameterDict = {}
@@ -60,6 +71,7 @@ class Dialog(QDialog):
         self.montageLayoutIdx = None
         self.customMontageLayoutIdx = None
 
+        # Start listing the widgets, we'll add them to the layout at the end
         label = str("=== Protocol Selection ===")
         self.label = QLabel(label)
         self.label.setFont(QFont("system-ui", 12))
@@ -91,8 +103,7 @@ class Dialog(QDialog):
         self.designerWidget = QWidget()
         layout_h = QHBoxLayout(self.designerWidget)
         self.designerTextBox = QLineEdit()
-        self.designerTextBox.setText(
-            "C:\\openvibe-3.5.0-64bit\\bin\\openvibe-designer.exe")  # TODO set to "" in release
+        self.designerTextBox.setText(self.ovScript)
         self.designerTextBox.setEnabled(False)
         layout_h.addWidget(self.designerTextBox)
         layout_h.addWidget(self.btn_browseOV)
@@ -104,13 +115,14 @@ class Dialog(QDialog):
         # self.btn_generate = QPushButton("Generate scenarios, let me handle things!")
         # self.btn_generate.clicked.connect(lambda: self.generate(False))
 
+        # Add all widgets to the general layout...
         self.dlgLayout.addWidget(self.label)
         self.dlgLayout.addWidget(self.scenarioComboBox)
         self.dlgLayout.addLayout(self.vBoxLayout)
         self.dlgLayout.addWidget(self.btn_generateLaunch)
         # self.dlgLayout.addWidget(self.btn_generate)
 
-        # display layout
+        # Display layout
         self.setLayout(self.dlgLayout)
         self.show()
 
@@ -206,6 +218,7 @@ class Dialog(QDialog):
         self.ovScript, dummy = QFileDialog.getOpenFileName(self, "OpenViBE designer script", str(directory))
         if "openvibe-designer.cmd" or "openvibe-designer.exe" or "openvibe-designer.sh" in self.ovScript:
             self.designerTextBox.setText(self.ovScript)
+            workspaceMgmt.setKeyValue(self.userConfig, "ovScript", self.ovScript)
         else:
             self.ovScript = None
 
@@ -233,6 +246,10 @@ class Dialog(QDialog):
         return True
 
     def generate(self, launch):
+
+        if self.ovScript == "" or not self.ovScript:
+            myMsgBox("Please enter a correct path for the OpenViBE designer")
+            return
 
         ix = self.scenarioComboBox.currentIndex()
         if ix == 0:
@@ -308,20 +325,20 @@ class Dialog(QDialog):
         #   SC2-SPEEDUP-FIRSTSTEP (TRAIN+, 1)
         #   SC2-SPEEDUP-FINALIZE  (TRAIN+, 2)
         for filename in settings.templateScenFilenames:
-            srcFile = os.path.join(os.getcwd(), self.templateFolder, filename)
-            destFile = os.path.join(os.getcwd(), self.workspaceFolder, filename)
-            if os.path.exists(srcFile):
-                print("---Copying file " + srcFile + " to " + destFile)
-                copyfile(srcFile, destFile)
-                if "xml" in destFile:
-                    modifyScenarioGeneralSettings(destFile, self.parameterDict)
+            with resources.path(self.templateFolder, filename) as srcFile:
+                destFile = os.path.join(self.workspaceFolder, filename)
+                if os.path.exists(srcFile):
+                    print("---Copying file " + str(srcFile) + " to " + str(destFile))
+                    copyfile(srcFile, destFile)
+                    if "xml" in destFile:
+                        modifyScenarioGeneralSettings(destFile, self.parameterDict)
 
         # SPECIAL CASES :
         #   SC1 & SC3 : "GRAZ" BOX SETTINGS
-        modifyAcqScenario(os.path.join(os.getcwd(), self.workspaceFolder, settings.templateScenFilenames[0]),
-                          self.parameterDict, False)
-        modifyAcqScenario(os.path.join(os.getcwd(), self.workspaceFolder, settings.templateScenFilenames[3]),
-                          self.parameterDict, True)
+        modifyAcqScenario(os.path.join(self.workspaceFolder,
+                                       settings.templateScenFilenames[0]), self.parameterDict, False)
+        modifyAcqScenario(os.path.join(self.workspaceFolder,
+                                       settings.templateScenFilenames[3]), self.parameterDict, True)
 
         if launch:
             self.launchTrue = True
@@ -377,12 +394,9 @@ if __name__ == '__main__':
 
     elif len(sys.argv) == 2:
         # Check that workspace file exists, is a json file, and contains HappyFeatVersion field...
-        workspaceFile = sys.argv[1]
-        workspacesFolder = "workspace"
-        currScriptFolder = os.path.dirname(os.path.abspath(sys.argv[0]))
-        fullWorkspacePath = os.path.join(currScriptFolder, workspacesFolder, workspaceFile)
+        fullWorkspacePath = sys.argv[1]
         if not os.path.exists(fullWorkspacePath):
-            myMsgBox("NEED WORKSPACE FILE !!")
+            myMsgBox("NEED FULL WORKSPACE FILE !!")
             # TODO
             sys.exit(-1)
         with open(fullWorkspacePath, "r") as wp:
