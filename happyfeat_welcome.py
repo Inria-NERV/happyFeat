@@ -6,9 +6,10 @@ from threading import Thread
 
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QApplication
-from PyQt5.QtWidgets import QVBoxLayout
+from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtWidgets import QListWidget
+from PyQt5.QtWidgets import QLineEdit
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtWidgets import QDialog
@@ -26,11 +27,18 @@ class Dialog(QDialog):
 
         super().__init__(parent)
 
-        self.workspaceFolder = "workspace"
+        self.workspaceFolder = None
         self.workspaceExtension = ".hfw"
         self.selectedWorkspace = None
         self.launchAcqGui = False
         self.launchMainGui = False
+
+        # TODO WARNING: this works with Windows only, find a way for linux
+        self.userConfig = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json')
+        with open(self.userConfig, "r+") as userCfg:
+            currentCfg = json.load(userCfg)
+            if "lastWorkspacePath" in currentCfg:
+                self.workspaceFolder = currentCfg["lastWorkspacePath"]
 
         # INTERFACE INIT...
         self.setWindowTitle('HappyFeat - Select workspace')
@@ -41,6 +49,23 @@ class Dialog(QDialog):
         self.label.setFont(QFont("system-ui", 12))
         self.label.setAlignment(QtCore.Qt.AlignCenter)
 
+        # Workspace folder selection
+        self.labelWs = QLabel()
+        self.labelWs.setText(str("Workspaces folder"))
+        self.labelWs.setAlignment(QtCore.Qt.AlignCenter)
+
+        self.btn_browse = QPushButton("Browse...")
+        self.btn_browse.clicked.connect(lambda: self.browseForWsFolder())
+        self.WsWidget = QWidget()
+        self.layout_h = QHBoxLayout(self.WsWidget)
+        self.WsTextBox = QLineEdit()
+        self.WsTextBox.setText("")
+        if self.workspaceFolder:
+            self.WsTextBox.setText(self.workspaceFolder)
+        self.WsTextBox.setEnabled(False)
+        self.layout_h.addWidget(self.WsTextBox)
+        self.layout_h.addWidget(self.btn_browse)
+
         # Buttons
         self.btn_newSession = QPushButton("Start new workspace")
         self.btn_newSession.clicked.connect(lambda: self.startNewWorkspace())
@@ -49,24 +74,49 @@ class Dialog(QDialog):
 
         self.workspaceListWidget = QListWidget()
         self.workspaceListWidget.setSelectionMode(QListWidget.SingleSelection)
-        workspaceList = []
-        for workspaceName in os.listdir(self.workspaceFolder):
-            if workspaceName.endswith(".hfw"):
-                workspaceList.append(workspaceName)
-                self.workspaceListWidget.addItem(workspaceList[-1])
 
         self.dlgLayout.addWidget(self.label)
+        self.dlgLayout.addWidget(self.labelWs)
+        self.dlgLayout.addWidget(self.WsWidget)
         self.dlgLayout.addWidget(self.btn_newSession)
         self.dlgLayout.addWidget(self.btn_loadSession)
         self.dlgLayout.addWidget(self.workspaceListWidget)
 
         self.setLayout(self.dlgLayout)
 
+        # Update List...
+        self.updateWorkspaceList()
+
         # display initial layout
         self.displayWindow()
 
     def displayWindow(self):
         self.show()
+
+    def browseForWsFolder(self):
+        directory = os.getcwd()
+        self.workspaceFolder = QFileDialog.getExistingDirectory(self, "Select directory", str(directory), QFileDialog.ShowDirsOnly)
+        self.WsTextBox.setText(self.workspaceFolder)
+        self.updateWorkspaceList()
+        self.updateCfgFile(self.userConfig, "lastWorkspacePath", self.workspaceFolder)
+        return
+
+    def updateWorkspaceList(self):
+        workspaceList = []
+        self.workspaceListWidget.clear()
+        for workspaceName in os.listdir(self.workspaceFolder):
+            if workspaceName.endswith(".hfw"):
+                workspaceList.append(workspaceName)
+                self.workspaceListWidget.addItem(workspaceList[-1])
+
+    def updateCfgFile(self, cfgfile, key, value):
+        dict= {}
+        with open(cfgfile, "r") as cfg:
+            dict = json.load(cfg)
+
+        dict[key] = value
+        with open(cfgfile, "w") as cfg:
+            json.dump(dict, cfg, indent=4)
 
     def loadExistingWorkspace(self):
         if not self.workspaceListWidget.selectedItems():
@@ -78,8 +128,7 @@ class Dialog(QDialog):
             myMsgBox("Please select a workspace...")
             return
 
-        currScriptFolder = os.path.dirname(os.path.abspath(sys.argv[0]))
-        fullWorkspacePath = os.path.join(currScriptFolder, "workspace", chosenWorkspace)
+        fullWorkspacePath = os.path.join(self.workspaceFolder, chosenWorkspace)
 
         # Check that all folders have been created (at least for "1")
         validWs = False
@@ -108,19 +157,18 @@ class Dialog(QDialog):
         self.accept()
 
     def startNewWorkspace(self):
+        # Check that a top Workspace folder has been selected
+        if not self.workspaceFolder:
+            myMsgBox("Please select a \"top\" Workspace folder to create your workspace into.")
+            return
+
         # Prompt user for filename, using QInputDialog
         workspaceName, ok = QInputDialog.getText(self, 'New workspace', 'Enter a name for the new workspace:')
         if not ok:
             return
         else:
-            # Check "workspace" folder exists. If not, create it
-            currScriptFolder = os.path.dirname(os.path.abspath(sys.argv[0]))
-            fullWorkspaceFolder = os.path.join(currScriptFolder, self.workspaceFolder)
-            if not os.path.exists(fullWorkspaceFolder):
-                os.mkdir(fullWorkspaceFolder)
-
             # Check if file already exists, and prompt user for overwrite
-            fullWorkspacePath = os.path.join(fullWorkspaceFolder, str(workspaceName+self.workspaceExtension))
+            fullWorkspacePath = os.path.join(self.workspaceFolder, str(workspaceName+self.workspaceExtension))
             if os.path.exists(fullWorkspacePath):
                 retVal = myOkCancelBox("Workspace already exists! Overwrite config file?\n(Folders and files will NOT be erased)")
                 if not retVal == QMessageBox.Ok:
@@ -132,18 +180,18 @@ class Dialog(QDialog):
             self.selectedWorkspace = str(workspaceName+self.workspaceExtension)
 
             # Create folder tree for new workspace
-            if not os.path.exists(os.path.join(fullWorkspaceFolder, workspaceName)):
-                os.mkdir(os.path.join(fullWorkspaceFolder, workspaceName))
-            if not os.path.exists(os.path.join(fullWorkspaceFolder, workspaceName, "signals")):
-                os.mkdir(os.path.join(fullWorkspaceFolder, workspaceName, "signals"))
-            if not os.path.exists(os.path.join(fullWorkspaceFolder, workspaceName, "sessions")):
-                os.mkdir(os.path.join(fullWorkspaceFolder, workspaceName, "sessions"))
-            if not os.path.exists(os.path.join(fullWorkspaceFolder, workspaceName, "sessions", "1")):
-                os.mkdir(os.path.join(fullWorkspaceFolder, workspaceName, "sessions", "1"))
-            if not os.path.exists(os.path.join(fullWorkspaceFolder, workspaceName, "sessions", "1", "extract")):
-                os.mkdir(os.path.join(fullWorkspaceFolder, workspaceName, "sessions", "1", "extract"))
-            if not os.path.exists(os.path.join(fullWorkspaceFolder, workspaceName, "sessions", "1", "train")):
-                os.mkdir(os.path.join(fullWorkspaceFolder, workspaceName, "sessions", "1", "train"))
+            if not os.path.exists(os.path.join(self.workspaceFolder, workspaceName)):
+                os.mkdir(os.path.join(self.workspaceFolder, workspaceName))
+            if not os.path.exists(os.path.join(self.workspaceFolder, workspaceName, "signals")):
+                os.mkdir(os.path.join(self.workspaceFolder, workspaceName, "signals"))
+            if not os.path.exists(os.path.join(self.workspaceFolder, workspaceName, "sessions")):
+                os.mkdir(os.path.join(self.workspaceFolder, workspaceName, "sessions"))
+            if not os.path.exists(os.path.join(self.workspaceFolder, workspaceName, "sessions", "1")):
+                os.mkdir(os.path.join(self.workspaceFolder, workspaceName, "sessions", "1"))
+            if not os.path.exists(os.path.join(self.workspaceFolder, workspaceName, "sessions", "1", "extract")):
+                os.mkdir(os.path.join(self.workspaceFolder, workspaceName, "sessions", "1", "extract"))
+            if not os.path.exists(os.path.join(self.workspaceFolder, workspaceName, "sessions", "1", "train")):
+                os.mkdir(os.path.join(self.workspaceFolder, workspaceName, "sessions", "1", "train"))
             # Launch GUI 1 (metric and acquisition parameters)
             self.launchAcqGui = True
             self.accept()
