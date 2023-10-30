@@ -102,14 +102,14 @@ class Dialog(QDialog):
         # Generate button
         self.btn_generateLaunch = QPushButton("Generate scenarios, launch HappyFeat")
         self.btn_generateLaunch.clicked.connect(lambda: self.generate(True))
-        self.btn_generate = QPushButton("Generate scenarios, let me handle things!")
-        self.btn_generate.clicked.connect(lambda: self.generate(False))
+        # self.btn_generate = QPushButton("Generate scenarios, let me handle things!")
+        # self.btn_generate.clicked.connect(lambda: self.generate(False))
 
         self.dlgLayout.addWidget(self.label)
         self.dlgLayout.addWidget(self.scenarioComboBox)
         self.dlgLayout.addLayout(self.vBoxLayout)
         self.dlgLayout.addWidget(self.btn_generateLaunch)
-        self.dlgLayout.addWidget(self.btn_generate)
+        # self.dlgLayout.addWidget(self.btn_generate)
 
         # display layout
         self.setLayout(self.dlgLayout)
