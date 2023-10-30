@@ -76,10 +76,8 @@ class Dialog(QDialog):
 
         super().__init__(parent)
 
-        self.scriptPath = os.path.dirname(os.path.realpath(sys.argv[0]))
         self.workspaceFile = workspaceFile
         self.workspaceFolder = os.path.splitext(workspaceFile)[0]
-        self.jsonfullpath = None
 
         # ---------------
         # INITIALIZATIONS
@@ -553,11 +551,8 @@ class Dialog(QDialog):
 
         # Select / all combinations buttons...
         self.btn_trainClassif = QPushButton("TRAIN CLASSIFIER")
-        self.btn_allCombinations = QPushButton("FIND BEST COMBINATION")
         self.btn_trainClassif.clicked.connect(lambda: self.btnTrainClassif())
-        self.btn_allCombinations.clicked.connect(lambda: self.btnAllCombinations())
         self.btn_trainClassif.setStyleSheet("font-weight: bold")
-        self.btn_allCombinations.setStyleSheet("font-weight: bold")
 
         # Connectivity: allow to enable/disable "Speed up" training"
         if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
@@ -578,7 +573,6 @@ class Dialog(QDialog):
         if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             self.qvTrainingLayout.addLayout(self.speedUpLayout)
         self.qvTrainingLayout.addWidget(self.btn_trainClassif)
-        # self.qvTrainingLayout.addWidget(self.btn_allCombinations)  #disabled for now
         self.dlgLayout.addLayout(self.layoutTrain, 1)
 
         # display initial layout
@@ -1124,15 +1118,16 @@ class Dialog(QDialog):
         # Instantiate the thread...
         combiComp = False
         signalFolder = os.path.join(self.workspaceFolder, "signals")
-        pipelineType = trainingParamDict["pipelineType"]
-        templateFolder = os.path.join(self.scriptPath, settings.optionsTemplatesDir[pipelineType])
+
         enableSpeedUp = False
         if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             if self.enableSpeedUp.isChecked():
                 enableSpeedUp = True
 
-        self.trainClassThread = TrainClassifier(combiComp, self.trainingFiles,
-                                                signalFolder, templateFolder, self.workspaceFolder,
+        templateFolder = settings.optionsTemplatesDir[self.parameterDict["pipelineType"]]
+        self.trainClassThread = TrainClassifier(self.trainingFiles,
+                                                signalFolder, templateFolder,
+                                                self.workspaceFolder,
                                                 self.ovScript,
                                                 trainingSize, listFeats,
                                                 trainingParamDict, self.samplingFreq,
@@ -1143,97 +1138,6 @@ class Dialog(QDialog):
         self.trainClassThread.info.connect(self.progressBarTrain.increment)
         self.trainClassThread.info2.connect(self.progressBarTrain.changeLabel)
         # Signal: Training work thread finished
-        self.trainClassThread.over.connect(self.training_over)
-        # Launch the work thread
-        self.trainClassThread.start()
-
-        self.trainTimerStart = time.perf_counter()
-
-    def btnAllCombinations(self):
-        # ----------
-        # Callback from button :
-        # Select features in fields, check if they're correctly formatted,
-        # launch openvibe with sc2-train.xml (in the background) to train the classifier,
-        # provide the classification score/accuracy as a textbox
-        # ----------
-        if not self.fileListWidgetTrain.selectedItems():
-            myMsgBox("Please select a set of runs for training")
-            return
-        elif len(self.fileListWidgetTrain.selectedItems()) > 5:
-            myMsgBox("Please select 5 runs maximum")
-            return
-
-        if not self.parameterDict["pipelineType"] == settings.optionKeys[3]:
-            # case with 1 set of features...
-            if len(self.selectedFeats[0]) < 1:
-                myMsgBox("Please use at least one set of features!")
-                return
-        else:
-            # case with 2 sets of features : one of the two can be empty
-            if len(self.selectedFeats[0]) < 1 and len(self.selectedFeats[1]) < 1:
-                myMsgBox("Please use at least one set of features!")
-                return
-
-        # Get training param from GUI and modify training scenario
-        err = True
-        trainingSize = 0
-        if self.trainingPartitions.text().isdigit():
-            if int(self.trainingPartitions.text()) > 0:
-                trainingSize = int(self.trainingPartitions.text())
-                err = False
-        if err:
-            myMsgBox("Nb of k-fold should be a positive number")
-            return
-
-        # create list of files...
-        self.trainingFiles = []
-        for selectedItem in self.fileListWidgetTrain.selectedItems():
-            self.trainingFiles.append(selectedItem.text())
-        signalFolder = os.path.join(self.workspaceFolder, "signals")
-        pipelineType = self.parameterDict["pipelineType"]
-        templateFolder = os.path.join(self.scriptPath, settings.optionsTemplatesDir[pipelineType])
-        scriptsFolder = self.scriptPath
-
-        # IMPORTANT !
-        # When using "mixed" pipeline, if one of the two feature lists is empty, we use
-        # the Training scenario template from the pipeline with the non-empty feature (got it?)
-        # ex: if feats(connectivity) is empty, then we use the "powerspectrum" template.
-        trainingParamDict = self.parameterDict.copy()
-        trainingFeats = self.selectedFeats
-        if self.parameterDict["pipelineType"] == settings.optionKeys[3]:
-            trainingFeats = self.selectedFeats
-            if len(self.selectedFeats[0]) < 1:
-                # no powspectum feature = use connectivity pipeline's training template
-                trainingParamDict["pipelineType"] = settings.optionKeys[2]
-                # copy the selected feats to the first list, for processing in the thread...
-                trainingFeats[0] = self.selectedFeats[1]
-            elif len(self.selectedFeats[1]) < 1:
-                # no connectivity feature = use powspectrum pipeline's training template
-                trainingParamDict["pipelineType"] = settings.optionKeys[1]
-
-        # deactivate this part of the GUI + the extraction part
-        self.enableExtractionGui(False)
-        self.enableTrainGui(False)
-
-        # create progress bar window...
-        i = []
-        for item in self.fileListWidgetTrain.selectedItems():
-            i.append("a")
-        nbCombinations = len(list(myPowerset(i)))
-        self.progressBarTrain = ProgressBar("Classifier Training", "First combination", nbCombinations)
-
-        # Instantiate the thread...
-        combiComp = True
-        speedUp = False
-        self.trainClassThread = TrainClassifier(combiComp, self.trainingFiles,
-                                                signalFolder, templateFolder, scriptsFolder, self.ovScript,
-                                                trainingSize, trainingFeats,
-                                                trainingParamDict, self.samplingFreq, speedUp)
-        # Signal: Extraction work thread finished one file of the selected list.
-        # Refresh the viz&train file lists to make it available + increment progress bar
-        self.trainClassThread.info.connect(self.progressBarTrain.increment)
-        self.trainClassThread.info2.connect(self.progressBarTrain.changeLabel)
-        # Signal: Extraction work thread finished
         self.trainClassThread.over.connect(self.training_over)
         # Launch the work thread
         self.trainClassThread.start()
@@ -1318,7 +1222,6 @@ class Dialog(QDialog):
         self.btn_addPair.setEnabled(myBool)
         self.btn_removePair.setEnabled(myBool)
         self.btn_trainClassif.setEnabled(myBool)
-        self.btn_allCombinations.setEnabled(myBool)
         for listOfFeatures in self.selectedFeats:
             for item in listOfFeatures:
                 item.setEnabled(myBool)
@@ -1794,19 +1697,16 @@ if __name__ == '__main__':
     # Check that a workspace file has been provided
     if len(sys.argv) == 1:
         print("\tError: missing argument.\n\tPlease call this interface with a workspace file (.hfw).")
-        print("\tEx: python 2-featureExtractionInterface myworkspace.hfw")
+        print("\tEx: python 2-featureExtractionInterface <fullpath>/myworkspace.hfw")
         print("\t(use happyfeat_welcome to initialize new workspaces)")
         sys.exit(-1)
 
     elif len(sys.argv) == 2:
         # Check that workspace file exists, is a json file, and contains HappyFeatVersion field...
-        workspaceFolder = "workspace"
-        workspaceFile = sys.argv[1]
-        currScriptFolder = os.path.dirname(os.path.abspath(sys.argv[0]))
-        fullWorkspacePath = os.path.join(currScriptFolder, workspaceFolder, workspaceFile)
+        fullWorkspacePath = sys.argv[1]
         if not os.path.exists(fullWorkspacePath):
             print("\tError: can't open workspace file.")
-            print("\tPlease check that \"workspace\" folder exists, and that your .hfw file is within.")
+            print("\tPlease check that you provided the full path to your .hfw file")
             print("\t(use happyfeat_welcome to initialize new workspaces)")
             sys.exit(-1)
         with open(fullWorkspacePath, "r") as wp:

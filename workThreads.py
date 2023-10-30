@@ -4,6 +4,7 @@ import time
 import subprocess
 import platform
 from shutil import copyfile
+from importlib import resources
 
 from PyQt5 import QtCore
 from PyQt5.QtCore import pyqtSignal
@@ -598,7 +599,7 @@ class TrainClassifier(QtCore.QThread):
     info2 = pyqtSignal(str)
     over = pyqtSignal(bool, str)
 
-    def __init__(self, isCombinationComputing, trainingFiles,
+    def __init__(self, trainingFiles,
                  signalFolder, templateFolder,
                  workspaceFolder, ovScript,
                  trainingSize, selectedFeats,
@@ -607,7 +608,6 @@ class TrainClassifier(QtCore.QThread):
 
         super().__init__(parent)
         self.stop = False
-        self.isCombinationComputing = isCombinationComputing
         self.trainingFiles = trainingFiles
         self.signalFolder = signalFolder
         self.templateFolder = templateFolder
@@ -711,11 +711,11 @@ class TrainClassifier(QtCore.QThread):
         # RE-COPY sc2 & sc3 FROM TEMPLATE, SO THE USER CAN DO THIS MULTIPLE TIMES
         for i in [2, 3, 4, 5]:
             scenName = settings.templateScenFilenames[i]
-            srcFile = os.path.join(self.templateFolder, scenName)
-            destFile = os.path.join(self.workspaceFolder, scenName)
+            with resources.path(self.templateFolder, scenName) as srcFile:
+                destFile = os.path.join(self.workspaceFolder, scenName)
+                print("---Copying file " + str(srcFile) + " to " + str(destFile))
+                copyfile(srcFile, destFile)
             trainingpath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train")
-            print("---Copying file " + srcFile + " to " + destFile)
-            copyfile(srcFile, destFile)
             modifyScenarioGeneralSettings(destFile, self.extractDict)
             if i == 2:
                 # training scenarios
@@ -847,156 +847,67 @@ class TrainClassifier(QtCore.QThread):
             tmax = float(self.extractDict["StimulationEpoch"])
 
             # Train on accumulation of all selected trials
-            if not self.isCombinationComputing:
-                compositeCsv = mergeRunsCsv(trainingSigList, self.parameterDict["AcquisitionParams"]["Class1"],
-                                            self.parameterDict["AcquisitionParams"]["Class2"],
-                                            class1Stim, class2Stim, tmin, tmax)
-                if not compositeCsv:
-                    self.over.emit(False, "Error merging runs!! Most probably different list of electrodes")
-                    return
+            compositeCsv = mergeRunsCsv(trainingSigList, self.parameterDict["AcquisitionParams"]["Class1"],
+                                        self.parameterDict["AcquisitionParams"]["Class2"],
+                                        class1Stim, class2Stim, tmin, tmax)
+            if not compositeCsv:
+                self.over.emit(False, "Error merging runs!! Most probably different list of electrodes")
+                return
 
-                print("Composite file for training: " + compositeCsv)
-                compositeCsvBasename = os.path.basename(compositeCsv)
-                newWeightsName = str("classifier-weights-" + self.attemptId + ".xml")
-                modifyTrainIO(compositeCsvBasename, newWeightsName, self.currentSessionId, scenFile)
+            print("Composite file for training: " + compositeCsv)
+            compositeCsvBasename = os.path.basename(compositeCsv)
+            newWeightsName = str("classifier-weights-" + self.attemptId + ".xml")
+            modifyTrainIO(compositeCsvBasename, newWeightsName, self.currentSessionId, scenFile)
 
-                # write composite file name in structure for future saving in workspace
-                self.currentAttempt["CompositeFile"] = compositeCsvBasename
+            # write composite file name in structure for future saving in workspace
+            self.currentAttempt["CompositeFile"] = compositeCsvBasename
 
-                # increment progressbar
-                self.info.emit(True)
-                self.info2.emit("Running Training Scenario")
+            # increment progressbar
+            self.info.emit(True)
+            self.info2.emit("Running Training Scenario")
 
-                # RUN THE CLASSIFIER TRAINING SCENARIO
-                scenXml = os.path.join(self.workspaceFolder, settings.templateScenFilenames[2])
-                success, classifierOutputStr, accuracy = self.runClassifierScenario(scenXml)
+            # RUN THE CLASSIFIER TRAINING SCENARIO
+            scenXml = os.path.join(self.workspaceFolder, settings.templateScenFilenames[2])
+            success, classifierOutputStr, accuracy = self.runClassifierScenario(scenXml)
 
-                if not success:
-                    self.errorMessageTrainer()
-                    self.over.emit(False, self.exitText)
-                else:
-                    # Copy weights file to <workspaceFolder>/classifier-weights.xml
-                    newWeights = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", \
-                                              str("classifier-weights-" + self.attemptId + ".xml"))
-                    origFilename = os.path.join(self.workspaceFolder, "classifier-weights.xml")
-                    copyfile(newWeights, origFilename)
-
-                    # write score in workspace structure for future reporting
-                    self.currentAttempt["Score"] = accuracy
-
-                    # PREPARE GOODBYE MESSAGE...
-                    textFeats = str("")
-                    for i in range(len(trainingSigList)):
-                        textFeats += str(os.path.basename(trainingSigList[i]) + "\n")
-
-                    if not self.usingDualFeatures:
-                        textFeats += str("\nFeature(s) ")
-                        textFeats += str("(" + self.parameterDict["pipelineType"]+"):\n")
-                        for i in range(len(selectedFeats)):
-                            textFeats += str("\t"+"Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
-                    else:
-                        textFeats += str("\nFeature(s) for PowSpectrum:\n")
-                        for i in range(len(selectedFeats)):
-                            textFeats += str(
-                                "\t" + "Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
-                        textFeats += str("Feature(s) for Connectivity:\n")
-                        for i in range(len(selectedFeats2)):
-                            textFeats += str(
-                                "\t" + "Channel " + str(selectedFeats2[i][0]) + " at " + str(selectedFeats2[i][1]) + " Hz\n")
-
-                    textDisplay = textFeats
-                    textDisplay += str("\n" + classifierOutputStr)
-
-                    self.exitText = textDisplay
-
-            # Train on combinations of selected trials
+            if not success:
+                self.errorMessageTrainer()
+                self.over.emit(False, self.exitText)
             else:
-                # Create list of files from selected items
-                combinationsList = list(myPowerset(trainingSigList))
-                sigIdxList = range(len(trainingSigList))
-                combIdx = list(myPowerset(sigIdxList))
-                scores = [0 for x in range(len(combIdx))]
-                classifierOutputStrList = ["" for x in range(len(combIdx))]
+                # Copy weights file to <workspaceFolder>/classifier-weights.xml
+                newWeights = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", \
+                                          str("classifier-weights-" + self.attemptId + ".xml"))
+                origFilename = os.path.join(self.workspaceFolder, "classifier-weights.xml")
+                copyfile(newWeights, origFilename)
 
-                successGlobal = True
-                for idxcomb, comb in enumerate(combinationsList):
-                    newLabel = str("Combination " + str(combIdx[idxcomb]))
-                    self.info2.emit(newLabel)
+                # write score in workspace structure for future reporting
+                self.currentAttempt["Score"] = accuracy
 
-                    sigList = []
-                    for file in comb:
-                        sigList.append(file)
-                    compositeCsv = mergeRunsCsv(sigList, self.parameterDict["AcquisitionParams"]["Class1"],
-                                                self.parameterDict["AcquisitionParams"]["Class2"],
-                                                class1Stim, class2Stim, tmin, tmax)
-                    if not compositeCsv:
-                        self.over.emit(False, "Error merging runs!! Most probably different list of electrodes")
-                        return
+                # PREPARE GOODBYE MESSAGE...
+                textFeats = str("")
+                for i in range(len(trainingSigList)):
+                    textFeats += str(os.path.basename(trainingSigList[i]) + "\n")
 
-                    print("Composite file for training: " + compositeCsv)
-                    compositeCsvBasename = os.path.basename(compositeCsv)
-                    newWeightsName = str("classifier-weights-" + self.attemptId + "-comb-" + str(idxcomb) + ".xml")
-                    modifyTrainIO(compositeCsvBasename, newWeightsName, self.currentSessionId, scenFile)
-
-                    # RUN THE CLASSIFIER TRAINING SCENARIO
-                    scenXml = os.path.join(self.workspaceFolder, settings.templateScenFilenames[2])
-                    success, classifierOutputStrList[idxcomb], scores[idxcomb] = self.runClassifierScenario(scenXml)
-                    if not success:
-                        successGlobal = False
-                        self.errorMessageTrainer()
-                        break
-
-                    self.info.emit(True)
-
-                if not successGlobal:
-                    self.errorMessageTrainer()
-                    self.over.emit(False, self.exitText)
+                if not self.usingDualFeatures:
+                    textFeats += str("\nFeature(s) ")
+                    textFeats += str("(" + self.parameterDict["pipelineType"]+"):\n")
+                    for i in range(len(selectedFeats)):
+                        textFeats += str("\t"+"Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
                 else:
-                    # Find max score
-                    maxIdx = scores.index(max(scores))
-                    # Copy weights file to <workspaceFolder>/classifier-weights.xml
-                    maxFilename = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", str("classifier-weights-" + self.attemptId))
-                    maxFilename += str("-comb-" + str(maxIdx) + ".xml")
-                    origFilename = os.path.join(self.workspaceFolder, "classifier-weights.xml")
-                    copyfile(maxFilename, origFilename)
+                    textFeats += str("\nFeature(s) for PowSpectrum:\n")
+                    for i in range(len(selectedFeats)):
+                        textFeats += str(
+                            "\t" + "Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+                    textFeats += str("Feature(s) for Connectivity:\n")
+                    for i in range(len(selectedFeats2)):
+                        textFeats += str(
+                            "\t" + "Channel " + str(selectedFeats2[i][0]) + " at " + str(selectedFeats2[i][1]) + " Hz\n")
 
-                    # ==========================
-                    # PREPARE GOODBYE MESSAGE...
-                    textFeats = str("")
-                    if not self.usingDualFeatures:
-                        textFeats += str("\nFeature(s):\n")
-                        for i in range(len(selectedFeats)):
-                            textFeats += str("\t"+"Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
-                    else:
-                        textFeats += str("\nFeature(s) for PowSpectrum:\n")
-                        for i in range(len(selectedFeats)):
-                            textFeats += str(
-                                "\t" + "Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
-                        textFeats += str("Feature(s) for Connectivity:\n")
-                        for i in range(len(selectedFeats2)):
-                            textFeats += str(
-                                "\t" + "Channel " + str(selectedFeats2[i][0]) + " at " + str(selectedFeats2[i][1]) + " Hz\n")
+                textDisplay = textFeats
+                textDisplay += str("\n" + classifierOutputStr)
 
-                    textFeats += str("\nExperiment runs:")
-                    for i in range(len(trainingSigList)):
-                        textFeats += str("\n\t[" + str(i) + "]: " + os.path.basename(trainingSigList[i]))
+                self.exitText = textDisplay
 
-                    textScore = str("Training Cross-Validation Test Accuracies per combination:\n")
-                    for i in range(len(combIdx)):
-                        combIdxStr = []
-                        for j in combIdx[i]:
-                            combIdxStr.append(str(j))
-                        textScore += str("\t[" + ",".join(combIdxStr) + "]: " + str(scores[i]) + "%\n")
-                    maxIdxStr = []
-                    for j in combIdx[maxIdx]:
-                        maxIdxStr.append(str(j))
-                    textScore += str("\nMax is combination [" + ','.join(maxIdxStr) + "] with " + str(max(scores)) + "%\n")
-                    textScore += classifierOutputStrList[maxIdx]
-
-                    textDisplay = textFeats
-                    textDisplay = str(textDisplay + "\n" + textScore)
-
-                    self.exitText = textDisplay
 
         self.stop = True
         self.over.emit(True, self.exitText)
