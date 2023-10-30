@@ -2,7 +2,7 @@
 
 <img src="img/brain_icon_vect.png" alt="HappyFeat Logo" style="width:200px;"/>
 
-***[HappyFeat](https://github.com/Inria-NERV/happyFeat)*** is a software aiming to to simplify the use of BCI pipelines in clinical settings. More precisely, it is a **software assitant for extracting and selecting classification features for BCI**.
+***[HappyFeat](https://github.com/Inria-NERV/happyFeat)*** is a software aiming to to simplify the use of BCI pipelines in clinical settings. More precisely, it is a **software assistant for extracting and selecting classification features for BCI**.
 
 It gathers all necessary manipulations and analysis in a **single convenient GUI**, and **automates experimental or analytic parameters**. The resulting workflow allows for effortlessly **selecting the best features**, helping to achieve good BCI performance in time-constrained environments. Alternative features based on **Functional Connectivity** can be used and compared or combined with Power Spectral Density, allowing a network-oriented approach. 
 
@@ -29,7 +29,7 @@ The focus is put on ease of use, trial-and-error training of the classifier, and
 * **Easy to use GUI** allowing to extract and visualize classification features, and select the most relevant ones for training a classifier.
 * Use **Spectral Power** or **Coherence-based** features for classification. HappyFeat allows to extract & visualize both types of features in parallel, and **mix them at the training level**.
 * Feature selection and classifier training can be done multiple times in a row, until satisfactory results are achieved.
-* A **worspace management system** keeps tracks of all extraction- and training-related manipulations, and enables a high degree of reproducibility.
+* A **workspace management system** keeps tracks of all extraction- and training-related manipulations, and enables a high degree of reproducibility.
 
 
 ### Available pipelines: 

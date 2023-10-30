@@ -24,7 +24,7 @@ As of today, you can choose between **Power Spectral Density**, **Connectivity-b
 
 Then, enter the parameters for your experiment: Number of trials, trial length, etc.
 
-You can either use known channel montages (e.g. `standard 1020`) or a custom montage. In that case, you will be prompted to provide a description via a .txt file.
+You can either use known channel montages (e.g. `standard 1020`) or a custom montage. See the [specific page on montages](montage.md) for more information.
 
 You also need to browse for the **OpenViBE** designer application on your computer (either the .exe, .sh or .cmd file).
 

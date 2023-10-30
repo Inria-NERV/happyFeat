@@ -21,6 +21,7 @@ nav:
   - User Guide:
     - Installation: user_guide/install.md
     - Getting started: user_guide/start.md
+    - Sensor Montages: user_guide/montage.md
     - Workspaces: user_guide/workspaces.md
     - Using HappyFeat: user_guide/using_hf.md
     - Feature Extraction: user_guide/extract.md
