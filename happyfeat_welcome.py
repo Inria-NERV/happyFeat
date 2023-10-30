@@ -1,6 +1,7 @@
 import sys
 import os
 import subprocess
+from multiprocessing import Process
 import json
 from threading import Thread
 
@@ -20,6 +21,9 @@ from PyQt5.QtGui import QFont
 import workspaceMgmt
 from workspaceMgmt import *
 from utils import *
+
+import bcipipeline_setup as bciSetup
+import featureExtractionInterface as featExtractApp
 
 # Main class
 class Dialog(QDialog):
@@ -204,22 +208,7 @@ class Dialog(QDialog):
         return self.launchMainGui
 
 
-def launchThread(script, space):
-    p = subprocess.Popen(["python", script, space],
-                         stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-    while True:
-        output = p.stdout.readline()
-        if p.poll() is not None:
-            break
-        if output:
-            print(str(output))
-            if "Process finished with exit code" in str(output):
-                break
-    return
-
-
-# main entry point
-if __name__ == '__main__':
+def main():
     app = QApplication(sys.argv)
     dlg = Dialog()
     result = dlg.exec()
@@ -229,18 +218,20 @@ if __name__ == '__main__':
         if dlg.getLaunchAcqQui():
             # Launch acquisition parameters interface (which will load the main
             # offline interface later)
-            pyscript = "1-bcipipeline_qt.py"
             workspace = dlg.getSelectedWorkspace()
-            threadAcqGui = Thread(target=launchThread, args=(pyscript, workspace))
-            threadAcqGui.start()
-            threadAcqGui.join()
+            p = Process(target=bciSetup.launch, args=(str(sys.argv[0]), workspace))
+            p.start()
+            p.join()
 
         if dlg.getLaunchMainQui():
             # Launch main offline extraction interface
-            pyscript = "2-featureExtractionInterface.py"
             workspace = dlg.getSelectedWorkspace()
-            threadAcqGui = Thread(target=launchThread, args=(pyscript, workspace))
-            threadAcqGui.start()
-            threadAcqGui.join()
+            p = Process(target=featExtractApp.launch, args=(str(sys.argv[0]), workspace))
+            p.start()
+            p.join()
 
-        sys.exit(0)
+
+# main entry point
+if __name__ == '__main__':
+    main()
+    sys.exit(0)

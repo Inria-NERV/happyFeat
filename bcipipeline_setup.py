@@ -2,6 +2,7 @@ import sys
 import os
 import mne
 import subprocess
+from multiprocessing import Process
 from shutil import copyfile
 import json
 from threading import Thread
@@ -29,6 +30,8 @@ import bcipipeline_settings as settings
 from utils import *
 import workspaceMgmt
 from workspaceMgmt import *
+
+import featureExtractionInterface as featExtractApp
 
 class Dialog(QDialog):
 
@@ -383,9 +386,50 @@ def launchOpenvibe(command, acqScen):
     return
 
 
-if __name__ == '__main__':
+def launch(folder, fullWorkspacePath):
     app = QApplication(sys.argv)
 
+    # Check that workspace file exists, is a json file, and contains HappyFeatVersion field...
+    if not os.path.exists(fullWorkspacePath):
+        myMsgBox("NEED FULL WORKSPACE FILE !!")
+        # TODO
+        return -1
+    with open(fullWorkspacePath, "r") as wp:
+        workDict = json.load(wp)
+        if not "HappyFeatVersion" in workDict:
+            myMsgBox("INVALID WORKSPACE FILE !!")
+            # TODO
+            return -1
+
+    dlg = Dialog(fullWorkspacePath)
+    result = dlg.exec()
+    # Dlg exit with error
+    if not result:
+        return -1
+
+    # Dlg exit success
+    if not dlg.getLaunch():
+        # No further operation
+        text = "Thanks for using the generation script!"
+        myMsgBox(text)
+        return 0
+    else:
+        # # Launch Openvibe with acq scenario
+        # acqScen = os.path.join(os.getcwd(), "generated", settings.templateScenFilenames[0])
+        # command = parameterDict["ovDesignerPath"]
+        # threadOV = Thread(target=launchOpenvibe, args=(command, acqScen))
+        # threadOV.start()
+
+        # Launch offline extraction interface
+        p = Process(target=featExtractApp.launch, args=(folder, fullWorkspacePath))
+        p.start()
+        p.join()
+
+    return app.exec_()
+
+
+if __name__ == '__main__':
+    retVal = -1
     # Check that a workspace file has been provided
     if len(sys.argv) == 1:
         myMsgBox("NEED WORKSPACE FILE !!")
@@ -393,43 +437,7 @@ if __name__ == '__main__':
         sys.exit(-1)
 
     elif len(sys.argv) == 2:
-        # Check that workspace file exists, is a json file, and contains HappyFeatVersion field...
-        fullWorkspacePath = sys.argv[1]
-        if not os.path.exists(fullWorkspacePath):
-            myMsgBox("NEED FULL WORKSPACE FILE !!")
-            # TODO
-            sys.exit(-1)
-        with open(fullWorkspacePath, "r") as wp:
-            workDict = json.load(wp)
-            if not "HappyFeatVersion" in workDict:
-                myMsgBox("INVALID WORKSPACE FILE !!")
-                # TODO
-                sys.exit(-1)
+        folder = os.path.dirname(os.path.abspath(sys.argv[0]))
+        retVal = launch(folder, sys.argv[1])
 
-        dlg = Dialog(fullWorkspacePath)
-        result = dlg.exec()
-        # Dlg exit with error
-        if not result:
-            sys.exit(-1)
-
-        # Dlg exit success
-        if not dlg.getLaunch():
-            # No further operation
-            text = "Thanks for using the generation script!"
-            myMsgBox(text)
-            sys.exit(0)
-        else:
-            # # Launch Openvibe with acq scenario
-            # acqScen = os.path.join(os.getcwd(), "generated", settings.templateScenFilenames[0])
-            # command = parameterDict["ovDesignerPath"]
-            # threadOV = Thread(target=launchOpenvibe, args=(command, acqScen))
-            # threadOV.start()
-
-            # Launch offline extraction interface
-            threadFeat = Thread(target=featureExtractionThread, args=[fullWorkspacePath])
-            threadFeat.start()
-
-            # threadOV.join()
-            threadFeat.join()
-
-            sys.exit(0)
+    sys.exit(retVal)

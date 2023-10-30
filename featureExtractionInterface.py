@@ -1691,9 +1691,27 @@ def qt_plot_strongestConnectome(connect1, connect2, percentStrong, fmin, fmax, e
 
 
 # main entry point...
-if __name__ == '__main__':
+def launch(folder, fullWorkspacePath):
     app = QApplication(sys.argv)
 
+    # Check that workspace file exists, is a json file, and contains HappyFeatVersion field...
+    if not os.path.exists(fullWorkspacePath):
+        print("\tError: can't open workspace file.")
+        print("\tPlease check that you provided the full path to your .hfw file")
+        print("\t(use happyfeat_welcome to initialize new workspaces)")
+        return -1
+    with open(fullWorkspacePath, "r") as wp:
+        workDict = json.load(wp)
+        if not "HappyFeatVersion" in workDict:
+            print("\tError: invalid workspace file.")
+            # TODO: more checks...
+            return -1
+
+    dlg = Dialog(fullWorkspacePath)
+    return app.exec_()
+
+
+if __name__ == '__main__':
     # Check that a workspace file has been provided
     if len(sys.argv) == 1:
         print("\tError: missing argument.\n\tPlease call this interface with a workspace file (.hfw).")
@@ -1702,19 +1720,7 @@ if __name__ == '__main__':
         sys.exit(-1)
 
     elif len(sys.argv) == 2:
-        # Check that workspace file exists, is a json file, and contains HappyFeatVersion field...
-        fullWorkspacePath = sys.argv[1]
-        if not os.path.exists(fullWorkspacePath):
-            print("\tError: can't open workspace file.")
-            print("\tPlease check that you provided the full path to your .hfw file")
-            print("\t(use happyfeat_welcome to initialize new workspaces)")
-            sys.exit(-1)
-        with open(fullWorkspacePath, "r") as wp:
-            workDict = json.load(wp)
-            if not "HappyFeatVersion" in workDict:
-                print("\tError: invalid workspace file.")
-                # TODO: more checks...
-                sys.exit(-1)
+        retVal = launch(sys.argv[0], sys.argv[1])
 
-    dlg = Dialog(fullWorkspacePath)
-    sys.exit(app.exec_())
+    print("Exit thread")
+    sys.exit(retVal)
