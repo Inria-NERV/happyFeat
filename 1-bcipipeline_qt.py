@@ -5,6 +5,7 @@ import subprocess
 from shutil import copyfile
 import json
 from threading import Thread
+import pandas as pd
 
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QApplication
@@ -143,7 +144,7 @@ class Dialog(QDialog):
         self.montageComboBox.addItem("Custom... (select file)")
         for idx, mtg in enumerate(mne.channels.get_builtin_montages()):
             self.montageComboBox.addItem(mtg)
-            if mtg == "standard_1020":  # default
+            if mtg == "biosemi64":  # default
                 montageIdx = idx + 1
 
         self.montageComboBox.setCurrentIndex(montageIdx)
@@ -214,13 +215,23 @@ class Dialog(QDialog):
     def browseForMontage(self):
         directory = os.getcwd()
         self.customMontagePath, dummy = QFileDialog.getOpenFileName(self, "Open electrode names file", str(directory))
-        # TODO : add a check on the content of the file...
-        if ".txt" in self.customMontagePath:
+        if self.checkCustomMontage():
             self.customMontageTxtBox.setText(self.customMontagePath)
-        else:
-            myMsgBox("Please enter a valid path for the custom montage file")
 
         return
+
+    def checkCustomMontage(self):
+        invalid = False
+        column_names = ['name', 'x', 'y', 'z']
+        csv = pd.read_csv(self.customMontagePath)
+        if len(csv.columns) != len(column_names):
+            myMsgBox("Invalid channel locations file. Please refer to the documentation.")
+            return False
+        if not all(csv.columns[x] == column_names[x] for x in range(len(column_names))):
+            myMsgBox("Invalid channel locations file. Please refer to the documentation.")
+            return False
+
+        return True
 
     def generate(self, launch):
 

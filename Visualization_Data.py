@@ -8,6 +8,7 @@ import mne
 from mne.io.meas_info import Info
 from mne.viz import topomap
 
+import pandas as pd
 
 def add_colorbar(ax, im, cmap, side="right", pad=.05, title=None,
                  format=None, size="5%"):
@@ -20,36 +21,58 @@ def add_colorbar(ax, im, cmap, side="right", pad=.05, title=None,
 
     return cbar, cax
 
-def topo_plot(Rsquare, title, montage, customMontage, electrodes, freqMin, freqMax, fres, fs, scaleColormap, Stat_method):
+def topo_plot(Rsquare, title, montageStr, customMontage, electrodes, freqMin, freqMax, fres, fs, scaleColormap, Stat_method):
     fig, ax = plt.subplots()
 
     useRange = False
     if freqMax > 0:
         useRange = True
 
-    if montage == "custom":
-        # TODO : manage custom montage...
-        print ("Custom electrode layout not yet available!")
-        return
+    if montageStr == "custom":
+        df = pd.read_csv(customMontage)
+        # TODO : catch errors (file not existing, badly formatted...)
+        ch_names = df.name.to_list()
+        pos = df[['x', 'y', 'z']].values
+        dig_ch_pos = dict(zip(ch_names, pos))
 
-    size_dim = mne.channels.make_standard_montage(montage)
-    biosemi_montage_inter = mne.channels.make_standard_montage(montage)
-    ind = [i for (i, channel) in enumerate(biosemi_montage_inter.ch_names) if channel in electrodes]
-    biosemi_montage = biosemi_montage_inter.copy()
-    # Only keep the desired channels
-    biosemi_montage.ch_names = [biosemi_montage_inter.ch_names[x] for x in ind]
-    kept_channel_info = [biosemi_montage_inter.dig[x + 3] for x in ind]
-    # Keep the first three rows as they are the fiducial points information
-    biosemi_montage.dig = biosemi_montage_inter.dig[0:3] + kept_channel_info
+        if set(['Nz', 'LPA', 'RPA']).issubset(ch_names):
+            idx_Nz = ch_names.index('Nz')
+            idx_LPA = ch_names.index('LPA')
+            idx_RPA = ch_names.index('RPA')
+            montage_inter = mne.channels.make_dig_montage(ch_pos=dig_ch_pos, nasion=pos[idx_Nz], lpa=pos[idx_LPA], rpa=pos[idx_RPA])
+            ind = [i for (i, channel) in enumerate(montage_inter.ch_names) if channel in electrodes]
+            montage = montage_inter.copy()
+            # Only keep the desired channels
+            montage.ch_names = [montage_inter.ch_names[x] for x in ind]
+            kept_channel_info = [montage_inter.dig[x + 3] for x in ind]
+            # Keep the first three rows as they are the fiducial points information
+            montage.dig = montage_inter.dig[0:3] + kept_channel_info
+        else:
+            montage_inter = mne.channels.make_dig_montage(ch_pos=dig_ch_pos)
+            ind = [i for (i, channel) in enumerate(montage_inter.ch_names) if channel in electrodes]
+            montage = montage_inter.copy()
+            # Only keep the desired channels
+            montage.ch_names = [montage_inter.ch_names[x] for x in ind]
+            montage.dig = [montage_inter.dig[x + 3] for x in ind]
 
-    n_channels = len(biosemi_montage.ch_names)
-    fake_info = mne.create_info(ch_names=biosemi_montage.ch_names, sfreq=fs / 2,
+    else:
+        montage_inter = mne.channels.make_standard_montage(montageStr)
+        ind = [i for (i, channel) in enumerate(montage_inter.ch_names) if channel in electrodes]
+        montage = montage_inter.copy()
+        # Only keep the desired channels
+        montage.ch_names = [montage_inter.ch_names[x] for x in ind]
+        kept_channel_info = [montage_inter.dig[x + 3] for x in ind]
+        # Keep the first three rows as they are the fiducial points information
+        montage.dig = montage_inter.dig[0:3] + kept_channel_info
+
+    n_channels = len(montage.ch_names)
+    fake_info = mne.create_info(ch_names=montage.ch_names, sfreq=fs / 2,
                                 ch_types='eeg')
 
     rng = np.random.RandomState(0)
     data = rng.normal(size=(n_channels, 1)) * 1e-6
     fake_evoked = mne.EvokedArray(data, fake_info)
-    fake_evoked.set_montage(biosemi_montage)
+    fake_evoked.set_montage(montage)
 
     sizer = np.zeros([n_channels])
 
@@ -57,13 +80,13 @@ def topo_plot(Rsquare, title, montage, customMontage, electrodes, freqMin, freqM
         freq = str(freqMin)
         for i in range(n_channels):
             for j in range(len(electrodes)):
-                if biosemi_montage.ch_names[i] == electrodes[j]:
+                if montage.ch_names[i] == electrodes[j]:
                     sizer[i] = Rsquare[:, freqMin][j]
     else:
         freq = str(freqMin) + ":" + str(freqMax)
         for i in range(n_channels):
             for j in range(len(electrodes)):
-                if biosemi_montage.ch_names[i] == electrodes[j]:
+                if montage.ch_names[i] == electrodes[j]:
                     sizer[i] = Rsquare[:, freqMin:freqMax][j].mean()
 
     vmin = None
@@ -71,7 +94,7 @@ def topo_plot(Rsquare, title, montage, customMontage, electrodes, freqMin, freqM
     if scaleColormap:
         vmax = None
 
-    plot_topomap_data_viz(title, sizer, fake_evoked.info, sensors=False, names=biosemi_montage.ch_names, show_names=True,
+    plot_topomap_data_viz(title, sizer, fake_evoked.info, sensors=False, names=montage.ch_names, show_names=True,
                           res=500, mask_params=dict(marker='', markerfacecolor='w', markeredgecolor='k', linewidth=0,
                                                     markersize=0), contours=0, image_interp='gaussian', show=True,
                           extrapolate='head', cmap='jet', freq=freq, vmin=vmin, vmax=vmax, Stat_method=Stat_method)
@@ -769,9 +792,11 @@ def Reorder_plusplus(Rsquare, Wsquare, Wpvalues, electrodes_orig, powerLeft, pow
         [timefreqRight.shape[0], timefreqRight.shape[1], timefreqRight.shape[2], timefreqLeft.shape[3]])
 
     electrode_test = []
+    electrode_final = []
     for l in range(len(index_elec)):
         # print("index "+str(l)+" replaced by "+str(index_elec[l]))
         electrode_test.append(index_elec[l])
+        electrode_final.append(electrodes_orig[index_elec[l]])
         powerLeft_final[:, l, :] = powerLeft[:, index_elec[l], :]
         powerRight_final[:, l, :] = powerRight[:, index_elec[l], :]
         timefreqLeftfinal[:, l, :, :] = timefreqLeft[:, index_elec[l], :, :]
@@ -780,7 +805,81 @@ def Reorder_plusplus(Rsquare, Wsquare, Wpvalues, electrodes_orig, powerLeft, pow
         Wsquare_final[l, :] = Wsquare[index_elec[l], :]
         Wpvalues_final[l, :] = Wpvalues[index_elec[l], :]
 
-    return Rsquare_final, Wsquare_final, Wpvalues_final, electrodes_target, powerLeft_final, powerRight_final, timefreqLeftfinal, timefreqRightfinal
+    return Rsquare_final, Wsquare_final, Wpvalues_final, electrode_final, powerLeft_final, powerRight_final, timefreqLeftfinal, timefreqRightfinal
+
+def Reorder_custom(Rsquare, customPath, electrodes_orig, powerLeft, powerRight):
+
+    df = pd.read_csv(customPath)
+    electrodes_target = df.name.to_list()
+
+    index_elec = []
+    for k in range(len(electrodes_target)):
+        for i in range(len(electrodes_orig)):
+            if electrodes_orig[i].casefold() == electrodes_target[k].casefold():
+                index_elec.append(i)
+                break
+
+    print(index_elec)
+
+    Rsquare_final = np.zeros([Rsquare.shape[0], Rsquare.shape[1]])
+    print(powerLeft.shape)
+    powerLeft_final = np.zeros([powerLeft.shape[0], powerLeft.shape[1], powerLeft.shape[2]])
+    powerRight_final = np.zeros([powerRight.shape[0], powerRight.shape[1], powerRight.shape[2]])
+
+    electrode_test = []
+    electrode_final = []
+    for l in range(len(index_elec)):
+        # print("index "+str(l)+" replaced by "+str(index_elec[l]))
+        electrode_test.append(index_elec[l])
+        electrode_final.append(electrodes_orig[index_elec[l]])
+        powerLeft_final[:, l, :] = powerLeft[:, index_elec[l], :]
+        powerRight_final[:, l, :] = powerRight[:, index_elec[l], :]
+        Rsquare_final[l, :] = Rsquare[index_elec[l], :]
+
+    return Rsquare_final, electrode_final, powerLeft_final, powerRight_final
+
+def Reorder_custom_plus(Rsquare, Wsquare, Wpvalues, customPath, electrodes_orig, powerLeft, powerRight, timefreqLeft, timefreqRight):
+
+    df = pd.read_csv(customPath)
+    electrodes_target = df.name.to_list()
+
+    index_elec = []
+    for k in range(len(electrodes_target)):
+        for i in range(len(electrodes_orig)):
+            if electrodes_orig[i].casefold() == electrodes_target[k].casefold():
+                index_elec.append(i)
+                break
+
+    print(index_elec)
+
+    Rsquare_final = np.zeros([Rsquare.shape[0], Rsquare.shape[1]])
+    Wsquare_final = np.zeros([Wsquare.shape[0], Wsquare.shape[1]])
+    Wpvalues_final = np.zeros([Wpvalues.shape[0], Wpvalues.shape[1]])
+    print(powerLeft.shape)
+    powerLeft_final = np.zeros([powerLeft.shape[0], powerLeft.shape[1], powerLeft.shape[2]])
+    powerRight_final = np.zeros([powerRight.shape[0], powerRight.shape[1], powerRight.shape[2]])
+    timefreqLeftfinal = np.zeros(
+        [timefreqLeft.shape[0], timefreqLeft.shape[1], timefreqLeft.shape[2], timefreqLeft.shape[3]])
+    timefreqRightfinal = np.zeros(
+        [timefreqRight.shape[0], timefreqRight.shape[1], timefreqRight.shape[2], timefreqLeft.shape[3]])
+
+    electrode_test = []
+    electrode_final = []
+    for l in range(len(index_elec)):
+        # print("index "+str(l)+" replaced by "+str(index_elec[l]))
+        electrode_test.append(index_elec[l])
+        electrode_final.append(electrodes_orig[index_elec[l]])
+        powerLeft_final[:, l, :] = powerLeft[:, index_elec[l], :]
+        powerRight_final[:, l, :] = powerRight[:, index_elec[l], :]
+        timefreqLeftfinal[:, l, :, :] = timefreqLeft[:, index_elec[l], :, :]
+        timefreqRightfinal[:, l, :, :] = timefreqRight[:, index_elec[l], :, :]
+        Rsquare_final[l, :] = Rsquare[index_elec[l], :]
+        Wsquare_final[l, :] = Wsquare[index_elec[l], :]
+        Wpvalues_final[l, :] = Wpvalues[index_elec[l], :]
+
+    return Rsquare_final, Wsquare_final, Wpvalues_final, electrode_final, powerLeft_final, powerRight_final, timefreqLeftfinal, timefreqRightfinal
+
+
 
 def Reorder_Rsquare(Rsquare, electrodes_orig, powerLeft, powerRight):
     if len(electrodes_orig) == 74:
@@ -843,14 +942,16 @@ def Reorder_Rsquare(Rsquare, electrodes_orig, powerLeft, powerRight):
     powerRight_final = np.zeros([powerRight.shape[0], powerRight.shape[1], powerRight.shape[2]])
 
     electrode_test = []
+    electrode_final = []
     for l in range(len(index_elec)):
         # print("index "+str(l)+" replaced by "+str(index_elec[l]))
         electrode_test.append(index_elec[l])
+        electrode_final.append(electrodes_orig[index_elec[l]])
         powerLeft_final[:, l, :] = powerLeft[:, index_elec[l], :]
         powerRight_final[:, l, :] = powerRight[:, index_elec[l], :]
         Rsquare_final[l, :] = Rsquare[index_elec[l], :]
 
-    return Rsquare_final, electrodes_target, powerLeft_final, powerRight_final
+    return Rsquare_final, electrode_final, powerLeft_final, powerRight_final
 
 
 

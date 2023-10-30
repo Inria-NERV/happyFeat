@@ -1426,12 +1426,6 @@ class Dialog(QDialog):
     def btnTopo(self, features, title):
         error = True
 
-        # First manage montage option...
-        if self.sensorMontage == "custom":
-            # TODO : get custom montage...
-            myMsgBox("wow this is impossible as of today, please choose a standard montage in GUI 1")
-            return
-
         # 2 cases : 1 freq bin, or freq range
         if self.freqTopo.text().isdigit() \
                 and 0 < int(self.freqTopo.text()) < (self.samplingFreq / 2):

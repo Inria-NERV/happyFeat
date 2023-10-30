@@ -369,9 +369,17 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         Wsquare, Wpvalues = Compute_Wilcoxon_Map(power_cond2_final[:, :, :(n_bins - 1)],
                                                  power_cond1_final[:, :, :(n_bins - 1)])
 
-        Rsigned_2, Wsquare_2, Wpvalues_2, electrodes_final, power_cond1_2, power_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
-            = Reorder_plusplus(Rsigned, Wsquare, Wpvalues, electrodeList, power_cond1_final, power_cond2_final,
-                               timefreq_cond1_final, timefreq_cond2_final)
+        # Reordering for R map and topography...
+        if self.parameterDict["sensorMontage"] == "standard_1020" \
+            or self.parameterDict["sensorMontage"] == "biosemi64":
+            Rsigned_2, Wsquare_2, Wpvalues_2, electrodes_final, power_cond1_2, power_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
+                = Reorder_plusplus(Rsigned, Wsquare, Wpvalues, electrodeList, power_cond1_final, power_cond2_final,
+                                   timefreq_cond1_final, timefreq_cond2_final)
+        elif self.parameterDict["sensorMontage"] == "custom" \
+            and self.parameterDict["customMontagePath"] != "":
+            Rsigned_2, Wsquare_2, Wpvalues_2, electrodes_final, power_cond1_2, power_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
+                = Reorder_custom_plus(Rsigned, Wsquare, Wpvalues, self.parameterDict["customMontagePath"], electrodeList, power_cond1_final, power_cond2_final,
+                                   timefreq_cond1_final, timefreq_cond2_final)
 
         self.Features.electrodes_orig = electrodeList
         self.Features.power_cond2 = power_cond2_2
@@ -555,8 +563,17 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         Rsigned = Compute_Rsquare_Map(connect_cond2_final[:, :, :(n_bins - 1)],
                                       connect_cond1_final[:, :, :(n_bins - 1)])
 
-        Rsigned_2, electrodes_final, connect_cond1_2, connect_cond2_2, \
-            = Reorder_Rsquare(Rsigned, electrodeList, connect_cond1_final, connect_cond2_final)
+
+        # Reordering for R map and topography...
+        if self.parameterDict["sensorMontage"] == "standard_1020" \
+            or self.parameterDict["sensorMontage"] == "biosemi64":
+            Rsigned_2, electrodes_final, connect_cond1_2, connect_cond2_2, \
+                = Reorder_Rsquare(Rsigned, electrodeList, connect_cond1_final, connect_cond2_final)
+
+        elif self.parameterDict["sensorMontage"] == "custom" \
+            and self.parameterDict["customMontagePath"] != "":
+            Rsigned_2, electrodes_final, connect_cond1_2, connect_cond2_2, \
+                = Reorder_custom(Rsigned, self.parameterDict["customMontagePath"], electrodeList, connect_cond1_final, connect_cond2_final,)
 
         # Fill Features struct...
         self.Features.electrodes_orig = electrodeList
