@@ -9,14 +9,14 @@ from importlib import resources
 from PyQt5 import QtCore
 from PyQt5.QtCore import pyqtSignal
 
-from .mergeRunsCsv import mergeRunsCsv, mergeRunsCsv_new
-from .extractMetaData import extractMetadata, generateMetadata
-from .modifyOpenvibeScen import *
-from .Visualization_Data import *
-from .featureExtractUtils import *
-from .utils import *
+from happyfeat.lib.mergeRunsCsv import mergeRunsCsv, mergeRunsCsv_new
+from happyfeat.lib.extractMetaData import extractMetadata, generateMetadata
+from happyfeat.lib.modifyOpenvibeScen import *
+from happyfeat.lib.Visualization_Data import *
+from happyfeat.lib.featureExtractUtils import *
+from happyfeat.lib.utils import *
 
-from .bcipipeline_settings import *
+from happyfeat.lib.bcipipeline_settings import *
 
 # ------------------------------------------------------
 # CLASSES FOR LONG-RUNNING OPERATIONS IN THREADS
@@ -710,7 +710,8 @@ class TrainClassifier(QtCore.QThread):
         # RE-COPY sc2 & sc3 FROM TEMPLATE, SO THE USER CAN DO THIS MULTIPLE TIMES
         for i in [2, 3, 4, 5]:
             scenName = templateScenFilenames[i]
-            with resources.path(self.templateFolder, scenName) as srcFile:
+            print("---Copying file from folder " + str(__name__.split('.')[0] + '.' + self.templateFolder))
+            with resources.path(str(__name__.split('.')[0] + '.' + self.templateFolder), scenName) as srcFile:
                 destFile = os.path.join(self.workspaceFolder, scenName)
                 print("---Copying file " + str(srcFile) + " to " + str(destFile))
                 copyfile(srcFile, destFile)

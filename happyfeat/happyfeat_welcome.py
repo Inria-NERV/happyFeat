@@ -18,12 +18,12 @@ from PyQt5.QtWidgets import QPushButton
 from PyQt5.QtWidgets import QInputDialog
 from PyQt5.QtGui import QFont
 
-import libs.workspaceMgmt as workspaceMgmt
-from libs.workspaceMgmt import *
-from libs.utils import *
+import happyfeat.lib.workspaceMgmt as workspaceMgmt
+from happyfeat.lib.workspaceMgmt import *
+from happyfeat. lib.utils import *
 
-import bcipipeline_setup as bciSetup
-import featureExtractionInterface as featExtractApp
+import happyfeat.bcipipeline_setup as bciSetup
+import happyfeat.featureExtractionInterface as featExtractApp
 
 # Main class
 class Dialog(QDialog):
@@ -40,6 +40,7 @@ class Dialog(QDialog):
 
         # TODO WARNING: this works with Windows only, find a way for linux
         self.userConfig = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json')
+        print(self.userConfig)
         if not os.path.exists(self.userConfig):
             with open(self.userConfig, "a+") as newfile:
                 dict = {"HappyFeatVersion": "0.0"}
@@ -105,10 +106,12 @@ class Dialog(QDialog):
 
     def browseForWsFolder(self):
         directory = os.getcwd()
-        self.workspacesFolder = QFileDialog.getExistingDirectory(self, "Select directory", str(directory), QFileDialog.ShowDirsOnly)
-        self.WsTextBox.setText(self.workspacesFolder)
-        self.updateWorkspaceList()
-        workspaceMgmt.setKeyValue(self.userConfig, "lastWorkspacePath", self.workspacesFolder)
+        selectedFolder = QFileDialog.getExistingDirectory(self, "Select directory", str(directory), QFileDialog.ShowDirsOnly)
+        if selectedFolder != "":
+            self.workspacesFolder = selectedFolder
+            self.WsTextBox.setText(self.workspacesFolder)
+            self.updateWorkspaceList()
+            workspaceMgmt.setKeyValue(self.userConfig, "lastWorkspacePath", self.workspacesFolder)
         return
 
     def updateWorkspaceList(self):

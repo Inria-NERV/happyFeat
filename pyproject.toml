@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "happyfeat_NEWPACKAGE"
+name = "happyfeat"
 version = "0.0.1"
 authors = [
   { name="Inria NERV", email="adesbois@inria.fr" },
@@ -29,8 +29,13 @@ dependencies = [
 "matplotlib>=3.4.2",
 ]
 
+[tool.hatch.build.targets.wheel]
+include = ["happyfeat", "happyfeat/lib"]
+
+
+
 [project.urls]
 "Homepage" = "https://github.com/Inria-NERV/happyFeat"
 
 [project.gui-scripts]
-happyfeat = "happyfeat_welcome:main"
+happyfeat = "happyfeat.happyfeat_welcome:main"

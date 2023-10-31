@@ -25,12 +25,12 @@ from PyQt5.QtWidgets import QLineEdit
 
 from PyQt5.QtGui import QFont
 
-from libs.modifyOpenvibeScen import *
-import libs.bcipipeline_settings as settings
-from libs.utils import *
-import libs.workspaceMgmt as workspaceMgmt
+from happyfeat.lib.modifyOpenvibeScen import *
+import happyfeat.lib.bcipipeline_settings as settings
+from happyfeat.lib.utils import *
+import happyfeat.lib.workspaceMgmt as workspaceMgmt
 
-import featureExtractionInterface as featExtractApp
+import happyfeat.featureExtractionInterface as featExtractApp
 
 class Dialog(QDialog):
 
@@ -327,7 +327,7 @@ class Dialog(QDialog):
         #   SC2-SPEEDUP-FIRSTSTEP (TRAIN+, 1)
         #   SC2-SPEEDUP-FINALIZE  (TRAIN+, 2)
         for filename in settings.templateScenFilenames:
-            with resources.path(self.templateFolder, filename) as srcFile:
+            with resources.path(str(__name__.split('.')[0] + '.' + self.templateFolder), filename) as srcFile:
                 destFile = os.path.join(self.workspaceFolder, filename)
                 if os.path.exists(srcFile):
                     print("---Copying file " + str(srcFile) + " to " + str(destFile))
