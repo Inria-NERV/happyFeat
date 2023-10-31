@@ -3,20 +3,16 @@
 In order to keep track of parameters used for acquisition and feature extraction 
 but also results from classification training attempts, HappyFeat uses a system of **workspaces** and **sessions**.
 
-Workspaces are managed in the folder `<HappyFeat_install>/workspace>`. They consist of a configuration file 
-(such as `<HappyFeat_install>/workspace/myWorkspace.hfw`) and a folder with the same basename (such as 
-`<HappyFeat_install>/workspace/myWorkspace`).
+**Workspaces** consist of a configuration file (such as `<workspacesFolder>/myWorkspace.hfw`) and a folder with the same basename (such as `<workspacesFolder>/myWorkspace/`). Using the entry point GUI (see [Getting Started](start.md)), you can browse on your machine for `<workspacesFolder>`.
 
-The configuration file contains all useful information, parameters, and manipulations (extractions, training attempts) that have 
-been realised since the creation of the workspace. It uses the JSON format, which is easily manipulated and human-readable.
+The configuration file (`myWorkspace.hfw`) contains all useful information, parameters, and manipulations (extractions, training attempts) that have been realised since the creation of the workspace. It is written in JSON format, which is easily manipulated and human-readable.
 
-The associated folder contains:
+The associated folder (`<workspacesFolder>/myWorkspace/`) contains:
 
-- *OpenViBE* scenarios relevant to the ongoing analysis, using user-defined parameters which are set in HappyFeat's GUIs. These are not meant to be manipulated by the user, as they are automatically generated and modified along the differents processing steps of HappyFeat, but can nonetheless be loaded in the *OpenViBE designer* application for verification purposes.
 - a `signals` folder, in which EEG signals of interest are stored (either directly from acquisitions when using HappyFeat in a real life 
 experiment, or copied/pasted from an existing database in the case of offline analysis)
-- a `sessions` folder, containing files obtained from the processing steps of HappyFeat (feature extraction, training attempts...) and used by 
-the software for further analysis or displaying results.
+- a `sessions` folder, containing files obtained from the processing steps of HappyFeat (feature extraction, training attempts...) and used by the software for further analysis or displaying results.
+- *OpenViBE* scenarios relevant to the ongoing analysis, using user-defined parameters which are set in HappyFeat's GUIs. These are not meant to be manipulated by the user, as they are automatically generated and modified along the differents processing steps of HappyFeat, but can nonetheless be loaded in the *OpenViBE designer* application for verification purposes.
 
 ## HappyFeat's extraction & training "sessions"
 

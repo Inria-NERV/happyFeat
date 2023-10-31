@@ -9,7 +9,7 @@ The application's entry point is the Python script *happyfeat_welcome.py*. Just 
     python happyfeat_welcome.py
 ```
 
-This script launches a GUI allowing to start a new **[workspace](workspaces.md)**, or to choose from a list of existing **[workspace](workspaces.md)**.
+This script launches a GUI allowing to select a **[workspace](workspaces.md)**. You can browse for location of your choice, choose from a list of existing **workspace**, or create a new **workspace**.
 
 <center><img src="../../img/hf_gui1.png" alt="HappyFeat workspace selection GUI" style='height: 50%; width: 50%; object-fit: contain;'/></center>
 
