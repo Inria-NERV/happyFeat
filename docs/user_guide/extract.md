@@ -18,7 +18,7 @@ From this list, select one or multiple signal files you're interested in analyzi
 !!! tip
     A list of (non-editable) experimental parameters (set up when creating the workspace) is provided as a reminder.
 
-Click on **"Extract Feature and Trials"**. EEG signal files (or **runs**) for which the extraction step has been performed appear in the lists of the central and right part of the GUI, meaning they are now available for the analysis ([visualization](visualize.md) and [training](train.md) steps.
+Click on **"Extract Feature and Trials"**. EEG signal files (or **runs**) for which the extraction step has been performed appear in the lists of the central and right part of the GUI, meaning they are now available for the analysis ([visualization](visualize.md) and [training](train.md) steps).
 
 !!! note
     * Note that processing times are highly dependent on the extraction parameters and the selected metric. As a rule of thumb, Connectivity features are much slower to compute than PSD ones, and using a higher AR order and/or higher number of estimations (shorter windows, higher amount of overlap) also means longer processing time.*

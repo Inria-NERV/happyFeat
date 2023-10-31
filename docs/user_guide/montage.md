@@ -13,7 +13,7 @@ Two options are available in the drop-down menu:
 
 ## Custom coordinates format and example
 
-An example file (`channel_example.txt`) is provided in the repository.
+An example file (`channel_example.txt`) is provided in the repository (folder `tutorials`).
 
 Custom files must follow this format:
 
