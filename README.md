@@ -17,42 +17,15 @@ The focus is put on ease of use, trial-and-error training of the classifier, and
 * Feature selection and classifier training can be done multiple times in a row, until satisfactory results are achieved.
 * A **worspace management system** keeps tracks of all extraction- and training-related manipulations, and enables a high degree of reproducibility.
 
-
-* Available pipelines: 
-  * Power Spectrum (Burg method)
-  * Functional Connectivity: Coherence-based Node Strength (Spectral Coherence, Imaginary part of Coherence)
-  * Mixing Both PSD and Connectivity
-* Available classifiers:
-  * LDA
-  * *more coming soon!*
-
-* *Coming soon: More Features!*
-  * *More feature classes, more classification algos*
-  * *Particle swarm algorithm for determining optimal AutoRegressive model order*
-
-* *Coming soon: Standalone Python software!*
-  * *Run the offline analysis (extraction, visualization, selection, training) without the need of a BCI software*
- 
-* *Coming soon: compatibility with more BCI software!*
-
 # Requirements
 
 * Python 3.9 or more recent
 * Python packages : shutils / PyQt5 / numpy / MNE / matplotlib / scipy / spectrum / statsmodel / pandas
 * OpenViBE Version 3.5.0: http://openvibe.inria.fr/downloads/
 
-# Installation
+# Installation & Full documentation
 
-Clone the project to a local directory. 
-
-To install the requirements, open a console/command prompt, change to your cloned folder and type:
-        pip install -r requirements.txt
-
-Everything from there on is managed directly from the cloned directory.
-
-# Full documentation
-
-Go to docs/index.md for more details!
+Go to [https://happyfeat.readthedocs.io/en/latest/](https://happyfeat.readthedocs.io/en/latest/) for more details!
 
 # License
 
