@@ -6,8 +6,8 @@ import platform
 from shutil import copyfile
 from importlib import resources
 
-from PyQt5 import QtCore
-from PyQt5.QtCore import pyqtSignal
+from PySide2 import QtCore
+from PySide2.QtCore import Signal
 
 from happyfeat.lib.mergeRunsCsv import mergeRunsCsv, mergeRunsCsv_new
 from happyfeat.lib.extractMetaData import extractMetadata, generateMetadata
@@ -23,7 +23,7 @@ from happyfeat.lib.bcipipeline_settings import *
 # ------------------------------------------------------
 
 class Acquisition(QtCore.QThread):
-    over = pyqtSignal(bool, str)
+    over = Signal(bool, str)
 
     def __init__(self, ovScript, scenFile, parameterDict, parent=None):
         super().__init__(parent)
@@ -64,9 +64,9 @@ class Acquisition(QtCore.QThread):
         self.stop = True
 
 class Extraction(QtCore.QThread):
-    info = pyqtSignal(bool)
-    info2 = pyqtSignal(str)
-    over = pyqtSignal(bool, str)
+    info = Signal(bool)
+    info2 = Signal(str)
+    over = Signal(bool, str)
 
     def __init__(self, ovScript, scenFile, signalFiles, signalFolder,
                  parameterDict, currentSessionId, parent=None):
@@ -174,9 +174,9 @@ class Extraction(QtCore.QThread):
 
 
 class LoadFilesForVizPowSpectrum(QtCore.QThread):
-    info = pyqtSignal(bool)
-    info2 = pyqtSignal(str)
-    over = pyqtSignal(bool, str)
+    info = Signal(bool)
+    info2 = Signal(str)
+    over = Signal(bool, str)
 
     def __init__(self, analysisFiles, workingFolder, parameterDict, Features, sampFreq, parent=None):
 
@@ -411,9 +411,9 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
 # data are NODE STRENGTH (not raw connectivity matrices), we manage them
 # almost like power spectra...
 class LoadFilesForVizConnectivity(QtCore.QThread):
-    info = pyqtSignal(bool)
-    info2 = pyqtSignal(str)
-    over = pyqtSignal(bool, str)
+    info = Signal(bool)
+    info2 = Signal(str)
+    over = Signal(bool, str)
 
     def __init__(self, analysisFiles, workingFolder, metaFolder, parameterDict, Features, sampFreq, parent=None):
 
@@ -594,9 +594,9 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
 
 
 class TrainClassifier(QtCore.QThread):
-    info = pyqtSignal(bool)
-    info2 = pyqtSignal(str)
-    over = pyqtSignal(bool, str)
+    info = Signal(bool)
+    info2 = Signal(str)
+    over = Signal(bool, str)
 
     def __init__(self, trainingFiles,
                  signalFolder, templateFolder,

@@ -9,21 +9,21 @@ from threading import Thread
 import pandas as pd
 from importlib import resources
 
-from PyQt5 import QtCore
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtWidgets import QHBoxLayout
-from PyQt5.QtWidgets import QVBoxLayout
-from PyQt5.QtWidgets import QFormLayout
-from PyQt5.QtWidgets import QWidget
-from PyQt5.QtWidgets import QLabel
-from PyQt5.QtWidgets import QComboBox
-from PyQt5.QtWidgets import QFileDialog
-from PyQt5.QtWidgets import QMessageBox
-from PyQt5.QtWidgets import QDialog
-from PyQt5.QtWidgets import QPushButton
-from PyQt5.QtWidgets import QLineEdit
+from PySide2 import QtCore
+from PySide2.QtWidgets import QApplication
+from PySide2.QtWidgets import QHBoxLayout
+from PySide2.QtWidgets import QVBoxLayout
+from PySide2.QtWidgets import QFormLayout
+from PySide2.QtWidgets import QWidget
+from PySide2.QtWidgets import QLabel
+from PySide2.QtWidgets import QComboBox
+from PySide2.QtWidgets import QFileDialog
+from PySide2.QtWidgets import QMessageBox
+from PySide2.QtWidgets import QDialog
+from PySide2.QtWidgets import QPushButton
+from PySide2.QtWidgets import QLineEdit
 
-from PyQt5.QtGui import QFont
+from PySide2.QtGui import QFont
 
 from happyfeat.lib.modifyOpenvibeScen import *
 import happyfeat.lib.bcipipeline_settings as settings

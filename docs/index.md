@@ -21,7 +21,7 @@ The focus is put on ease of use, trial-and-error training of the classifier, and
 # Requirements
 
 * Python 3.9 or more recent
-* Python packages : shutils / PyQt5 / numpy / MNE / matplotlib / scipy / spectrum / statsmodel / pandas
+* Python packages : shutils / PySide2 / numpy / MNE / matplotlib / scipy / spectrum / statsmodel / pandas
 * OpenViBE Version 3.5.0: http://openvibe.inria.fr/downloads/
 
 # Key Features

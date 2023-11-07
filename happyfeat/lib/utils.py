@@ -1,5 +1,5 @@
 from itertools import chain, combinations
-from PyQt5.QtWidgets import QMessageBox
+from PySide2.QtWidgets import QMessageBox
 
 def myPowerset(iterable):
     s = list(iterable)
