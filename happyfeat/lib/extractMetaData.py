@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import subprocess
 from shutil import copyfile
+from importlib import resources
 
 from .modifyOpenvibeScen import *
 
@@ -9,17 +10,18 @@ def generateMetadata(ovFile, openvibeDesigner):
     # Make a copy of Openvibe scenario, for safe modification...
     scenName = "toolbox-generate-metadata.xml"
     toolboxPath = "toolbox-scenarios"
-    srcFile = os.path.join(os.getcwd(), toolboxPath, scenName)
-    destFile = os.path.join(os.getcwd(), toolboxPath, scenName.replace(".xml", "-TEMP.xml"))
-    print("---Copying file " + srcFile + " to " + destFile)
-    copyfile(srcFile, destFile)
+    fullPath = str(__name__.split('.')[0] + '.' + toolboxPath)
+    with resources.path(fullPath, scenName) as srcFile:
+        with resources.path(fullPath, scenName.replace(".xml", "-TEMP.xml")) as destFile:
+            print("---Copying file " + str(srcFile) + " to " + str(destFile))
+            copyfile(srcFile, destFile)
 
     inputParam = ovFile.replace("\\", "/")
     outputParam = inputParam.replace(".ov", "-META.csv")
     paramDict = {"EEGData": inputParam, "EEGMetaData": outputParam}
 
     # Modify scenario I/O
-    modifyScenarioGeneralSettings(destFile, paramDict)
+    modifyScenarioGeneralSettings(str(destFile), paramDict)
 
     # launch Openvibe toolbox scenario
     p = subprocess.Popen([openvibeDesigner, "--no-gui", "--play-fast", destFile],

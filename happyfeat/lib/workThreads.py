@@ -716,7 +716,7 @@ class TrainClassifier(QtCore.QThread):
                 print("---Copying file " + str(srcFile) + " to " + str(destFile))
                 copyfile(srcFile, destFile)
             trainingpath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train")
-            modifyScenarioGeneralSettings(destFile, self.extractDict)
+            modifyScenarioGeneralSettings(str(destFile), self.extractDict)
             if i == 2:
                 # training scenarios
                 if not self.usingDualFeatures:
