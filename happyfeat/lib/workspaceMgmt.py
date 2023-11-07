@@ -19,6 +19,15 @@ def setKeyValue(jsonFile, key, value):
     currentDict[key] = value
     writeJson(jsonFile, currentDict)
 
+def getExperimentalParameters(jsonFile):
+    currentDict = {}
+    with open(jsonFile, "r") as myjson:
+        currentDict = json.load(myjson)
+        if currentDict["AcquisitionParams"]:
+            return currentDict["AcquisitionParams"]
+        else:
+            return None
+
 def loadExtractedFiles(jsonFile, sessionId):
     currentDict = {}
     with open(jsonFile, "r") as myjson:

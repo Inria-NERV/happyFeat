@@ -1243,7 +1243,12 @@ class Dialog(QDialog):
         # ----------
         # Get experimental parameters from the JSON parameters
         # ----------
-        newDict = settings.pipelineAcqSettings.copy()
+        newDict = getExperimentalParameters(self.workspaceFile)
+        if not newDict:
+            newDict = settings.pipelineAcqSettings.copy()
+            # todo : ask user to use GUI 1 ! it's not normal that
+            # todo (cont): ... experimental parameters are missing at this point
+
         print(newDict)
         return newDict
 
