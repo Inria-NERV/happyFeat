@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "happyfeat"
-version = "0.1.0"
+version = "0.1.1"
 authors = [
   { name="Inria NERV", email="adesbois@inria.fr" },
 ]
@@ -31,7 +31,7 @@ dependencies = [
 
 [tool.hatch.build.targets.wheel]
 include = ["happyfeat", "happyfeat/lib"]
-
+exclude = ["happyfeat/config.json"]
 
 
 [project.urls]
