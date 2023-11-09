@@ -96,13 +96,13 @@ def topo_plot(Rsquare, title, montageStr, customMontage, electrodes, freqMin, fr
 
     plot_topomap_data_viz(title, sizer, fake_evoked.info, sensors=False, names=montage.ch_names, show_names=True,
                           res=500, mask_params=dict(marker='', markerfacecolor='w', markeredgecolor='k', linewidth=0,
-                                                    markersize=0), contours=0, image_interp='gaussian', show=True,
+                                                    markersize=0), contours=0, image_interp='cubic', show=True,
                           extrapolate='head', cmap='jet', freq=freq, vmin=vmin, vmax=vmax, Stat_method=Stat_method)
 
 def plot_topomap_data_viz(title, data, pos, vmin=None, vmax=None, cmap=None, sensors=True,
                           res=64, axes=None, names=None, show_names=False, mask=None,
                           mask_params=None, outlines='head',
-                          contours=6, image_interp='bilinear', show=True,
+                          contours=6, image_interp='cubic', show=True,
                           onselect=None, extrapolate=_EXTRAPOLATE_DEFAULT,
                           sphere=None, border=_BORDER_DEFAULT,
                           ch_type='eeg', freq='10', Stat_method='R_square signed'):
@@ -189,7 +189,7 @@ def plot_topomap_data_viz(title, data, pos, vmin=None, vmax=None, cmap=None, sen
 
 def _plot_topomap_test(title, data, pos, vmin=None, vmax=None, cmap=None, sensors=True, res=64, axes=None, names=None,
                        show_names=False, mask=None, mask_params=None, outlines='head', contours=6,
-                       image_interp='bilinear', show=True, onselect=None, extrapolate=_EXTRAPOLATE_DEFAULT, sphere=None,
+                       image_interp='cubic', show=True, onselect=None, extrapolate=_EXTRAPOLATE_DEFAULT, sphere=None,
                        border=_BORDER_DEFAULT, ch_type='eeg', freq='10', Stat_method='R square signed'):
 
     data = np.asarray(data)
@@ -265,7 +265,7 @@ def _plot_topomap_test(title, data, pos, vmin=None, vmax=None, cmap=None, sensor
 
     # find mask limits
     extent, Xi, Yi, interp = topomap._setup_interp(
-        pos, res, extrapolate, sphere, outlines, border)
+        pos, res, image_interp, extrapolate, outlines, border)
     interp.set_values(data)
     Zi = interp.set_locations(Xi, Yi)()
 
