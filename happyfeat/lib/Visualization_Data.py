@@ -1,4 +1,4 @@
-from happyfeat.lib.Statistical_analysis import *
+from lib.Statistical_analysis import *
 import matplotlib.pyplot as plt
 from matplotlib.widgets import RectangleSelector
 from matplotlib import cm

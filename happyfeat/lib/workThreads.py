@@ -5,18 +5,19 @@ import subprocess
 import platform
 from shutil import copyfile
 from importlib import resources
-
+import mne
 from PySide2 import QtCore
 from PySide2.QtCore import Signal
 
-from happyfeat.lib.mergeRunsCsv import mergeRunsCsv, mergeRunsCsv_new
-from happyfeat.lib.extractMetaData import extractMetadata, generateMetadata
-from happyfeat.lib.modifyOpenvibeScen import *
-from happyfeat.lib.Visualization_Data import *
-from happyfeat.lib.featureExtractUtils import *
-from happyfeat.lib.utils import *
-
-from happyfeat.lib.bcipipeline_settings import *
+from lib.mergeRunsCsv import mergeRunsCsv, mergeRunsCsv_new
+from lib.extractMetaData import extractMetadata, generateMetadata
+from lib.fileLoading import *
+from lib.modifyOpenvibeScen import *
+from lib.Visualization_Data import *
+from lib.featureExtractUtils import *
+from lib.utils import *
+from lib.Spectral_Analysis import *
+from lib.bcipipeline_settings import *
 
 # ------------------------------------------------------
 # CLASSES FOR LONG-RUNNING OPERATIONS IN THREADS
@@ -90,81 +91,51 @@ class Extraction(QtCore.QThread):
             tstart = time.perf_counter()
 
             self.info2.emit(str("Extracting data for file " + signalFile + "..."))
+            ## Load the signal
+            car_bool = False # outside parameter for CAR for later ?
+            cond1 = 'OVTK_GDF_Left'
+            cond2 = 'OVTK_GDF_Right'
+            tmin = float(pipelineExtractSettings["PowSpectrumGraz"]["StimulationDelay"])
+            tmax = tmin + float(pipelineExtractSettings["PowSpectrumGraz"]["StimulationEpoch"])
 
-            # Verify the existence of metadata files for each selected files,
-            # and if not, generate them.
-            # Then extract sampling frequency and electrode list
-            sampFreq = None
-            electrodeList = None
-            metaFile = signalFile.replace(".ov", "-META.csv")
 
-            if metaFile in os.listdir(self.signalFolder):
-                sampFreq, electrodeList = extractMetadata(os.path.join(self.signalFolder, metaFile))
-            else:
-                generateMetadata(os.path.join(self.signalFolder, signalFile), self.ovScript)
-                sampFreq, electrodeList = extractMetadata(os.path.join(self.signalFolder, metaFile))
-            # Check everything went ok...
-            if not sampFreq:
-                errMsg = str("Error while loading metadata CSV file for session " + signalFile)
-                self.over.emit(False, errMsg)
-                return
 
-            ## MODIFY THE EXTRACTION SCENARIO with entered parameters
-            # /!\ after updating ARburg order and FFT size using sampfreq
+
+            ## Load EEG files
+            raw_EDF, events_from_annot, event_id = load_file(self.signalFolder, signalFile, car_bool)
+            sampFreq = raw_EDF.info["sfreq"]
+            electrodeList = raw_EDF.info["ch_names"]
+            Epoch_compute_CLASS_1 = select_Event(cond1, raw_EDF, events_from_annot, event_id, tmin, tmax,len(electrodeList))
+            Epoch_compute_CLASS_2 = select_Event(cond2, raw_EDF, events_from_annot, event_id, tmin, tmax,len(electrodeList))
+
+            ## Meta Data information
             self.extractDict["ChannelNames"] = ";".join(electrodeList)
             self.extractDict["AutoRegressiveOrder"] = str(
                 timeToSamples(float(self.extractDict["AutoRegressiveOrderTime"]), sampFreq))
             self.extractDict["PsdSize"] = str(freqResToPsdSize(float(self.extractDict["FreqRes"]), sampFreq))
 
-            # Special case : "subset of electrodes" for connectivity
-            # DISABLED FOR NOW
-            # if field is empty, use all electrodes
-            # if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
-            #     if self.parameterDict["ChannelSubset"] == "":
-            #         self.parameterDict["ChannelSubset"] = self.parameterDict["ChannelNames"]
-            self.extractDict["ChannelSubset"] = self.extractDict["ChannelNames"]
+            nper_segSamples = int(sampFreq*float(pipelineExtractSettings["PowSpectrumGraz"]["TimeWindowLength"]))
+            shiftSamples = int(sampFreq*float(pipelineExtractSettings["PowSpectrumGraz"]["TimeWindowShift"]))
+            noverlapSamples = nper_segSamples-shiftSamples
+            nfft = int(sampFreq/float(pipelineExtractSettings["PowSpectrumGraz"]["FreqRes"]))
 
-            # Special case : "connectivity shift", used in scenarios but not set that way
-            # in the interface
-            if "ConnectivityOverlap" in self.extractDict.keys():
-                self.extractDict["ConnectivityShift"] = str(float(self.extractDict["ConnectivityLength"]) * (100.0 - float(self.extractDict["ConnectivityOverlap"])) / 100.0)
+            filter_order = self.extractDict["AutoRegressiveOrder"]
 
-            # Modify the scenario
-            modifyScenarioGeneralSettings(self.scenFile, self.extractDict)
+            ## CAR for PSD computation
+            Epoch_compute_CLASS_1_CAR,ref_data = mne.set_eeg_reference(Epoch_compute_CLASS_1, ref_channels='average')
+            Epoch_compute_CLASS_2_CAR, ref_data = mne.set_eeg_reference(Epoch_compute_CLASS_2, ref_channels='average')
 
-            # Special case: "connectivity metric"
-            if "ConnectivityMetric" in self.extractDict.keys():
-                modifyConnectivityMetric(self.extractDict["ConnectivityMetric"], self.scenFile)
 
-            # Modify extraction scenario to use provided signal file, and rename outputs accordingly
-            filename = signalFile.removesuffix(".ov")
-            outputSpect1 = str(filename + "-SPECTRUM-" + self.parameterDict["AcquisitionParams"]["Class1"] + ".csv")
-            outputSpect2 = str(filename + "-SPECTRUM-" + self.parameterDict["AcquisitionParams"]["Class2"] + ".csv")
-            outputConnect1 = str(filename + "-CONNECT-" + self.parameterDict["AcquisitionParams"]["Class1"] + ".csv")
-            outputConnect2 = str(filename + "-CONNECT-" + self.parameterDict["AcquisitionParams"]["Class2"] + ".csv")
-            outputBaseline1 = str(filename + "-SPECTRUM-" + self.parameterDict["AcquisitionParams"]["Class1"] + "-BASELINE.csv")
-            outputBaseline2 = str(filename + "-SPECTRUM-" + self.parameterDict["AcquisitionParams"]["Class2"] + "-BASELINE.csv")
-            outputTrials = str(filename + "-TRIALS.csv")
-            modifyExtractionIO(self.scenFile, signalFile, outputSpect1, outputSpect2,
-                               outputBaseline1, outputBaseline2, outputConnect1, outputConnect2, outputTrials, self.currentSessionId)
 
-            # Launch OV scenario !
-            p = subprocess.Popen([command, "--invisible", "--play-fast", self.scenFile],
-                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-
-            # Print console output, and detect end of process...
-            while True:
-                output = p.stdout.readline()
-                if p.poll() is not None:
-                    break
-                if output:
-                    print(str(output))
-                    if "Application terminated" in str(output):
-                        break
+            Psd_CLASS_1, Timefreq_CLASS_1, Time_CLASS_1 = \
+                Power_burg_calculation(Epoch_compute_CLASS_1_CAR.get_data()[:,:,:], noverlapSamples, nfft, sampFreq, nper_segSamples, False,filter_order)
+            Psd_CLASS_2, Timefreq_CLASS_2, Time_CLASS_2 = \
+                Power_burg_calculation(Epoch_compute_CLASS_2_CAR.get_data()[:,:,:], noverlapSamples, nfft, sampFreq, nper_segSamples,
+                                       False, filter_order)
 
             self.info.emit(True)    # send "info" signal to increment progressbar
             tstop = time.perf_counter()
-            print("= Extraction from file " + filename + " finished in " + str(tstop-tstart))
+            print("= Extraction from file " + signalFile + " finished in " + str(tstop-tstart))
 
         self.stop = True
         self.over.emit(True, "")

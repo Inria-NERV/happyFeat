@@ -34,15 +34,15 @@ from PySide2.QtWidgets import QAction
 from PySide2.QtGui import QFont
 from PySide2.QtCore import QTimer
 
-from happyfeat.lib.Visualization_Data import *
-from happyfeat.lib.featureExtractUtils import *
-from happyfeat.lib.modifyOpenvibeScen import *
-from happyfeat.lib.utils import *
-from happyfeat.lib.workspaceMgmt import *
-from happyfeat.lib.workThreads import *
-from happyfeat.lib.myProgressBar import ProgressBar, ProgressBarNoInfo
+from lib.Visualization_Data import *
+from lib.featureExtractUtils import *
+from lib.modifyOpenvibeScen import *
+from lib.utils import *
+from lib.workspaceMgmt import *
+from lib.workThreads import *
+from lib.myProgressBar import ProgressBar, ProgressBarNoInfo
 
-import happyfeat.lib.bcipipeline_settings as settings
+import lib.bcipipeline_settings as settings
 
 class Features:
     Rsigned = []
@@ -630,14 +630,14 @@ class Dialog(QDialog):
 
     def refreshSignalList(self, listwidget, workingFolder):
         # ----------
-        # Refresh list of available signal (.ov) files
+        # Refresh list of available signal (.edf) files
         # ----------
         signalFolder = os.path.join(workingFolder, "signals")
 
         # first get a list of all files in workingfolder that match the condition
         filelist = []
         for filename in os.listdir(signalFolder):
-            if filename.endswith(".ov"):
+            if filename.endswith(".edf"):
                 filelist.append(filename)
 
         # iterate over existing items in widget and delete those who don't exist anymore

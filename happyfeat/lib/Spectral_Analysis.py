@@ -4,8 +4,9 @@ from spectrum import arburg,arma2psd,pburg
 import statsmodels.regression.linear_model as transform
 
 
-def Power_burg_calculation_optimization(Epoch_compute,noverlap,N_FFT,f_max, n_per_seg,smoothing,freqs_left,filter_order):
+def Power_burg_calculation_optimization(Epoch_compute,noverlap,N_FFT,f_max, n_per_seg,smoothing,filter_order):
     #burg = pburg(Epoch_compute,15,NFFT = nfft_test)
+    freqs_left = np.arange(0, f_max+3)
     data = Epoch_compute[:,:]
     xs, ys = [], []
     a = data.shape
@@ -62,65 +63,50 @@ def Power_burg_calculation_optimization(Epoch_compute,noverlap,N_FFT,f_max, n_pe
     return trialspectrum[:,round(f_max/(2*fres)):round(f_max/fres)],Time_freq,time
 
 
-def Power_burg_calculation(Epoch_compute,noverlap,N_FFT,f_max, n_per_seg,smoothing,freqs_left,filter_order):
+def Power_burg_calculation(Epoch_compute,noverlap,N_FFT,f_max, n_per_seg,smoothing,filter_order):
     #burg = pburg(Epoch_compute,15,NFFT = nfft_test)
-    data = Epoch_compute[:,:,:]
-    xs, ys = [], []
-    a = data.shape
-    M = a[2]
-    #print(M)
-    L = n_per_seg
-    #print(L)
-    noverlap = noverlap
-    LminusOverlap = L-noverlap
-    #print(LminusOverlap)
-    k = round((M-noverlap)/(LminusOverlap))
-    #print(k)
-    xStart = np.array(range(0,k*LminusOverlap,LminusOverlap))
-    #print(xStart)
-    xEnd = []
-    for i in xStart:
-        xEnd.append(i+L-1)
-    xEnd = np.array(xEnd)
-    #print(xEnd)
-    
-    fres =f_max/N_FFT
-    power = []
-    Block_spectrum= []
-    
-    tab = np.array(range(k-1))
+    a = Epoch_compute.shape
+    print(a)
+    M = a[2]  # M = trial length, in samples
+    L = n_per_seg  # L = windowing size, in samples
+    noverlap = noverlap  # size of overlapping segment btw windows, in samples
+    k = round((M-noverlap)/(L-noverlap))  # nb of windows in the trial
+
+    # Arrays of starting and ending indices, for cutting the signal in overlapping chunks
+    xStart = np.array(range(0, k*(L-noverlap), L-noverlap))
+    xEnd = xStart.copy() + L
+
+    fres = f_max/N_FFT
+
+    tab = np.array(range(k))  # tab = indices of overlapping windows
     trialspectrum = np.zeros([a[0],a[1],N_FFT])
     PSD_final = np.zeros([a[0],a[1],round(f_max/2)])
     Time_freq = np.zeros([a[0],a[1],len(tab),round(f_max/(2*fres))])
     time = np.linspace(0,round(M/f_max),k-1)
+    ITC = np.zeros((a[0], a[1], N_FFT),dtype=np.complex_)
+
     for i in range(a[0]):
         for j in range(a[1]):
             Block_spectrum = []
+            Block_complex = []
             for numBlock in tab:
-                aux_condition1data = Epoch_compute[i,j,xStart[numBlock]:xEnd[numBlock]]
+                windowData = Epoch_compute[i, j, xStart[numBlock]:xEnd[numBlock]]
+                windowData = signal.detrend(windowData, type='constant')
 
-                aux_condition1data = signal.detrend(aux_condition1data,type='constant')
-
-                AR, sigma2 = transform.burg(aux_condition1data, filter_order)
-                PSD = arma2psd(-AR, NFFT = N_FFT,sides='centerdc')
+                AR, sigma2 = transform.burg(windowData, filter_order)
+                PSD = arma2psd(-AR, NFFT=N_FFT, sides='centerdc')
+                Block_spectrum.append(PSD)
+                Time_freq[i, j, numBlock] = PSD[round(f_max / (2 * fres)):round(f_max / fres)]
                 # plt.plot(PSD)
                 # plt.show()
-                Block_spectrum.append(PSD)
 
-                Time_freq[i,j,numBlock]=PSD[round(f_max/(2*fres)):round(f_max/fres)]
-            block = np.mean(Block_spectrum,axis=0)
-            trialspectrum[i,j] = np.array(block)
+            block = np.mean(Block_spectrum, axis=0)
+            trialspectrum[i, j] = np.array(block)
+            #print(np.angle(np.array(Block_complex).mean(0)))
 
-    if smoothing == True:
-        for k in range(a[0]):
-             for l in range(a[1]):
-                 PSD_final[k,l,0] = (trialspectrum[k,l,0] + trialspectrum[k,l,1] +trialspectrum[k,l,2])/3
-                 PSD_final[k,l,round(f_max/2)-1] = (trialspectrum[k,l,freqs_left.shape[0]-3] + trialspectrum[k,l,freqs_left.shape[0]-2] +trialspectrum[k,l,freqs_left.shape[0]-1])/3
-                 for i in range(5,freqs_left.shape[0]-2,round(1/fres)):
-                     PSD_final[k,l,round(i/5)] = (trialspectrum[k,l,i-2] +trialspectrum[k,l,i-1] +trialspectrum[k,l,i] + trialspectrum[k,l,i+1] +trialspectrum[k,l,i+2])/(5)
-        return PSD_final
 
-    return trialspectrum[:,:,round(f_max/(2*fres)):round(f_max/fres)],Time_freq,time
+
+    return trialspectrum[:,:,round(f_max/(2*fres)):round(f_max/fres)], Time_freq, time
 
 def Power_calculation_welch_method(Epoch_compute,f_min,f_max,t_min,t_max,nfft,noverlap,nper_seg,pick,proje,averag,windowing, smoothing):
     #filtered = mne.filter.filter_data(Epoch_compute, 140, 7, 35)

@@ -25,12 +25,12 @@ from PySide2.QtWidgets import QLineEdit
 
 from PySide2.QtGui import QFont
 
-from happyfeat.lib.modifyOpenvibeScen import *
-import happyfeat.lib.bcipipeline_settings as settings
-from happyfeat.lib.utils import *
-import happyfeat.lib.workspaceMgmt as workspaceMgmt
+from lib.modifyOpenvibeScen import *
+import lib.bcipipeline_settings as settings
+from lib.utils import *
+import lib.workspaceMgmt as workspaceMgmt
 
-import happyfeat.featureExtractionInterface as featExtractApp
+import featureExtractionInterface as featExtractApp
 
 class Dialog(QDialog):
 

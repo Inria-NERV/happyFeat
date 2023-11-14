@@ -18,12 +18,12 @@ from PySide2.QtWidgets import QPushButton
 from PySide2.QtWidgets import QInputDialog
 from PySide2.QtGui import QFont
 
-import happyfeat.lib.workspaceMgmt as workspaceMgmt
-from happyfeat.lib.workspaceMgmt import *
-from happyfeat. lib.utils import *
+import lib.workspaceMgmt as workspaceMgmt
+from lib.workspaceMgmt import *
+from  lib.utils import *
 
-import happyfeat.bcipipeline_setup as bciSetup
-import happyfeat.featureExtractionInterface as featExtractApp
+import bcipipeline_setup as bciSetup
+import featureExtractionInterface as featExtractApp
 
 # Main class
 class Dialog(QDialog):
