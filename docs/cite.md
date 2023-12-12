@@ -7,14 +7,14 @@ Desbois, Arthur and Venot, Tristan and De Vico Fallani, Fabrizio and Corsi, Mari
 !!! BibTeX 
     ```
     @article{desbois_happyfeatinteractive_2024,
-	    title = {{HappyFeat}—{An} interactive and efficient {BCI} framework for clinical applications},
-        author = {Desbois, Arthur and Venot, Tristan and De Vico Fallani, Fabrizio and Corsi, Marie-Constance},
+	    title = {HappyFeat—An interactive and efficient BCI framework for clinical applications},
+            author = {Desbois, Arthur and Venot, Tristan and De Vico Fallani, Fabrizio and Corsi, Marie-Constance},
 	    volume = {19},
-		month = mar,
+            month = mar,
 	    year = {2024},
 	    pages = {100610},
 	    issn = {2665-9638},
 	    doi = {10.1016/j.simpa.2023.100610},
 	    journal = {Software Impacts},
     }
-	```
+    ```
