@@ -117,12 +117,37 @@ def Extract_Connect_NodeStrength_CSV_Data(data_cond, trialLength, nbElectrodes, 
     nbTrials = int(np.shape(data)[0] / nbwindows)
 
     connectivityMatrix = np.zeros([nbTrials, nbElectrodes, bins])
+
     for i in range(connectivityMatrix.shape[0]):
         for j in range(connectivityMatrix.shape[2]):
             connectivityMatrix[i, :, j] = data[(i * nbwindows):(i * nbwindows + nbwindows),
                                                (j*nbElectrodes):(j*nbElectrodes + nbElectrodes)].mean(axis=0)
 
     return connectivityMatrix
+
+def Extract_Connect_NodeStrength_TimeFreq_CSV_Data(data_cond, trialLength, nbElectrodes, bins, connectLength, connectOverlap):
+    # Only keep the actual data, discard time & stimulations info...
+    data = data_cond[:, 2:]
+    data = data[:, :bins*nbElectrodes]
+
+    shift = connectLength * (100.0 - connectOverlap) / 100.0
+    nbwindows = int(np.floor((trialLength - connectLength) / shift) + 1)
+    nbTrials = int(np.shape(data)[0] / nbwindows)
+
+    connectivityMatrix = np.zeros([nbTrials, nbElectrodes, bins])
+    timefreq = np.zeros([nbTrials, nbwindows, bins, nbElectrodes])
+
+    for i in range(connectivityMatrix.shape[0]):
+        for j in range(connectivityMatrix.shape[2]):
+            connectivityMatrix[i, :, j] = data[(i * nbwindows):(i * nbwindows + nbwindows),
+                                               (j*nbElectrodes):(j*nbElectrodes + nbElectrodes)].mean(axis=0)
+    for i in range(timefreq.shape[0]):
+        for j in range(timefreq.shape[1]):
+            for k in range(timefreq.shape[2]):
+                timefreq[i, j, k, :] = data[(i * nbwindows + j),
+                                            (k * nbElectrodes):(k * nbElectrodes + nbElectrodes)]
+
+    return connectivityMatrix, timefreq
 
 def psdSizeToFreqRes(psdSize, fSamp):
     return float(fSamp) / float(psdSize)

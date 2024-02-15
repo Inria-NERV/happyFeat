@@ -529,8 +529,9 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         electrodeList = listElectrodeList[0]
         nbElectrodes = len(electrodeList)
         n_bins = listFreqs[0]
-        connectLength = float(self.extractDict["ConnectivityLength"])
-        connectOverlap = float(self.extractDict["ConnectivityOverlap"])
+        winLen = float(self.extractDict["ConnectivityLength"])
+        overlap = float(self.extractDict["ConnectivityOverlap"])
+        winShift = winLen * (1.0 - overlap/ 100)
         sampFreq = listSamplingFreqs[0]
 
         # For multiple runs (ie. multiple selected CSV files), we just concatenate
@@ -538,20 +539,38 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         # will be computed as averages over all the trials.
         connect_cond1_final = None
         connect_cond2_final = None
+        timefreq_cond1_final = None
+        timefreq_cond2_final = None
+        timefreq_cond1_baseline_final = None
+        timefreq_cond2_baseline_final = None
         idxFile = 0
         for run in range(len(self.dataNp1)):
             idxFile += 1
             self.info2.emit(str("Processing data for file " + str(idxFile)))
-            connect_cond1 = Extract_Connect_NodeStrength_CSV_Data(self.dataNp1[run], trialLength, nbElectrodes, n_bins,
-                                                                  connectLength, connectOverlap)
-            connect_cond2 = Extract_Connect_NodeStrength_CSV_Data(self.dataNp2[run], trialLength, nbElectrodes, n_bins,
-                                                                  connectLength, connectOverlap)
+            connect_cond1, timefreq_cond1 = \
+                Extract_Connect_NodeStrength_TimeFreq_CSV_Data(self.dataNp1[run], trialLength, nbElectrodes, n_bins,
+                                                               winLen, overlap)
+            connect_cond2, timefreq_cond2 = \
+                Extract_Connect_NodeStrength_TimeFreq_CSV_Data(self.dataNp2[run], trialLength, nbElectrodes, n_bins,
+                                                               winLen, overlap)
+
+            # transpose to fit data format with future reordering functions...
+            timefreq_cond1_transp = timefreq_cond1.transpose(0, 3, 1, 2)
+            timefreq_cond2_transp = timefreq_cond2.transpose(0, 3, 1, 2)
+
             if connect_cond1_final is None:
                 connect_cond1_final = connect_cond1
                 connect_cond2_final = connect_cond2
+
+                timefreq_cond1_final = timefreq_cond1_transp
+                timefreq_cond2_final = timefreq_cond2_transp
+
             else:
                 connect_cond1_final = np.concatenate((connect_cond1_final, connect_cond1))
                 connect_cond2_final = np.concatenate((connect_cond2_final, connect_cond2))
+
+                timefreq_cond1_final = np.concatenate((timefreq_cond1_final, timefreq_cond1_transp))
+                timefreq_cond2_final = np.concatenate((timefreq_cond2_final, timefreq_cond2_transp))
 
         self.info2.emit("Computing statistics")
         trialLengthSec = float(self.parameterDict["AcquisitionParams"]["TrialLength"])
@@ -562,24 +581,29 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         freqs_array = np.arange(0, n_bins, fres)
         Rsigned = Compute_Rsquare_Map(connect_cond2_final[:, :, :(n_bins - 1)],
                                       connect_cond1_final[:, :, :(n_bins - 1)])
-
+        Wsquare, Wpvalues = Compute_Wilcoxon_Map(connect_cond2_final[:, :, :(n_bins - 1)],
+                                                 connect_cond1_final[:, :, :(n_bins - 1)])
 
         # Reordering for R map and topography...
         if self.parameterDict["sensorMontage"] == "standard_1020" \
-            or self.parameterDict["sensorMontage"] == "biosemi64":
-            Rsigned_2, electrodes_final, connect_cond1_2, connect_cond2_2, \
-                = Reorder_Rsquare(Rsigned, electrodeList, connect_cond1_final, connect_cond2_final)
-
+                or self.parameterDict["sensorMontage"] == "biosemi64":
+            Rsigned_2, Wsquare_2, Wpvalues_2, electrodes_final, connect_cond1_2, connect_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
+                = Reorder_plusplus(Rsigned, Wsquare, Wpvalues, electrodeList, connect_cond1_final, connect_cond2_final,
+                                   timefreq_cond1_final, timefreq_cond2_final)
         elif self.parameterDict["sensorMontage"] == "custom" \
-            and self.parameterDict["customMontagePath"] != "":
-            Rsigned_2, electrodes_final, connect_cond1_2, connect_cond2_2, \
-                = Reorder_custom(Rsigned, self.parameterDict["customMontagePath"], electrodeList, connect_cond1_final, connect_cond2_final,)
+                and self.parameterDict["customMontagePath"] != "":
+            Rsigned_2, Wsquare_2, Wpvalues_2, electrodes_final, connect_cond1_2, connect_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
+                = Reorder_custom_plus(Rsigned, Wsquare, Wpvalues, self.parameterDict["customMontagePath"],
+                                      electrodeList, connect_cond1_final, connect_cond2_final,
+                                      timefreq_cond1_final, timefreq_cond2_final)
 
         # Fill Features struct...
         self.Features.electrodes_orig = electrodeList
         self.Features.electrodes_final = electrodes_final
         self.Features.power_cond1 = connect_cond1_2
         self.Features.power_cond2 = connect_cond2_2
+        self.Features.timefreq_cond1 = timefreq_cond1_2
+        self.Features.timefreq_cond2 = timefreq_cond2_2
         self.Features.fres = fres
         self.Features.samplingFreq = sampFreq
         self.Features.freqs_array = freqs_array

@@ -373,7 +373,7 @@ class Dialog(QDialog):
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             # Viz options for "Connectivity" pipeline...
             self.btn_r2map = QPushButton("Display Frequency-channel R² map (NODE STRENGTH)")
-            # self.btn_timefreq = QPushButton("Display Time-Frequency ERD/ERS analysis")
+            self.btn_timefreq = QPushButton("Display Time-Frequency ERD/ERS analysis")
             self.btn_metric = QPushButton("Display NODE STRENGTH comparison between classes")
             self.btn_topo = QPushButton("Display NODE STRENGTH Brain Topography")
             titleR2 = "Freq.-chan. map of R² values of node strength"
@@ -382,11 +382,11 @@ class Dialog(QDialog):
             titleTopo = "Topography of node strengths, for freq. "
             self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2))
             self.btn_metric.clicked.connect(lambda: self.btnMetric(self.Features, titleMetric))
-            # self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq(self.Features, titleTimeFreq))
+            self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreqConnect(self.Features, titleTimeFreq))
             self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo))
             self.parallelVizLayouts[1].addWidget(self.btn_r2map)
             self.parallelVizLayouts[1].addWidget(self.btn_metric)
-            # self.parallelVizLayouts[1].addWidget(self.btn_timefreq)
+            self.parallelVizLayouts[1].addWidget(self.btn_timefreq)
             self.parallelVizLayouts[1].addWidget(self.btn_topo)
 
             self.layoutViz.addLayout(self.parallelVizLayouts[1])
@@ -606,6 +606,7 @@ class Dialog(QDialog):
             # self.btn_connectSpect.setEnabled(myBool)
             # self.btn_connectMatrices.setEnabled(myBool)
             # self.btn_connectome.setEnabled(myBool)
+            self.btn_timefreq.setEnabled(myBool)
             self.btn_r2map.setEnabled(myBool)
             self.btn_metric.setEnabled(myBool)
             self.btn_topo.setEnabled(myBool)
@@ -1297,6 +1298,23 @@ class Dialog(QDialog):
                        features.electrodes_final,
                        fmin, fmax, tmin, tmax, class1, class2, title)
 
+    def btnTimeFreqConnect(self, features, title):
+        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
+            print("TimeFreq for sensor: " + self.electrodePsd.text())
+
+            tmin = float(self.parameterDict["Sessions"][self.currentSessionId]["ExtractionParams"]['StimulationDelay'])
+            tmax = float(self.parameterDict["Sessions"][self.currentSessionId]["ExtractionParams"]['StimulationEpoch'])
+            fmin = int(self.userFmin.text())
+            fmax = int(self.userFmax.text())
+            class1 = self.parameterDict["AcquisitionParams"]["Class1"]
+            class2 = self.parameterDict["AcquisitionParams"]["Class2"]
+
+            qt_plot_tf_connect(features.timefreq_cond1, features.timefreq_cond2,
+                               features.time_array, features.freqs_array,
+                               self.electrodePsd.text(), features.fres,
+                               features.electrodes_final,
+                               fmin, fmax, tmin, tmax, class1, class2, title)
+
     def btnMetric(self, features, title):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             fmin = int(self.userFmin.text())
@@ -1653,6 +1671,47 @@ def qt_plot_tf(timefreq_cond1, timefreq_cond2, time_array, freqs_array, electrod
         time_frequency_map(timefreq_cond2, time_array, freqs_array, Index_electrode, fmin, fmax, fres, 10, average_baseline_cond2, electrodes, std_baseline_cond2, vmin, vmax, tlength)
         plt.title(title+'(' + class2label + ') Sensor ' + electrodes[Index_electrode], fontdict=font)
         plt.show()
+
+def qt_plot_tf_connect(timefreq_cond1, timefreq_cond2, time_array, freqs_array, electrode, fres, electrodes, f_min_var, f_max_var, tmin, tmax, class1label, class2label, title):
+    font = {'family': 'serif',
+            'color':  'black',
+            'weight': 'normal',
+            'size': 14,
+            }
+    fmin = int(f_min_var/fres)
+    fmax = int(f_max_var/fres)
+
+    Test_existing = False
+    idx = 0
+    for i in range(len(electrodes)):
+        if electrodes[i] == electrode:
+            idx = i
+            Test_existing = True
+    if not Test_existing:
+        myMsgBox("No Electrode with this name found")
+    else:
+        tf = (timefreq_cond1.mean(0) - timefreq_cond2.mean(0)) / timefreq_cond1.mean(0)
+        tf = tf.transpose(0, 2, 1)
+
+    fig, ax = plt.subplots()
+    im = ax.imshow(tf[idx, fmin:fmax, :], cmap='jet', origin='lower', aspect='auto',
+                   vmin=- np.nanmax(abs(tf[idx, fmin:fmax, :])),
+                   vmax=np.nanmax(abs(tf[idx, fmin:fmax, :])))
+
+    time_increments = (tmax-tmin)/np.shape(tf)[2]
+    time_series = np.around(np.arange(tmin, tmax, time_increments), 2)
+    freq_series = np.arange(f_min_var, f_max_var+1, int(f_max_var-f_min_var)/10)
+    ax.set_xticks(np.arange(0, np.shape(tf)[2], 1))
+    ax.set_xticklabels(time_series, rotation=90)
+    ax.set_yticks(np.arange(fmin, fmax+1, int(fmax-fmin)/10))
+    ax.set_yticklabels(freq_series)
+
+    ax.set_xlabel(' Time (s)', fontdict=font)
+    ax.set_ylabel('Frequency (Hz)', fontdict=font)
+    plt.title(title + ' (' + class1label + '/' + class2label + ') Sensor ' + electrodes[idx], fontdict=font)
+    cbar = fig.colorbar(im, ax=ax)
+    cbar.set_label('ERD/ERS', rotation=270, labelpad = 15)
+    plt.show()
 
 # Plot "connectivity spectrum" from a RAW connectivity matrix. UNUSED
 def qt_plot_connectSpectrum(connect1, connect2, chan1, chan2, electrodeList, fres, class1label, class2label, title):
