@@ -828,7 +828,7 @@ class TrainClassifier(QtCore.QThread):
 
             self.info2.emit("Finalizing Training...")
             scenXml = os.path.join(self.workspaceFolder, templateScenFilenames[5])
-            success, classifierOutputStr, accuracy = self.runClassifierScenario(scenXml)
+            success, classifierOutputStr, accuracy = self.playClassifierScenario(scenXml)
             if not success:
                 successGlobal = False
                 self.errorMessageTrainer()
@@ -892,7 +892,7 @@ class TrainClassifier(QtCore.QThread):
 
             # RUN THE CLASSIFIER TRAINING SCENARIO
             scenXml = os.path.join(self.workspaceFolder, templateScenFilenames[2])
-            success, classifierOutputStr, accuracy = self.runClassifierScenario(scenXml)
+            success, classifierOutputStr, accuracy = self.playClassifierScenario(scenXml)
 
             if not success:
                 self.errorMessageTrainer()
@@ -975,7 +975,7 @@ class TrainClassifier(QtCore.QThread):
 
         return selectedFeats, errMsg
 
-    def runClassifierScenario(self, scenFile):
+    def playClassifierScenario(self, scenFile):
         # ----------
         # Run the provided training scenario, and check the console output for termination, errors, and
         # classification results
@@ -1103,3 +1103,305 @@ class TrainClassifier(QtCore.QThread):
 
         return success
 
+class RunClassifier(QtCore.QThread):
+    info = Signal(bool)
+    info2 = Signal(str)
+    over = Signal(bool, str)
+
+    def __init__(self, classifFiles, templateFolder,
+                 workspaceFolder, ovScript,
+                 classifWeightsPath,
+                 listFeat, listFeat2,
+                 parameterDict, sampFreq, electrodeList,
+                 parent=None):
+
+        super().__init__(parent)
+        self.stop = False
+        self.classifFiles = classifFiles
+        self.templateFolder = templateFolder
+        self.workspaceFolder = workspaceFolder
+        self.ovScript = ovScript
+        self.listFeat = listFeat
+        self.listFeat2 = listFeat2
+        self.classifWeightsPath = classifWeightsPath
+        self.parameterDict = parameterDict.copy()
+        self.currentSessionId = self.parameterDict["currentSessionId"]
+        self.extractDict = parameterDict["Sessions"][self.parameterDict["currentSessionId"]]["ExtractionParams"].copy()
+        self.samplingFreq = sampFreq
+        self.electrodeList = electrodeList
+        self.exitText = ""
+
+        self.usingDualFeatures = self.parameterDict["pipelineType"] == optionKeys[3]
+
+    def run(self):
+        # Get electrodes lists and sampling freqs, and check that they match
+        # + that the selected channels are in the list of electrodes
+        classifSigFiles = []
+        listSampFreq = []
+        listElectrodeList = []
+        for classifFile in self.classifFiles:
+            generateMetadata(classifFile, self.ovScript)
+            metaFile = classifFile.replace(".ov", "-META.csv")
+            sampFreqTemp, electrodeListTemp = extractMetadata(metaFile)
+
+            listSampFreq.append(sampFreqTemp)
+            listElectrodeList.append(electrodeListTemp)
+            classifSigFiles.append(classifFile)  # ??
+
+        if not all(freqsamp == self.samplingFreq for freqsamp in listSampFreq):
+            errMsg = str("Error when loading signal files for classification\n")
+            errMsg = str(errMsg + "Sampling frequency mismatch (expected " + str(self.samplingFreq) + ", got " + str(listSampFreq) + ")")
+            self.over.emit(False, errMsg)
+            return
+        else:
+            print("Sampling Frequency for selected files : " + str(listSampFreq[0]))
+
+        for electrodeList in listElectrodeList:
+            if not set(electrodeList) == set(self.electrodeList):
+                errMsg = str("Error when loading signal files for classification\n")
+                errMsg = str(errMsg + "Electrode List mismatch")
+                self.over.emit(False, errMsg)
+                return
+        else:
+            print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
+
+        selectedFeats = None
+        selectedFeats2 = None
+        if not self.usingDualFeatures:
+            selectedFeats, errMsg = self.checkSelectedFeats(self.listFeat, self.samplingFreq, self.electrodeList)
+            if not selectedFeats:
+                self.over.emit(False, errMsg)
+                return
+        else:
+            selectedFeats, errMsg = self.checkSelectedFeats(self.listFeat, self.samplingFreq, self.electrodeList)
+            if not selectedFeats:
+                self.over.emit(False, errMsg)
+                return
+            selectedFeats2, errMsg = self.checkSelectedFeats(self.listFeat2, self.samplingFreq, self.electrodeList)
+            if not selectedFeats2:
+                self.over.emit(False, errMsg)
+                return
+
+        # Computing the "Epoch Average" count, important in the classification scenario.
+        epochCount = [0, 0]
+        stimEpochLength = float(self.extractDict["StimulationEpoch"])
+        if self.parameterDict["pipelineType"] == optionKeys[1]:
+            winLength = float(self.extractDict["TimeWindowLength"])
+            winShift = float(self.extractDict["TimeWindowShift"])
+            epochCount[0] = np.floor((stimEpochLength - winLength) / winShift) + 1
+        elif self.parameterDict["pipelineType"] == optionKeys[2]:
+            winLength = float(self.extractDict["ConnectivityLength"])
+            overlap = float(self.extractDict["ConnectivityOverlap"])
+            winShift = winLength * (100.0-overlap) / 100.0
+            epochCount[0] = np.floor((stimEpochLength - winLength) / winShift) + 1
+        elif self.parameterDict["pipelineType"] == optionKeys[3]:
+            winLength0 = float(self.extractDict["TimeWindowLength"])
+            winShift0 = float(self.extractDict["TimeWindowShift"])
+            epochCount[0] = np.floor((stimEpochLength - winLength0) / winShift0) + 1
+            winLength1 = float(self.extractDict["ConnectivityLength"])
+            overlap = float(self.extractDict["ConnectivityOverlap"])
+            winShift1 = winLength1 * (100.0-overlap) / 100.0
+            epochCount[1] = np.floor((stimEpochLength - winLength1) / winShift1) + 1
+
+        ## MODIFY THE SCENARIO with entered parameters
+        # /!\ after updating ARburg order and FFT size using sampfreq
+        self.extractDict["ChannelNames"] = ";".join(self.electrodeList)
+        self.extractDict["AutoRegressiveOrder"] = str(
+            timeToSamples(float(self.extractDict["AutoRegressiveOrderTime"]), self.samplingFreq))
+        self.extractDict["PsdSize"] = str(freqResToPsdSize(float(self.extractDict["FreqRes"]), self.samplingFreq))
+
+        # Special case : "connectivity shift", used in scenarios but not set that way in the interface
+        if "ConnectivityOverlap" in self.extractDict.keys():
+            self.extractDict["ConnectivityShift"] = str(float(self.extractDict["ConnectivityLength"]) * (100.0 - float(self.extractDict["ConnectivityOverlap"])) / 100.0)
+
+        # Case of a single feature type (power spectrum OR connectivity...)
+        # RE-COPY sc4 FROM TEMPLATE, SO THE USER CAN DO THIS MULTIPLE TIMES
+        scenIdx = 6  # idx in bcipipeline_settings.py
+        scenName = templateScenFilenames[scenIdx]
+        destScenFile = os.path.join(self.workspaceFolder, scenName)
+        print("---Copying file from folder " + str(__name__.split('.')[0] + '.' + self.templateFolder))
+        with resources.path(str(__name__.split('.')[0] + '.' + self.templateFolder), scenName) as srcFile:
+            print("---Copying file " + str(srcFile) + " to " + str(destScenFile))
+            copyfile(srcFile, destScenFile)
+
+        # current session (linked to extraction parameters), to know where to get training results...
+        trainingpath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train")
+        modifyScenarioGeneralSettings(str(destScenFile), self.extractDict)
+
+        # running/replay scenarios
+        if not self.usingDualFeatures:
+            modifyTrainScenUsingSplitAndClassifiers("SPLIT", "Classifier processor", selectedFeats, epochCount[0], destScenFile)
+            # Special case: "connectivity metric"
+            if "ConnectivityMetric" in self.extractDict.keys():
+                modifyConnectivityMetric(self.extractDict["ConnectivityMetric"], destScenFile)
+        else:
+            modifyTrainScenUsingSplitAndClassifiers("SPLIT POWSPECTRUM", "Classifier processor", selectedFeats, epochCount[0], destScenFile)
+            modifyTrainScenUsingSplitAndClassifiers("SPLIT CONNECT", "Classifier processor", selectedFeats2, epochCount[1], destScenFile)
+            modifyConnectivityMetric(self.extractDict["ConnectivityMetric"], destScenFile)
+
+        modifyOneGeneralSetting(destScenFile, "ClassifWeights", self.classifWeightsPath)
+
+        # RUN SCENARIO ON EVERY SIGNAL FILE
+        targetList = []
+        classifiedList = []
+        fileIdx = 1
+
+        for sigFile in classifSigFiles:
+            # increment progressbars
+            self.info.emit(True)
+            self.info2.emit("Running Scenario on file" +  str(fileIdx) +"/" + str(len(classifSigFiles)))
+
+            # change scenario IO
+            modifyOneGeneralSetting(destScenFile, "EEGData", sigFile)
+            success, targetListTemp, classifiedListTemp = self.playClassifierScenario(destScenFile)
+            targetList.extend(targetListTemp)
+            classifiedList.extend(classifiedListTemp)
+
+            if not success:
+                self.errorMessageRunner()
+                self.over.emit(False, self.exitText)
+
+
+        # PREPARE RESULTS & GOODBYE MESSAGE...
+
+        # count nb of differences in both (ordered) lists
+        nbClassifs = len(targetList)
+        nbErrors = sum(map(lambda x, y: bool(x - y), targetList, classifiedList))
+        accuracy = 100.0 * float((nbClassifs - nbErrors) / nbClassifs)
+
+        tp1 = 0
+        fn1 = 0
+        tp2 = 0
+        fn2 = 0
+        for idx in range(len(targetList)):
+            if targetList[idx] == classifiedList[idx]:
+                if targetList[idx] == 1:
+                    tp1 += 1
+                else:
+                    tp2 += 1
+            else:
+                if targetList[idx] == 1:
+                    fn1 += 1
+                else:
+                    fn2 += 1
+
+        precision1 = 100.0*float(tp1 / (tp1 + fn1))
+        precision2 = 100.0*float(tp2 / (tp2 + fn2))
+
+        messageClassif = "Overall accuracy : " + str(accuracy) + "% (" + str(nbClassifs) + " trials)\n"
+        messageClassif += "\tClass 1 (" + self.parameterDict["AcquisitionParams"]["Class1"] + ")| Precision  : " + str(precision1) + "% (" + str(tp1+fn1) + " trials)\n"
+        messageClassif += "\tClass 2 (" + self.parameterDict["AcquisitionParams"]["Class2"] + ")| Precision  : " + str(precision2) + "% (" + str(tp2+fn2) + " trials)\n"
+
+        # PREPARE DISPLAYED MESSAGE...
+        textFeats = str("======CLASSIFICATION ATTEMPT=======\n")
+        textFeats += str("Signal Files\n")
+        for i in range(len(classifSigFiles)):
+            textFeats += str("\t" + os.path.basename(classifSigFiles[i]) + "\n")
+
+        if not self.usingDualFeatures:
+            textFeats += str("\nFeature(s) ")
+            textFeats += str("(" + self.parameterDict["pipelineType"]+"):\n")
+            for i in range(len(selectedFeats)):
+                textFeats += str("\t"+"Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+        else:
+            textFeats += str("\nFeature(s) for PowSpectrum:\n")
+            for i in range(len(selectedFeats)):
+                textFeats += str(
+                    "\t" + "Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+            textFeats += str("Feature(s) for Connectivity:\n")
+            for i in range(len(selectedFeats2)):
+                textFeats += str(
+                    "\t" + "Channel " + str(selectedFeats2[i][0]) + " at " + str(selectedFeats2[i][1]) + " Hz\n")
+
+        textDisplay = textFeats
+        textDisplay += str("\n" + messageClassif)
+
+        self.exitText = textDisplay
+
+
+        self.stop = True
+        self.over.emit(True, self.exitText)
+
+    def stopThread(self):
+        self.stop = True
+
+    def errorMessageRunner(self):
+        textError = str("Error running \"Run/Replay\" scenario\n")
+        self.exitText = textError
+
+    def checkSelectedFeats(self, inputSelectedFeats, sampFreq, electrodeList):
+        selectedFeats = []
+        errMsg = ""
+        # Checks :
+        # - No empty field
+        # - frequencies in acceptable ranges
+        # - channels in list
+        n_bins = int((sampFreq / 2) + 1)
+        for idx, feat in enumerate(inputSelectedFeats):
+            if feat == "":
+                errMsg = str("Pair " + str(idx + 1) + " is empty...")
+                return None, errMsg
+            [chan, freqstr] = feat.split(";")
+            if chan not in electrodeList:
+                errMsg = str("Channel in pair " + str(idx + 1) + " (" + str(chan) + ") is not in the list...")
+                return None, errMsg
+            freqs = freqstr.split(":")
+            for freq in freqs:
+                if not freq.isdigit():
+                    errMsg = str("Frequency in pair " + str(idx + 1) + " (" + str(
+                        freq) + ") has an invalid format, must be an integer...")
+                    return None, errMsg
+                if int(freq) >= n_bins:
+                    errMsg = str(
+                        "Frequency in pair " + str(idx + 1) + " (" + str(freq) + ") is not in the acceptable range...")
+                    return None, errMsg
+            selectedFeats.append(feat.split(";"))
+            print(feat)
+
+        return selectedFeats, errMsg
+
+    def playClassifierScenario(self, scenFile):
+        # ----------
+        # Run the provided run/replay scenario, and check the console output for termination, errors, and
+        # classification results
+        # ----------
+
+        # BUILD THE COMMAND (use designer.cmd from GUI)
+        command = self.ovScript
+        if platform.system() == 'Windows':
+            command = command.replace("/", "\\")
+
+        # Run actual command (openvibe-designer.cmd --no-gui --play-fast <scen.xml>)
+        p = subprocess.Popen([command, "--invisible", "--play-fast", scenFile],
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+
+        # Read console output to detect end of process
+        # and prompt user with classification score. Quite artisanal but works
+        success = True
+        classifierOutputStr = ""
+        targetList = []
+        classifiedList = []
+        while True:
+            output = p.stdout.readline()
+            if p.poll() is not None:
+                break
+            if output:
+                print(str(output))
+                if "Invalid indexes: stopIdx - trainIndex = 1" in str(output):
+                    success = False
+                    return success, None, None
+                if "Application terminated" in str(output):
+                    break
+
+                if "aka Target" in str(output):
+                    if "769[OVTK_GDF_Left]" in str(output):
+                        targetList.append(1)
+                    elif "770[OVTK_GDF_Right]" in str(output):
+                        targetList.append(2)
+                if "aka Classified" in str(output):
+                    if "769[OVTK_GDF_Left]" in str(output):
+                        classifiedList.append(1)
+                    elif "770[OVTK_GDF_Right]" in str(output):
+                        classifiedList.append(2)
+
+        return success, targetList, classifiedList
