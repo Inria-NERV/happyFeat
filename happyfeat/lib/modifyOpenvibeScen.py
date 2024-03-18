@@ -4,7 +4,20 @@ from xml.dom import minidom
 import os
 import binascii
 
+def modifyOneGeneralSetting(scenXml, settingName, newVal):
+    print("---Modifying " + scenXml)
+    tree = ET.parse(scenXml)
+    root = tree.getroot()
 
+    for settings in root.findall('Settings'):
+        for setting in settings.findall('Setting'):
+            if setting.find('Name').text == settingName:
+                xmlVal = setting.find('Value')
+                xmlVal.text = newVal
+
+    # WRITE NEW XML
+    tree.write(scenXml)
+    return
 def modifyScenarioGeneralSettings(scenXml, parameterDict):
     print("---Modifying " + scenXml)
     tree = ET.parse(scenXml)
@@ -552,6 +565,26 @@ def modifyOnlineScenario(chanFreqPairs, scenXml):
                 featAggInputIdx += 1
                 linkBoxes(root, listofBoxesToChain, nbOfOutputs, featAggInputIdx)
 
+    # WRITE NEW XML
+    tree.write(scenXml)
+    return
+
+def modifyClassifierWeights(weightsFile, scenXml):
+    print("---Modifying " + scenXml + " to set " + weightsFile + " as Classifier Processor's weights file")
+    tree = ET.parse(scenXml)
+    root = tree.getroot()
+
+    for boxes in root.findall('Boxes'):
+        for box in boxes.findall('Box'):
+            if box.find('Name').text == 'Classifier Processor':
+                for settings in box.findall('Settings'):
+                    for setting in settings.findall('Setting'):
+                        if setting.find('Name').text == "Filename to load configuration from":   # nice name !
+                            xmlVal = setting.find('Value')
+                            print("       replacing " + xmlVal.text)
+                            xmlVal.text = weightsFile
+                            print("            with " + xmlVal.text)
+                            break
     # WRITE NEW XML
     tree.write(scenXml)
     return

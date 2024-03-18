@@ -457,7 +457,7 @@ class Dialog(QDialog):
         self.layoutTrain = QVBoxLayout()
         self.layoutTrain.setAlignment(QtCore.Qt.AlignTop)
 
-        self.labelTrain = QLabel('== CLASSIFIER TRAINING ==')
+        self.labelTrain = QLabel('== CLASSIFICATION ==')
         self.labelTrain.setAlignment(QtCore.Qt.AlignCenter)
         self.labelTrain.setFont(QFont("system-ui", 12))
         self.labelTrain.setStyleSheet("font-weight: bold")
@@ -533,6 +533,11 @@ class Dialog(QDialog):
         self.fileListWidgetTrain = QListWidget()
         self.fileListWidgetTrain.setSelectionMode(QListWidget.MultiSelection)
 
+        # Classifier training button
+        self.btn_trainClassif = QPushButton("TRAIN CLASSIFIER")
+        self.btn_trainClassif.clicked.connect(lambda: self.btnTrainClassif())
+        self.btn_trainClassif.setStyleSheet("font-weight: bold")
+
         # Label + QTreeWidget for training results
         labelLastResults = str("--- Last Training Results ---")
         self.labelLastResults = QLabel(labelLastResults)
@@ -549,11 +554,6 @@ class Dialog(QDialog):
         # Update training results from config file
         self.updateTrainingAttemptsTree()
 
-        # Select / all combinations buttons...
-        self.btn_trainClassif = QPushButton("TRAIN CLASSIFIER")
-        self.btn_trainClassif.clicked.connect(lambda: self.btnTrainClassif())
-        self.btn_trainClassif.setStyleSheet("font-weight: bold")
-
         # Connectivity: allow to enable/disable "Speed up" training"
         if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             self.enableSpeedUp = QCheckBox()
@@ -566,13 +566,37 @@ class Dialog(QDialog):
             self.speedUpLayout.addWidget(self.speedUpLabel)
             self.speedUpLayout.addWidget(self.enableSpeedUp)
 
+        # Label for classifier running
+        labelRunClassif = str("--- Run classification ---")
+        self.labelRunClassif = QLabel(labelRunClassif)
+        self.labelRunClassif.setAlignment(QtCore.Qt.AlignCenter)
+
+        # Select files + apply selected classifier
+        self.classifLayoutH = QHBoxLayout()
+        self.btn_selectFilesClassif = QPushButton("Browse for files...")
+        self.btn_runClassif = QPushButton("RUN CLASSIFIER")
+        self.btn_selectFilesClassif.clicked.connect(lambda: self.btnSelectFilesClassif())
+        self.btn_runClassif.clicked.connect(lambda: self.btnRunClassif())
+        self.classifLayoutH.addWidget(self.btn_selectFilesClassif)
+        self.classifLayoutH.addWidget(self.btn_runClassif)
+
+        self.fileListWidgetClassifRun = QTreeWidget()
+        self.fileListWidgetClassifRun.setColumnCount(1)
+        self.fileListWidgetClassifRun.setHeaderLabels([""])
+
+        # Update GUI layout
         self.qvTrainingLayout.addLayout(self.trainingParamsLayout)
         self.qvTrainingLayout.addWidget(self.fileListWidgetTrain)
-        self.qvTrainingLayout.addWidget(self.labelLastResults)
-        self.qvTrainingLayout.addWidget(self.lastTrainingResults)
         if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             self.qvTrainingLayout.addLayout(self.speedUpLayout)
         self.qvTrainingLayout.addWidget(self.btn_trainClassif)
+        self.qvTrainingLayout.addWidget(self.labelLastResults)
+        self.qvTrainingLayout.addWidget(self.lastTrainingResults)
+
+        self.qvTrainingLayout.addWidget(self.labelRunClassif)
+        self.qvTrainingLayout.addLayout(self.classifLayoutH)
+        self.qvTrainingLayout.addWidget(self.fileListWidgetClassifRun)
+
         self.dlgLayout.addLayout(self.layoutTrain, 1)
 
         # display initial layout
@@ -1039,7 +1063,7 @@ class Dialog(QDialog):
                 myMsgBox("Please use at least one set of features!")
                 return
 
-        # Get training param from GUI and modify training scenario
+        # Get training param from GUI (to modify training scenario later on)
         err = True
         trainingSize = 0
         if self.trainingPartitions.text().isdigit():
@@ -1231,6 +1255,8 @@ class Dialog(QDialog):
         self.menuOptions.setEnabled(myBool)
         if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             self.enableSpeedUp.setEnabled(myBool)
+        self.btn_runClassif.setEnabled(myBool)
+        self.btn_selectFilesClassif.setEnabled(myBool)
 
 
     def enableGui(self, myBool):
@@ -1538,6 +1564,160 @@ class Dialog(QDialog):
 
         # collapse all items
         self.lastTrainingResults.collapseAll()
+
+    def btnSelectFilesClassif(self):
+        # Open file browser to select files upon which we want to apply the selected classifier
+        # + update the indicative list
+        self.fileListWidgetClassifRun.clear()
+        directory = os.getcwd()
+        paths, dummy = QFileDialog.getOpenFileNames(self, "Signal files", str(directory))
+
+        for path in paths:
+            if not ".ov" in path:
+                myMsgBox("Warning:\n" + path + "\ndoesn't seem to be a valid signal file")
+            else:
+                item = QTreeWidgetItem(self.fileListWidgetClassifRun)
+                item.setText(0, os.path.basename(path) )
+                fullpath = QTreeWidgetItem(None)
+                fullpath.setText(0, path)
+                item.addChild(fullpath)
+
+    def btnRunClassif(self):
+        # ------
+        # Run the selected classifier on the selected files.
+        # ------
+
+        # - check if files have been selected (browse...)
+        # - get the selected classifier = line in the results list
+        #   => check if a line is selected, extract its index X and feature parameters
+        # - check if associated classifier-weights-X.xml exists
+        # - update template scenario with feature(s) + weight xml file
+        # - run the scenario and get score
+
+        # === 1st step: check if signal files have been selected by browsing (= not empty list)
+        if self.fileListWidgetClassifRun.topLevelItemCount() == 0:
+            myMsgBox("Please use the \"Browse\" button to select signal file(s).")
+            return
+
+        # create list of files...
+        self.classifFiles = []
+        for i in range(0, self.fileListWidgetClassifRun.topLevelItemCount()):
+            self.classifFiles.append(self.fileListWidgetClassifRun.topLevelItem(i).child(0).text(0))
+
+        # === 2nd step : get line idx (& parameters) in classification results list
+        selectedClassifIdx = self.lastTrainingResults.selectedItems()
+        if not selectedClassifIdx:
+            myMsgBox("Please select a classifier in the \"Last Results\" list above.")
+            return
+
+        baseNode = selectedClassifIdx[0]
+        classifIdx = baseNode.text(0)
+        nbChildren = baseNode.childCount()
+        pipelineTextToFind = ""
+        pipelineTextToFind2 = ""
+        listFeat = []
+        listFeat2 = []
+        sampFreq = None
+        electrodeList = None
+        paramsFound = False
+
+        # which metric str to look for in the column text
+        if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
+            pipelineTextToFind = settings.optionKeys[1]
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+            pipelineTextToFind = settings.optionKeys[2]
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+            pipelineTextToFind = settings.optionKeys[1]
+            pipelineTextToFind2 = settings.optionKeys[2]
+
+        # iterate over all sub-lines of selected line, in results list widget
+        for child in range(0, nbChildren):
+            textInfo = baseNode.child(child).text(2)  # relevant info in column 2. Might change later...
+
+            if pipelineTextToFind in textInfo:
+                textInfo = textInfo.removeprefix(str(pipelineTextToFind+" "))
+                listFeat.append(textInfo)
+
+            # special case: "Mixed" pipeline: 2 lists to extract
+            if self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+                if pipelineTextToFind2 in textInfo:
+                    textInfo = textInfo.removeprefix(str(pipelineTextToFind2 + " "))
+                    listFeat.append(textInfo)
+
+            if not paramsFound:
+                if "-TRIALS.csv" in textInfo:
+                    sampFreq, electrodeList = extractMetadata(os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", textInfo))
+                    if sampFreq and electrodeList:
+                        paramsFound = True
+
+        print("classifIdx : " + str(classifIdx))
+        print("listFeat : " + str(listFeat))
+        print("listFeat2 : " + str(listFeat2))
+        print("list of files: " + str(self.classifFiles))
+        print("sampFreq : " + str(sampFreq))
+        print("electrodeList: " + str(electrodeList))
+
+        # === 3rd step : check if classifier-weights-X.xml exists
+        classifWeightsPath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", str("classifier-weights-"+str(classifIdx)+".xml"))
+        if not os.path.exists(classifWeightsPath):
+            myMsgBox("ERROR: for selected classification results (" + str(classifIdx) + "),\nweights file not found in workspace.")
+            return
+        # Reformat to openvibe's preference... C:/etc.
+        if platform.system() == 'Windows':
+            classifWeightsPath = classifWeightsPath.replace("\\", "/")
+
+
+        # === 4th step : run scenario thread
+
+        self.enableExtractionGui(False)
+        self.enableTrainGui(False)
+        trainingParamDict = self.parameterDict.copy()
+
+        # create progress bar window...
+        self.progressBarRun = ProgressBar("Running classification", "File...", len(self.classifFiles))
+
+        # Instantiate the thread...
+        templateFolder = settings.optionsTemplatesDir[self.parameterDict["pipelineType"]]
+        self.runClassThread = RunClassifier(self.classifFiles, templateFolder,
+                                                self.workspaceFolder, self.ovScript,
+                                                classifWeightsPath,
+                                                listFeat, listFeat2,
+                                                trainingParamDict, sampFreq, electrodeList)
+
+        # Signal: RunClassif work thread finished one step
+        # Increment progress bar + change its label
+        self.runClassThread.info.connect(self.progressBarRun.increment)
+        self.runClassThread.info2.connect(self.progressBarRun.changeLabel)
+        # Signal: Training work thread finished
+        self.runClassThread.over.connect(self.running_over)
+        # Launch the work thread
+        self.runClassThread.start()
+
+        self.runTimerStart = time.perf_counter()
+
+        return
+
+    def running_over(self, success, resultsText):
+        # Running work thread is over, so we kill the progress bar,
+        # display a msg with results, and make the running Gui available again
+        self.runTimerEnd = time.perf_counter()
+        elapsed = self.runTimerEnd - self.runTimerStart
+        print("=== Running done in: ", str(elapsed))
+
+        self.progressBarRun.finish()
+
+        if success:
+            textDisplayed = str(resultsText)
+            msg = QMessageBox()
+            msg.setText(textDisplayed)
+
+            msg.setStyleSheet("QLabel{min-width: 1200px;}")
+            msg.setWindowTitle("Classification Score")
+            msg.exec_()
+        else:
+            myMsgBox(resultsText)
+
+        self.enableGui(True)
 
 # ------------------------------------------------------
 # STATIC FUNCTIONS
