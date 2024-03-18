@@ -1696,7 +1696,7 @@ def qt_plot_tf_connect(timefreq_cond1, timefreq_cond2, time_array, freqs_array, 
     fig, ax = plt.subplots()
     im = ax.imshow(tf[idx, fmin:fmax, :], cmap='jet', origin='lower', aspect='auto',
                    vmin=- np.nanmax(abs(tf[idx, fmin:fmax, :])),
-                   vmax=np.nanmax(abs(tf[idx, fmin:fmax, :])))
+                   vmax=np.nanmax(abs(tf[idx, fmin:fmax, :])), interpolation="hanning")
 
     time_increments = (tmax-tmin)/np.shape(tf)[2]
     time_series = np.around(np.arange(tmin, tmax, time_increments), 2)
