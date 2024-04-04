@@ -49,7 +49,8 @@ class Features:
     Wsigned = []
     electrodes_orig = []
     electrodes_final = []
-
+    Features_NS_selected = []
+    Features_PSD_selected = []
     power_cond1 = []
     power_cond2 = []
     timefreq_cond1 = []
@@ -416,13 +417,15 @@ class Dialog(QDialog):
             titleTimeFreq = "Time-Frequency ERD/ERS analysis"
             titlePsd = "Power Spectrum "
             titleTopo = "Topography of power spectra, for freq. "
+            titleFeatSel = 'Optimal Features to load'
             self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2))
             self.btn_psd.clicked.connect(lambda: self.btnPsd(self.Features, titlePsd))
             self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo))
+            self.btn_feature_to_select_bcinet(lambda: self.btnFeature_to_select(self.Features, titleFeatSel))
             self.parallelVizLayouts[0].addWidget(self.btn_r2map)
             self.parallelVizLayouts[0].addWidget(self.btn_psd)
             self.parallelVizLayouts[0].addWidget(self.btn_topo)
-
+            self.parallelVizLayouts[0].addWidget(self.btn_feature_to_select_bcinet)
             # Viz options for "Connectivity" pipeline...
             self.btn_r2map2 = QPushButton("Freq.-chan. R² map")
             self.btn_metric = QPushButton("NodeStr. for the 2 classes")
@@ -1310,6 +1313,40 @@ class Dialog(QDialog):
                        features.electrodes_final,
                        features.fres, int(self.userFmin.text()), int(self.userFmax.text()),
                        self.colormapScale.isChecked(), title)
+
+    def btnFeature_to_select(self, features, title):
+
+        self.btnRemovePair(self.selectedFeats[0], self.qvFeatureLayouts[0])
+        self.btnRemovePair(self.selectedFeats[1], self.qvFeatureLayouts[1])
+
+        elecs = self.Features_PSD_selected[0]
+        freqs = self.Features_PSD_selected[1]
+        for index in range(len(elecs)):
+            self.btnAddPair_BCINET(self.selectedFeats[0], self.qvFeatureLayouts[0],[elecs[index],freqs[index]])
+
+        elecs = self.Features_NS_selected[0]
+        freqs = self.Features_NS_selected[1]
+        for index in range(len(elecs)):
+            self.btnAddPair_BCINET(self.selectedFeats[1], self.qvFeatureLayouts[1],[elecs[index],freqs[index]])
+
+
+
+    def btnAddPair_BCINET(self, selectedFeats, layout,Feature):
+        if len(selectedFeats) == 0:
+            # Remove "no feature" label
+            item = layout.itemAt(3)
+            widget = item.widget()
+            widget.deleteLater()
+        # default text
+        featText = Feature[0]+';'+str(Feature[1])
+        if len(selectedFeats) >= 1:
+            # if a feature window already exists, copy its text
+            featText = selectedFeats[-1].text()
+        # add new qlineedit
+        selectedFeats.append(QLineEdit())
+        selectedFeats[-1].setText(featText)
+        layout.addWidget(selectedFeats[-1])
+
 
     def btnW2(self, features, title):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
