@@ -381,6 +381,25 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
                 = Reorder_custom_plus(Rsigned, Wsquare, Wpvalues, self.parameterDict["customMontagePath"], electrodeList, power_cond1_final, power_cond2_final,
                                    timefreq_cond1_final, timefreq_cond2_final)
 
+        electrode_Cortex_1 = ['C5', 'C3', 'C1', 'CP5', 'CP3', 'CP1', 'FC5', 'FC3', 'FC5', 'Cz', 'CPz', 'FCz', 'C6',
+                              'C4', 'C2', 'CP6', 'CP4', 'CP2', 'FC6', 'FC4', 'FC2']
+        Index_electrode_1 = []
+        for i in range(len(electrodes_final)):
+            for j in electrode_Cortex_1:
+                if electrodes_final[i] == j:
+                    Index_electrode_1.append(i)
+        Rsigned_reduced = Rsigned_2[Index_electrode_1, 7:35]
+        Max_per_electrode = Rsigned_reduced.max(1)
+        indices_max = np.argpartition(Max_per_electrode, -3)[-3:]
+        sorted_indices = indices_max[np.argsort(Max_per_electrode[indices_max])]
+        Freq_associated = []
+        for index_ in sorted_indices:
+            frequ_ = Rsigned_reduced[index_, :]
+            index_freq = 7 + np.argmax(frequ_)
+            Freq_associated.append(index_freq)
+
+        Final_Features_selected = [electrodes_final[Index_electrode_1[sorted_indices]], Freq_associated]
+        self.Features_PSD_selected = Final_Features_selected
         self.Features.electrodes_orig = electrodeList
         self.Features.power_cond2 = power_cond2_2
         self.Features.power_cond1 = power_cond1_2
@@ -597,7 +616,26 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
                                       electrodeList, connect_cond1_final, connect_cond2_final,
                                       timefreq_cond1_final, timefreq_cond2_final)
 
+        electrode_Cortex_1 = ['C5', 'C3', 'C1', 'CP5', 'CP3', 'CP1', 'FC5', 'FC3', 'FC5', 'Cz', 'CPz', 'FCz', 'C6',
+                              'C4', 'C2', 'CP6', 'CP4', 'CP2', 'FC6', 'FC4', 'FC2']
+        Index_electrode_1 = []
+        for i in range(len(electrodes_final)):
+            for j in electrode_Cortex_1:
+                if electrodes_final[i] == j:
+                    Index_electrode_1.append(i)
+        Rsigned_reduced = Rsigned_2[Index_electrode_1, 7:35]
+        Max_per_electrode = Rsigned_reduced.max(1)
+        indices_max = np.argpartition(Max_per_electrode, -3)[-3:]
+        sorted_indices = indices_max[np.argsort(Max_per_electrode[indices_max])]
+        Freq_associated = []
+        for index_ in sorted_indices:
+            frequ_ = Rsigned_reduced[index_, :]
+            index_freq = 7 + np.argmax(frequ_)
+            Freq_associated.append(index_freq)
+
+        Final_Features_selected = [electrodes_final[Index_electrode_1[sorted_indices]], Freq_associated]
         # Fill Features struct...
+        self.Features_NS_selected= Final_Features_selected
         self.Features.electrodes_orig = electrodeList
         self.Features.electrodes_final = electrodes_final
         self.Features.power_cond1 = connect_cond1_2
