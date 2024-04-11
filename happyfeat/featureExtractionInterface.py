@@ -1149,7 +1149,7 @@ class Dialog(QDialog):
             if self.enableSpeedUp.isChecked():
                 enableSpeedUp = True
 
-        templateFolder = settings.optionsTemplatesDir[self.parameterDict["pipelineType"]]
+        templateFolder = settings.optionsTemplatesDir[trainingParamDict["pipelineType"]]
         self.trainClassThread = TrainClassifier(self.trainingFiles,
                                                 signalFolder, templateFolder,
                                                 self.workspaceFolder,
