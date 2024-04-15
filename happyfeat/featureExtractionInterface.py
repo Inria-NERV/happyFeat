@@ -116,6 +116,9 @@ class Dialog(QDialog):
         self.progressBarViz2 = None
         self.progressBarTrain = None
 
+        # "Advanced mode" with more options...?
+        self.advanced = False
+
         # GET BASIC SETTINGS FROM WORKSPACE FILE
         if self.workspaceFile:
             print("--- Using parameters from workspace file: " + workspaceFile)
@@ -144,6 +147,10 @@ class Dialog(QDialog):
         self.qActionFindOV = QAction("&Browse for OpenViBE", self)
         self.qActionFindOV.triggered.connect(lambda: self.browseForDesigner())
         self.menuOptions.addAction(self.qActionFindOV)
+        # Activate/deactivate advanced options...
+        self.qActionEnableAdvancedMode = QAction("&Enable/Disable Advanced Mode", self)
+        self.qActionEnableAdvancedMode.triggered.connect(lambda: self.toggleAdvanced())
+        self.menuOptions.addAction(self.qActionEnableAdvancedMode)
 
         # -----------------------------------------------------------------------
         # NEW! LEFT-MOST PART: Signal acquisition & Online classification parts
@@ -559,9 +566,11 @@ class Dialog(QDialog):
             self.enableSpeedUp = QCheckBox()
             self.enableSpeedUp.setTristate(False)
             self.enableSpeedUp.setChecked(False)
+            self.enableSpeedUp.setVisible(False)  # advanced option
             speedUpLabel = str("Speed-up training (experimental)")
             self.speedUpLabel = QLabel(speedUpLabel)
             self.speedUpLabel.setAlignment(QtCore.Qt.AlignCenter)
+            self.speedUpLabel.setVisible(False)  # advanced option
             self.speedUpLayout = QHBoxLayout()
             self.speedUpLayout.addWidget(self.speedUpLabel)
             self.speedUpLayout.addWidget(self.enableSpeedUp)
@@ -570,12 +579,16 @@ class Dialog(QDialog):
         labelRunClassif = str("--- Run classification ---")
         self.labelRunClassif = QLabel(labelRunClassif)
         self.labelRunClassif.setAlignment(QtCore.Qt.AlignCenter)
+        self.labelRunClassif.setVisible(False)  # advanced option
 
         # Select files + apply selected classifier
         self.classifLayoutH = QHBoxLayout()
         self.btn_selectFilesClassif = QPushButton("Browse for files...")
+        self.btn_selectFilesClassif.setVisible(False) # advanced option
         self.btn_runClassif = QPushButton("RUN CLASSIFIER")
+        self.btn_runClassif.setVisible(False) # advanced option
         self.btn_selectFilesClassif.clicked.connect(lambda: self.btnSelectFilesClassif())
+
         self.btn_runClassif.clicked.connect(lambda: self.btnRunClassif())
         self.classifLayoutH.addWidget(self.btn_selectFilesClassif)
         self.classifLayoutH.addWidget(self.btn_runClassif)
@@ -583,6 +596,7 @@ class Dialog(QDialog):
         self.fileListWidgetClassifRun = QTreeWidget()
         self.fileListWidgetClassifRun.setColumnCount(1)
         self.fileListWidgetClassifRun.setHeaderLabels([""])
+        self.fileListWidgetClassifRun.setVisible(False) # advanced option
 
         # Update GUI layout
         self.qvTrainingLayout.addLayout(self.trainingParamsLayout)
@@ -1486,6 +1500,25 @@ class Dialog(QDialog):
 
         # TODO : add some check, to verify that it's an OpenViBE exec..? how..?
         setKeyValue(self.workspaceFile, "ovDesignerPath", self.parameterDict["ovDesignerPath"])
+        return
+
+    def toggleAdvanced(self):
+        # Toggles some options in the interface...
+
+        if self.advanced:
+            self.advanced = False
+        else:
+            self.advanced = True
+
+        self.labelRunClassif.setVisible(self.advanced)
+        self.btn_selectFilesClassif.setVisible(self.advanced)
+        self.btn_runClassif.setVisible(self.advanced)
+        self.fileListWidgetClassifRun.setVisible(self.advanced)
+
+        if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+            self.enableSpeedUp.setVisible(self.advanced)
+            self.speedUpLabel.setVisible(self.advanced)
+
         return
 
     def checkExistenceExtractFiles(self, file):
