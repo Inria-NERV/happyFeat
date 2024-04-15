@@ -30,6 +30,7 @@ from PySide2.QtWidgets import QSizePolicy
 from PySide2.QtWidgets import QMenuBar
 from PySide2.QtWidgets import QMenu
 from PySide2.QtWidgets import QAction
+from PySide2.QtWidgets import QInputDialog
 
 from PySide2.QtGui import QFont
 from PySide2.QtCore import QTimer
@@ -49,8 +50,7 @@ class Features:
     Wsigned = []
     electrodes_orig = []
     electrodes_final = []
-    Features_NS_selected = []
-    Features_PSD_selected = []
+
     power_cond1 = []
     power_cond2 = []
     timefreq_cond1 = []
@@ -70,6 +70,7 @@ class Features:
 
     samplingFreq = []
 
+    autoselected = []
 
 class Dialog(QDialog):
 
@@ -105,6 +106,11 @@ class Dialog(QDialog):
         self.vizTimerEnd = 0
         self.trainTimerStart = 0
         self.trainTimerEnd = 0
+
+        # default parameters for automatic selection
+        self.autoFeatChannelList = ['C5', 'C3', 'C1', 'CP5', 'CP3', 'CP1', 'FC5', 'FC3', 'FC1',
+                                    'Cz', 'CPz', 'FCz', 'C6', 'C4', 'C2', 'CP6', 'CP4', 'CP2', 'FC6', 'FC4', 'FC2']
+        self.autoFeatFreqRange = "7:35"
 
         # Work Threads & Progress bars
         self.acquisitionThread = None
@@ -144,6 +150,7 @@ class Dialog(QDialog):
         self.dlgLayout.setMenuBar(self.menuBar)
         self.menuOptions = QMenu("&Options")
         self.menuBar.addMenu(self.menuOptions)
+
         # OpenViBE designer browser...
         self.qActionFindOV = QAction("&Browse for OpenViBE", self)
         self.qActionFindOV.triggered.connect(lambda: self.browseForDesigner())
@@ -152,6 +159,19 @@ class Dialog(QDialog):
         self.qActionEnableAdvancedMode = QAction("&Enable/Disable Advanced Mode", self)
         self.qActionEnableAdvancedMode.triggered.connect(lambda: self.toggleAdvanced())
         self.menuOptions.addAction(self.qActionEnableAdvancedMode)
+
+        if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+            # Auto-select feature: select a set of channels for autoselection
+            self.menuAutoSelect = QMenu("&Feature AutoSelect")
+            self.menuBar.addMenu(self.menuAutoSelect)
+
+            self.qActionChanList = QAction("Set &Channel sub-selection", self)
+            self.qActionChanList.triggered.connect(lambda: self.autoFeatSetChannelSubselection())
+            self.menuAutoSelect.addAction(self.qActionChanList)
+
+            self.qActionFreqRange = QAction("Set frequency &Range", self)
+            self.qActionFreqRange.triggered.connect(lambda: self.autoFeatSetFreqRange())
+            self.menuAutoSelect.addAction(self.qActionFreqRange)
 
         # -----------------------------------------------------------------------
         # NEW! LEFT-MOST PART: Signal acquisition & Online classification parts
@@ -399,7 +419,8 @@ class Dialog(QDialog):
 
             self.layoutViz.addLayout(self.parallelVizLayouts[1])
 
-        elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
             # Viz options in parallel
             labelPowSpectViz = QLabel("Power Spectrum")
             labelPowSpectViz.setAlignment(QtCore.Qt.AlignCenter)
@@ -417,15 +438,12 @@ class Dialog(QDialog):
             titleTimeFreq = "Time-Frequency ERD/ERS analysis"
             titlePsd = "Power Spectrum "
             titleTopo = "Topography of power spectra, for freq. "
-            titleFeatSel = 'Optimal Features to load'
             self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2))
             self.btn_psd.clicked.connect(lambda: self.btnPsd(self.Features, titlePsd))
             self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo))
-            self.btn_feature_to_select_bcinet(lambda: self.btnFeature_to_select(self.Features, titleFeatSel))
             self.parallelVizLayouts[0].addWidget(self.btn_r2map)
             self.parallelVizLayouts[0].addWidget(self.btn_psd)
             self.parallelVizLayouts[0].addWidget(self.btn_topo)
-            self.parallelVizLayouts[0].addWidget(self.btn_feature_to_select_bcinet)
             # Viz options for "Connectivity" pipeline...
             self.btn_r2map2 = QPushButton("Freq.-chan. R² map")
             self.btn_metric = QPushButton("NodeStr. for the 2 classes")
@@ -448,6 +466,11 @@ class Dialog(QDialog):
 
             self.layoutViz.addLayout(self.labelLayoutH)
             self.layoutViz.addLayout(self.parallelVizLayoutH)
+
+        if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+            self.btn_autoFeat = QPushButton("Auto. select optimal features")
+            self.btn_autoFeat.clicked.connect(lambda: self.btnAutoFeat(self.Features, self.Features2))
+            self.layoutViz.addWidget(self.btn_autoFeat)
 
         # Add separator...
         separator2 = QFrame()
@@ -483,7 +506,8 @@ class Dialog(QDialog):
         self.qvFeatureLayouts = [None, None]
         self.qvFeatureLayouts[0] = QFormLayout()
         self.qvFeatureLayouts[1] = QFormLayout()
-        if self.parameterDict["pipelineType"] != settings.optionKeys[3]:
+        if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             self.layoutTrain.addLayout(self.qvFeatureLayouts[0])
         else:
             labelFeat = [None, None]
@@ -506,23 +530,24 @@ class Dialog(QDialog):
         self.selectedFeats = [[], []]
 
         self.selectedFeats[0].append(QLineEdit())
-        self.selectedFeats[0][0].setText('CP3;22')
+        self.selectedFeats[0][0].setText('CP3;8')
 
         self.btn_addPair = QPushButton("Add feature")
         self.btn_removePair = QPushButton("Remove feature")
-        self.btn_addPair.clicked.connect(lambda: self.btnAddPair(self.selectedFeats[0], self.qvFeatureLayouts[0]))
+        self.btn_addPair.clicked.connect(lambda: self.btnAddPair(self.selectedFeats[0], self.qvFeatureLayouts[0], None))
         self.btn_removePair.clicked.connect(lambda: self.btnRemovePair(self.selectedFeats[0], self.qvFeatureLayouts[0]))
         self.qvFeatureLayouts[0].addWidget(self.btn_addPair)
         self.qvFeatureLayouts[0].addWidget(self.btn_removePair)
         self.qvFeatureLayouts[0].addWidget(self.selectedFeats[0][0])
 
-        if self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+        if self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
             self.selectedFeats[1].append(QLineEdit())
-            self.selectedFeats[1][0].setText('CP3;22')
+            self.selectedFeats[1][0].setText('CP3;8')
 
             self.btn_addPair2 = QPushButton("Add feature")
             self.btn_removePair2 = QPushButton("Remove feature")
-            self.btn_addPair2.clicked.connect(lambda: self.btnAddPair(self.selectedFeats[1], self.qvFeatureLayouts[1]))
+            self.btn_addPair2.clicked.connect(lambda: self.btnAddPair(self.selectedFeats[1], self.qvFeatureLayouts[1], None))
             self.btn_removePair2.clicked.connect(lambda: self.btnRemovePair(self.selectedFeats[1], self.qvFeatureLayouts[1]))
             self.qvFeatureLayouts[1].addWidget(self.btn_addPair2)
             self.qvFeatureLayouts[1].addWidget(self.btn_removePair2)
@@ -651,13 +676,17 @@ class Dialog(QDialog):
             self.btn_r2map.setEnabled(myBool)
             self.btn_metric.setEnabled(myBool)
             self.btn_topo.setEnabled(myBool)
-        elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
             self.btn_r2map.setEnabled(myBool)
             self.btn_psd.setEnabled(myBool)
             self.btn_topo.setEnabled(myBool)
             self.btn_r2map2.setEnabled(myBool)
             self.btn_metric.setEnabled(myBool)
             self.btn_topo2.setEnabled(myBool)
+
+        if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+            self.btn_autoFeat.setEnabled(myBool)
 
         self.show()
 
@@ -709,7 +738,8 @@ class Dialog(QDialog):
             suffix1 = "-SPECTRUM"
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             suffix1 = "-CONNECT"
-        elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
             suffix1 = "-SPECTRUM"
             suffix2 = "-CONNECT"
         suffixFinal = suffix1
@@ -990,7 +1020,8 @@ class Dialog(QDialog):
            suffix = "-SPECTRUM"
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             suffix = "-CONNECT"
-        elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
             suffix = "-SPECTRUM-CONNECT"
 
         analysisFiles = []
@@ -1003,13 +1034,17 @@ class Dialog(QDialog):
         self.enableVizGui(False)
 
         # Instantiate the thread...
+        # TODO : refactor using automatic feature selection possibility
         if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
-            self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq)
+            self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq, None, None)
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
-            self.loadFilesForVizThread = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features, self.samplingFreq)
+            self.loadFilesForVizThread = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features, self.samplingFreq, None, None)
         elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
-            self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq)
-            self.loadFilesForVizThread2 = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features2, self.samplingFreq)
+            self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq, None, None)
+            self.loadFilesForVizThread2 = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features2, self.samplingFreq, None, None)
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+            self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq, self.autoFeatChannelList, self.autoFeatFreqRange)
+            self.loadFilesForVizThread2 = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features2, self.samplingFreq, self.autoFeatChannelList, self.autoFeatFreqRange)
 
         # create progress bar window...
         self.progressBarViz = ProgressBar("Feature Visualization", "Loading data from Csv files...",
@@ -1069,7 +1104,8 @@ class Dialog(QDialog):
             myMsgBox("Please select a set of files for training")
             return
 
-        if not self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+        if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             # case with 1 set of features...
             if len(self.selectedFeats[0]) < 1:
                 myMsgBox("Please use at least one set of features!")
@@ -1107,7 +1143,8 @@ class Dialog(QDialog):
         # ex: if feats(connectivity) is empty, then we use the "powerspectrum" template.
         trainingParamDict = self.parameterDict.copy()
         listFeats = []
-        if self.parameterDict["pipelineType"] != settings.optionKeys[3]:
+        if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             for featWidget in self.selectedFeats[0]:
                 listFeats.append(featWidget.text())
             self.currentAttempt["Features"] = {self.parameterDict["pipelineType"]: listFeats}
@@ -1314,40 +1351,6 @@ class Dialog(QDialog):
                        features.fres, int(self.userFmin.text()), int(self.userFmax.text()),
                        self.colormapScale.isChecked(), title)
 
-    def btnFeature_to_select(self, features, title):
-
-        self.btnRemovePair(self.selectedFeats[0], self.qvFeatureLayouts[0])
-        self.btnRemovePair(self.selectedFeats[1], self.qvFeatureLayouts[1])
-
-        elecs = self.Features_PSD_selected[0]
-        freqs = self.Features_PSD_selected[1]
-        for index in range(len(elecs)):
-            self.btnAddPair_BCINET(self.selectedFeats[0], self.qvFeatureLayouts[0],[elecs[index],freqs[index]])
-
-        elecs = self.Features_NS_selected[0]
-        freqs = self.Features_NS_selected[1]
-        for index in range(len(elecs)):
-            self.btnAddPair_BCINET(self.selectedFeats[1], self.qvFeatureLayouts[1],[elecs[index],freqs[index]])
-
-
-
-    def btnAddPair_BCINET(self, selectedFeats, layout,Feature):
-        if len(selectedFeats) == 0:
-            # Remove "no feature" label
-            item = layout.itemAt(3)
-            widget = item.widget()
-            widget.deleteLater()
-        # default text
-        featText = Feature[0]+';'+str(Feature[1])
-        if len(selectedFeats) >= 1:
-            # if a feature window already exists, copy its text
-            featText = selectedFeats[-1].text()
-        # add new qlineedit
-        selectedFeats.append(QLineEdit())
-        selectedFeats[-1].setText(featText)
-        layout.addWidget(selectedFeats[-1])
-
-
     def btnW2(self, features, title):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             plot_stats(features.Wsigned,
@@ -1498,17 +1501,17 @@ class Dialog(QDialog):
                                     self.parameterDict["AcquisitionParams"]["Class1"],
                                     self.parameterDict["AcquisitionParams"]["Class2"], title)
 
-    def btnAddPair(self, selectedFeats, layout):
+    def btnAddPair(self, selectedFeats, layout, featText):
         if len(selectedFeats) == 0:
             # Remove "no feature" label
             item = layout.itemAt(3)
             widget = item.widget()
             widget.deleteLater()
+
+        if not featText:
         # default text
-        featText = "CP3;22"
-        if len(selectedFeats) >= 1:
-            # if a feature window already exists, copy its text
-            featText = selectedFeats[-1].text()
+            featText = "CP3;8"
+
         # add new qlineedit
         selectedFeats.append(QLineEdit())
         selectedFeats[-1].setText(featText)
@@ -1523,6 +1526,53 @@ class Dialog(QDialog):
                 noFeatLabel = QLabel("No feature")
                 noFeatLabel.setAlignment(QtCore.Qt.AlignCenter)
                 layout.addWidget(noFeatLabel)
+
+    def btnAutoFeat(self, resultsPSD, resultsNS):
+
+        if len(resultsPSD.autoselected) < 1 \
+                or len(resultsNS.autoselected) < 1:
+            myMsgBox("Error in automatic selection of best features")  # Todo: make more secure & explicit
+            return
+
+        # Remove all pairs of features in both columns
+        # TODO : refactor. A bit dirty...
+
+        if len(self.selectedFeats[0]) == 0:
+            # Remove "no feature" label
+            item = self.qvFeatureLayouts[0].itemAt(3)
+            widget = item.widget()
+            widget.deleteLater()
+        if len(self.selectedFeats[1]) == 0:
+            # Remove "no feature" label
+            item = self.qvFeatureLayouts[1].itemAt(3)
+            widget = item.widget()
+            widget.deleteLater()
+
+        while len(self.selectedFeats[0]) > 0:
+            result = self.qvFeatureLayouts[0].getWidgetPosition(self.selectedFeats[0][-1])
+            self.qvFeatureLayouts[0].removeRow(result[0])
+            self.selectedFeats[0].pop()
+        if len(self.selectedFeats[0]) == 0:
+            noFeatLabel0 = QLabel("No feature")
+            noFeatLabel0.setAlignment(QtCore.Qt.AlignCenter)
+            self.qvFeatureLayouts[0].addWidget(noFeatLabel0)
+        while len(self.selectedFeats[1]) > 0:
+            result = self.qvFeatureLayouts[1].getWidgetPosition(self.selectedFeats[1][-1])
+            self.qvFeatureLayouts[1].removeRow(result[0])
+            self.selectedFeats[1].pop()
+        if len(self.selectedFeats[1]) == 0:
+            noFeatLabel1 = QLabel("No feature")
+            noFeatLabel1.setAlignment(QtCore.Qt.AlignCenter)
+            self.qvFeatureLayouts[1].addWidget(noFeatLabel1)
+
+        # get auto-selected features and add them to the interface
+        for featPair in resultsPSD.autoselected:
+            featText = str(featPair[0]) + ';' + str(featPair[1])
+            self.btnAddPair(self.selectedFeats[0], self.qvFeatureLayouts[0], featText)
+
+        for featPair in resultsNS.autoselected:
+            featText = str(featPair[0]) + ';' + str(featPair[1])
+            self.btnAddPair(self.selectedFeats[1], self.qvFeatureLayouts[1], featText)
 
     def browseForDesigner(self):
         # ----------
@@ -1558,6 +1608,49 @@ class Dialog(QDialog):
 
         return
 
+    def autoFeatSetChannelSubselection(self):
+        # ----------
+        # Allow user to select a list of channels in which the "automatic selection of feature"
+        # can take place
+        # ----------
+        displayed = ";".join(self.autoFeatChannelList)
+        text, ok = QInputDialog.getText(self, 'Channel list for automatic feature selection', 'Enter a list of channels separated with \";\"', text=displayed)
+
+        if ok:
+            # Check if it's all alphanumeric, except for ";"...
+            for c in text:
+                if not c.isalnum():
+                    if c != ";":
+                        myMsgBox("Please respect formatting: channels as alphanumeric characters, separated with \";\"")
+                        return
+
+            self.autoFeatChannelList = text.split(";")
+
+        return
+
+    def autoFeatSetFreqRange(self):
+        # ----------
+        # Allow user to select a range of frequencies in which the "automatic selection of feature"
+        # can take place
+        # ----------
+        text, ok = QInputDialog.getText(self, 'Frequency range for automatic feature selection', 'Enter two numbers separated with \":\"', text=self.autoFeatFreqRange)
+        if ok:
+            # Check if it's all alphanumeric, except for ":"...
+            for c in text:
+                if not c.isalnum():
+                    if c != ":":
+                        myMsgBox("Please respect formatting: two numbers separated with \":\"")
+                        return
+
+            range = text.split(":")
+            if len(range) != 2:
+                myMsgBox("Please respect formatting: two numbers separated with \":\"")
+                return
+
+            self.autoFeatFreqRange = text
+
+        return
+
     def checkExistenceExtractFiles(self, file):
         extractFolder = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "extract")
         if not os.path.exists(extractFolder):
@@ -1566,7 +1659,8 @@ class Dialog(QDialog):
         class1 = self.parameterDict["AcquisitionParams"]["Class1"]
         class2 = self.parameterDict["AcquisitionParams"]["Class2"]
         if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
-            or self.parameterDict["pipelineType"] == settings.optionKeys[3] :
+            or self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+            or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
             # PSD
             metric = "SPECTRUM"
             extractFile1 = str(os.path.splitext(file)[0] + "-" + metric + "-" + class1 + ".csv")
@@ -1577,7 +1671,8 @@ class Dialog(QDialog):
                 return False
 
         if self.parameterDict["pipelineType"] == settings.optionKeys[2] \
-            or self.parameterDict["pipelineType"] == settings.optionKeys[3] :
+            or self.parameterDict["pipelineType"] == settings.optionKeys[3]\
+            or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
             # CONNECT
             metric = "CONNECT"
             extractFile1 = str(os.path.splitext(file)[0] + "-" + metric + "-" + class1 + ".csv")
@@ -1696,7 +1791,8 @@ class Dialog(QDialog):
             pipelineTextToFind = settings.optionKeys[1]
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             pipelineTextToFind = settings.optionKeys[2]
-        elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
             pipelineTextToFind = settings.optionKeys[1]
             pipelineTextToFind2 = settings.optionKeys[2]
 
@@ -1709,7 +1805,8 @@ class Dialog(QDialog):
                 listFeat.append(textInfo)
 
             # special case: "Mixed" pipeline: 2 lists to extract
-            if self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+            if self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                    or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
                 if pipelineTextToFind2 in textInfo:
                     textInfo = textInfo.removeprefix(str(pipelineTextToFind2 + " "))
                     listFeat.append(textInfo)

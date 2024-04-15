@@ -178,7 +178,7 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
     info2 = Signal(str)
     over = Signal(bool, str)
 
-    def __init__(self, analysisFiles, workingFolder, parameterDict, Features, sampFreq, parent=None):
+    def __init__(self, analysisFiles, workingFolder, parameterDict, Features, sampFreq, autoFeatChannelList, autoFeatFreqRange, parent=None):
 
         super().__init__(parent)
         self.stop = False
@@ -188,6 +188,9 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         self.extractDict = parameterDict["Sessions"][parameterDict["currentSessionId"]]["ExtractionParams"].copy()
         self.Features = Features
         self.samplingFreq = sampFreq
+        self.autoFeatChannelList = autoFeatChannelList
+        self.autoFeatFreqRange = autoFeatFreqRange
+        self.useBaselineFiles = False
 
         self.dataNp1 = []
         self.dataNp2 = []
@@ -201,6 +204,8 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         listFreqBins = []
         idxFile = 0
 
+        self.useBaselineFiles = self.parameterDict["pipelineType"] == optionKeys[1]
+
         for selectedFilesForViz in self.analysisFiles:
             idxFile += 1
             pipelineLabel = "SPECTRUM"
@@ -210,15 +215,16 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
 
             path1 = os.path.join(self.workingFolder, str(selectedBasename + "-" + pipelineLabel + "-" + class1label + ".csv"))
             path2 = os.path.join(self. workingFolder, str(selectedBasename + "-" + pipelineLabel + "-" + class2label + ".csv"))
-            path1baseline = os.path.join(self.workingFolder, str(selectedBasename + "-" + pipelineLabel + "-" + class1label + "-BASELINE.csv"))
-            path2baseline = os.path.join(self.workingFolder, str(selectedBasename + "-" + pipelineLabel + "-" + class2label + "-BASELINE.csv"))
-
             self.info2.emit(str("Loading " + pipelineLabel + " Data for file " + str(idxFile) + " : " + selectedFilesForViz))
             [header1, data1] = load_csv_np(path1)
             [header2, data2] = load_csv_np(path2)
-            self.info2.emit(str("Loading " + pipelineLabel + " Baseline Data for file " + str(idxFile) + " : " + selectedFilesForViz))
-            [header1baseline, data1baseline] = load_csv_np(path1baseline)
-            [header2baseline, data2baseline] = load_csv_np(path2baseline)
+
+            if self.useBaselineFiles:
+                path1baseline = os.path.join(self.workingFolder, str(selectedBasename + "-" + pipelineLabel + "-" + class1label + "-BASELINE.csv"))
+                path2baseline = os.path.join(self.workingFolder, str(selectedBasename + "-" + pipelineLabel + "-" + class2label + "-BASELINE.csv"))
+                self.info2.emit(str("Loading " + pipelineLabel + " Baseline Data for file " + str(idxFile) + " : " + selectedFilesForViz))
+                [header1baseline, data1baseline] = load_csv_np(path1baseline)
+                [header2baseline, data2baseline] = load_csv_np(path2baseline)
 
             # Sampling frequency
             # Infos in the columns header of the CSVs in format "Time:32x251:500"
@@ -257,8 +263,9 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
 
             self.dataNp1.append(data1)
             self.dataNp2.append(data2)
-            self.dataNp1baseline.append(data1baseline)
-            self.dataNp2baseline.append(data2baseline)
+            if self.useBaselineFiles:
+                self.dataNp1baseline.append(data1baseline)
+                self.dataNp2baseline.append(data2baseline)
             self.info.emit(True)
 
         # Check if all files have the same sampling freq and electrode list. If not, for now, we don't process further
@@ -317,31 +324,37 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
                 Extract_CSV_Data(self.dataNp1[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
             power_cond2, timefreq_cond2 = \
                 Extract_CSV_Data(self.dataNp2[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
-            power_cond1_baseline, timefreq_cond1_baseline = \
-                Extract_CSV_Data(self.dataNp1baseline[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
-            power_cond2_baseline, timefreq_cond2_baseline = \
-                Extract_CSV_Data(self.dataNp2baseline[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
+            if self.useBaselineFiles:
+                power_cond1_baseline, timefreq_cond1_baseline = \
+                    Extract_CSV_Data(self.dataNp1baseline[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
+                power_cond2_baseline, timefreq_cond2_baseline = \
+                    Extract_CSV_Data(self.dataNp2baseline[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
 
             if power_cond1_final is None:
                 power_cond1_final = power_cond1
                 power_cond2_final = power_cond2
-                power_cond1_baseline_final = power_cond1_baseline
-                power_cond2_baseline_final = power_cond2_baseline
                 timefreq_cond1_final = timefreq_cond1
                 timefreq_cond2_final = timefreq_cond2
-                timefreq_cond1_baseline_final = timefreq_cond1_baseline
-                timefreq_cond2_baseline_final = timefreq_cond2_baseline
+                if self.useBaselineFiles:
+                    power_cond1_baseline_final = power_cond1_baseline
+                    power_cond2_baseline_final = power_cond2_baseline
+                    timefreq_cond1_baseline_final = timefreq_cond1_baseline
+                    timefreq_cond2_baseline_final = timefreq_cond2_baseline
             else:
                 power_cond1_final = np.concatenate((power_cond1_final, power_cond1))
                 power_cond2_final = np.concatenate((power_cond2_final, power_cond2))
-                power_cond1_baseline_final = np.concatenate((power_cond1_baseline_final, power_cond1_baseline))
-                power_cond2_baseline_final = np.concatenate((power_cond2_baseline_final, power_cond2_baseline))
                 timefreq_cond1_final = np.concatenate((timefreq_cond1_final, timefreq_cond1))
                 timefreq_cond2_final = np.concatenate((timefreq_cond2_final, timefreq_cond2))
-                timefreq_cond1_baseline_final = np.concatenate((timefreq_cond1_baseline_final, timefreq_cond1_baseline))
-                timefreq_cond2_baseline_final = np.concatenate((timefreq_cond2_baseline_final, timefreq_cond2_baseline))
+                if self.useBaselineFiles:
+                    power_cond1_baseline_final = np.concatenate((power_cond1_baseline_final, power_cond1_baseline))
+                    power_cond2_baseline_final = np.concatenate((power_cond2_baseline_final, power_cond2_baseline))
+                    timefreq_cond1_baseline_final = np.concatenate((timefreq_cond1_baseline_final, timefreq_cond1_baseline))
+                    timefreq_cond2_baseline_final = np.concatenate((timefreq_cond2_baseline_final, timefreq_cond2_baseline))
 
         self.info2.emit("Computing statistics")
+
+        print(np.shape(power_cond1_final))
+        print(np.shape(power_cond2_final))
 
         trialLengthSec = float(self.parameterDict["AcquisitionParams"]["TrialLength"])
         totalTrials = len(self.dataNp1) * trials
@@ -381,25 +394,38 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
                 = Reorder_custom_plus(Rsigned, Wsquare, Wpvalues, self.parameterDict["customMontagePath"], electrodeList, power_cond1_final, power_cond2_final,
                                    timefreq_cond1_final, timefreq_cond2_final)
 
-        electrode_Cortex_1 = ['C5', 'C3', 'C1', 'CP5', 'CP3', 'CP1', 'FC5', 'FC3', 'FC5', 'Cz', 'CPz', 'FCz', 'C6',
-                              'C4', 'C2', 'CP6', 'CP4', 'CP2', 'FC6', 'FC4', 'FC2']
-        Index_electrode_1 = []
-        for i in range(len(electrodes_final)):
-            for j in electrode_Cortex_1:
-                if electrodes_final[i] == j:
-                    Index_electrode_1.append(i)
-        Rsigned_reduced = Rsigned_2[Index_electrode_1, 7:35]
-        Max_per_electrode = Rsigned_reduced.max(1)
-        indices_max = np.argpartition(Max_per_electrode, -3)[-3:]
-        sorted_indices = indices_max[np.argsort(Max_per_electrode[indices_max])]
-        Freq_associated = []
-        for index_ in sorted_indices:
-            frequ_ = Rsigned_reduced[index_, :]
-            index_freq = 7 + np.argmax(frequ_)
-            Freq_associated.append(index_freq)
+        self.Features.autoselected = None
 
-        Final_Features_selected = [electrodes_final[Index_electrode_1[sorted_indices]], Freq_associated]
-        self.Features_PSD_selected = Final_Features_selected
+        if self.autoFeatFreqRange and self.autoFeatChannelList:
+            # Automatic feature selection : find best R² among predetermined list of channels and in
+            # (so far hardcoded) range of frequencies
+            # TODO : make frequencies NOT hard coded! (featureExtractionInterface.py)
+            autoSelectedFeats = []
+            Index_electrode = []
+            print("Sublist of channels: " + str(self.autoFeatChannelList))
+            print("Frequency range: " + str(self.autoFeatFreqRange))
+            for chan in self.autoFeatChannelList:
+                Index_electrode.append(electrodes_final.index(chan))
+            print("Index_electrode:  " + str(Index_electrode))
+
+            freqMin = int(self.autoFeatFreqRange.split(":")[0])
+            freqMax = int(self.autoFeatFreqRange.split(":")[1])
+            # freqRange = [i for i in range(freqMin, freqMax+1)]
+
+            Rsigned_reduced = Rsigned_2[Index_electrode, freqMin:freqMax]
+            Max_per_electrode = Rsigned_reduced.max(1)
+            indices_max = list(reversed(np.argsort(Max_per_electrode)))[0:3]  # indices of 3 max values within the scope of Index_electrodes
+            indices_max_final = [Index_electrode[i] for i in indices_max]
+
+            for idx in indices_max_final:
+                r2Vals = Rsigned_2[idx, freqMin:freqMax]
+                idxfreqMax = 7 + np.argmax(r2Vals)
+                autoSelectedFeats.append((electrodes_final[idx], idxfreqMax))
+
+            print(autoSelectedFeats)
+
+        # Fill result structure...
+        self.Features.autoselected = autoSelectedFeats
         self.Features.electrodes_orig = electrodeList
         self.Features.power_cond2 = power_cond2_2
         self.Features.power_cond1 = power_cond1_2
@@ -413,10 +439,11 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         self.Features.Rsigned = Rsigned_2
         self.Features.Wsigned = Wsquare_2
 
-        self.Features.average_baseline_cond1 = np.mean(power_cond1_baseline_final, axis=0)
-        self.Features.std_baseline_cond1 = np.std(power_cond1_baseline_final, axis=0)
-        self.Features.average_baseline_cond2 = np.mean(power_cond2_baseline_final, axis=0)
-        self.Features.std_baseline_cond2 = np.std(power_cond2_baseline_final, axis=0)
+        if self.useBaselineFiles:
+            self.Features.average_baseline_cond1 = np.mean(power_cond1_baseline_final, axis=0)
+            self.Features.std_baseline_cond1 = np.std(power_cond1_baseline_final, axis=0)
+            self.Features.average_baseline_cond2 = np.mean(power_cond2_baseline_final, axis=0)
+            self.Features.std_baseline_cond2 = np.std(power_cond2_baseline_final, axis=0)
 
         self.Features.samplingFreq = self.samplingFreq
 
@@ -434,7 +461,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
     info2 = Signal(str)
     over = Signal(bool, str)
 
-    def __init__(self, analysisFiles, workingFolder, metaFolder, parameterDict, Features, sampFreq, parent=None):
+    def __init__(self, analysisFiles, workingFolder, metaFolder, parameterDict, Features, sampFreq, autoFeatChannelList, autoFeatFreqRange, parent=None):
 
         super().__init__(parent)
         self.stop = False
@@ -445,6 +472,8 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         self.extractDict = parameterDict["Sessions"][parameterDict["currentSessionId"]]["ExtractionParams"].copy()
         self.Features = Features
         self.samplingFreq = sampFreq
+        self.autoFeatChannelList = autoFeatChannelList
+        self.autoFeatFreqRange = autoFeatFreqRange
 
         self.dataNp1 = []
         self.dataNp2 = []
@@ -616,26 +645,39 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
                                       electrodeList, connect_cond1_final, connect_cond2_final,
                                       timefreq_cond1_final, timefreq_cond2_final)
 
-        electrode_Cortex_1 = ['C5', 'C3', 'C1', 'CP5', 'CP3', 'CP1', 'FC5', 'FC3', 'FC5', 'Cz', 'CPz', 'FCz', 'C6',
-                              'C4', 'C2', 'CP6', 'CP4', 'CP2', 'FC6', 'FC4', 'FC2']
-        Index_electrode_1 = []
-        for i in range(len(electrodes_final)):
-            for j in electrode_Cortex_1:
-                if electrodes_final[i] == j:
-                    Index_electrode_1.append(i)
-        Rsigned_reduced = Rsigned_2[Index_electrode_1, 7:35]
-        Max_per_electrode = Rsigned_reduced.max(1)
-        indices_max = np.argpartition(Max_per_electrode, -3)[-3:]
-        sorted_indices = indices_max[np.argsort(Max_per_electrode[indices_max])]
-        Freq_associated = []
-        for index_ in sorted_indices:
-            frequ_ = Rsigned_reduced[index_, :]
-            index_freq = 7 + np.argmax(frequ_)
-            Freq_associated.append(index_freq)
+        self.Features.autoselected = None
 
-        Final_Features_selected = [electrodes_final[Index_electrode_1[sorted_indices]], Freq_associated]
+        if self.autoFeatFreqRange and self.autoFeatChannelList:
+            # Automatic feature selection : find best R² among predetermined list of channels and in
+            # (so far hardcoded) range of frequencies
+            # TODO : make frequencies NOT hard coded! (featureExtractionInterface.py)
+            autoSelectedFeats = []
+            Index_electrode = []
+            print("Sublist of channels: " + str(self.autoFeatChannelList))
+            print("Frequency range: " + str(self.autoFeatFreqRange))
+            for chan in self.autoFeatChannelList:
+                Index_electrode.append(electrodes_final.index(chan))
+            print("Index_electrode:  " + str(Index_electrode))
+
+            freqMin = int(self.autoFeatFreqRange.split(":")[0])
+            freqMax = int(self.autoFeatFreqRange.split(":")[1])
+            # freqRange = [i for i in range(freqMin, freqMax + 1)]
+
+            Rsigned_reduced = Rsigned_2[Index_electrode, freqMin:freqMax]
+            Max_per_electrode = Rsigned_reduced.max(1)
+            indices_max = list(reversed(np.argsort(Max_per_electrode)))[0:3]  # indices of 3 max values within the scope of Index_electrodes
+            indices_max_final = [Index_electrode[i] for i in indices_max]
+
+            for idx in indices_max_final:
+                r2Vals = Rsigned_2[idx, freqMin:freqMax]
+                idxfreqMax = 7 + np.argmax(r2Vals)
+                autoSelectedFeats.append((electrodes_final[idx], idxfreqMax))
+
+            print(autoSelectedFeats)
+
+
         # Fill Features struct...
-        self.Features_NS_selected= Final_Features_selected
+        self.Features.autoselected = autoSelectedFeats
         self.Features.electrodes_orig = electrodeList
         self.Features.electrodes_final = electrodes_final
         self.Features.power_cond1 = connect_cond1_2

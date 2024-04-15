@@ -6,19 +6,22 @@ global optionKeys
 optionKeys = ["",
               "PowSpectrumGraz",
               "Connectivity",
-              "Psd+Connect"]
+              "Psd+Connect",
+              "BCINET-AutoFeatures"]
 
 global optionsComboText
 optionsComboText = {optionKeys[0]: "",
                     optionKeys[1]: "GrazBCI - Power Spectrum Features (2 classes)",
                     optionKeys[2]: "GrazBCI - Connectivity Features (2 classes)",
-                    optionKeys[3]: "GrazBCI - Pow.Spect. + Connectivity Features (2 classes)"}
+                    optionKeys[3]: "GrazBCI - Pow.Spect. + Connectivity Features (2 classes)",
+                    optionKeys[4]: "BCINET - Pow.Spect. + Connectivity (1 class, auto selection)"}
 
 global optionsTemplatesDir
 optionsTemplatesDir = {optionKeys[0]: None,
                        optionKeys[1]: "templates-spectralpower",
                        optionKeys[2]: "templates-connectivity",
-                       optionKeys[3]: "templates-mixed"}
+                       optionKeys[3]: "templates-mixed",
+                       optionKeys[4]: "templates-mixed-1-class"}
 
 global templateScenFilenames
 templateScenFilenames = ["sc1-monitor-acq.xml",
@@ -48,11 +51,12 @@ pipelineAcqSettings = { "TrialNb": 20,
                         "Class2": "REST",  # OV : RIGHT
                         "Baseline": 20,
                         "TrialWait": 3,
+                        "TrialDelay": 1,
                         "TrialLength": 3,
                         "EndTrialMin": 2.5,
                         "EndTrialMax": 3.5,
                         "FeedbackLength": 3,
-                       }
+                        }
 
 global pipelineExtractSettings
 pipelineExtractSettings = {optionKeys[0]: None,
@@ -73,7 +77,7 @@ pipelineExtractSettings = {optionKeys[0]: None,
                            optionKeys[2]:
                                {"StimulationEpoch": "3",
                                 "StimulationDelay": "1",
-                                "ConnectivityMetric": connectMetrics[0],
+                                "ConnectivityMetric": connectMetrics[1],
                                 "ConnectivityLength": "0.25",
                                 "ConnectivityOverlap": "36",
                                 # "AutoRegressiveOrder": "12",
@@ -88,7 +92,21 @@ pipelineExtractSettings = {optionKeys[0]: None,
                                 "StimulationDelay": "1",
                                 "TimeWindowLength": "0.25",
                                 "TimeWindowShift": "0.161",
-                                "ConnectivityMetric": connectMetrics[0],
+                                "ConnectivityMetric": connectMetrics[1],
+                                "ConnectivityLength": "0.25",
+                                "ConnectivityOverlap": "36",
+                                # "AutoRegressiveOrder": "12",
+                                "AutoRegressiveOrderTime": "0.038",
+                                # "PsdSize": "256",
+                                "FreqRes": "1",
+                                },
+
+                           optionKeys[4]:
+                               {"StimulationEpoch": "3",
+                                "StimulationDelay": "1",
+                                "TimeWindowLength": "0.25",
+                                "TimeWindowShift": "0.161",
+                                "ConnectivityMetric": connectMetrics[1],
                                 "ConnectivityLength": "0.25",
                                 "ConnectivityOverlap": "36",
                                 # "AutoRegressiveOrder": "12",
@@ -96,7 +114,6 @@ pipelineExtractSettings = {optionKeys[0]: None,
                                 # "PsdSize": "256",
                                 "FreqRes": "1",
                                 }
-
                            }
 
 global paramIdText
@@ -105,6 +122,7 @@ paramIdText = {"TrialNb": "Nb Trials per class",
                "Class2": "Class / Stimulation 2",
                "Baseline": "\"Get Set\" time (s)",
                "TrialWait": "Pre-Stimulus time (s)",
+               "TrialDelay": "Offset/Delay between stimulus and actual trial (s)",
                "TrialLength": "Trial duration (s)",
                "EndTrialMin": "Inter-trial interval min (s)",
                "EndTrialMax": "Inter-trial interval max (s)",
