@@ -386,7 +386,7 @@ class Dialog(QDialog):
             titleTimeFreq = "Time-Frequency ERD/ERS analysis"
             titlePsd = "Power Spectrum "
             titleTopo = "Topography of power spectra, for freq. "
-            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2))
+            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2, False))
             self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq(self.Features, titleTimeFreq))
             self.btn_psd.clicked.connect(lambda: self.btnPsd(self.Features, titlePsd))
             self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo))
@@ -408,7 +408,7 @@ class Dialog(QDialog):
             titleTimeFreq = "Time-Frequency ERD/ERS analysis"
             titleMetric = "Connectivity-based node strength, "
             titleTopo = "Topography of node strengths, for freq. "
-            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2))
+            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2, False))
             self.btn_metric.clicked.connect(lambda: self.btnMetric(self.Features, titleMetric))
             self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreqConnect(self.Features, titleTimeFreq))
             self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo))
@@ -438,9 +438,13 @@ class Dialog(QDialog):
             titleTimeFreq = "Time-Frequency ERD/ERS analysis"
             titlePsd = "Power Spectrum "
             titleTopo = "Topography of power spectra, for freq. "
-            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2))
+            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2, False))
             self.btn_psd.clicked.connect(lambda: self.btnPsd(self.Features, titlePsd))
             self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo))
+            if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+                self.btn_r2mapAutoFeat = QPushButton("R² map (sub-select.)")
+                self.btn_r2mapAutoFeat.clicked.connect(lambda: self.btnR2(self.Features, titleR2, True))
+                self.parallelVizLayouts[0].addWidget(self.btn_r2mapAutoFeat)
             self.parallelVizLayouts[0].addWidget(self.btn_r2map)
             self.parallelVizLayouts[0].addWidget(self.btn_psd)
             self.parallelVizLayouts[0].addWidget(self.btn_topo)
@@ -452,9 +456,13 @@ class Dialog(QDialog):
             titleTimeFreq_c = "Time-Frequency ERD/ERS analysis"
             titleMetric_c = "Connectivity-based Node Strength, "
             titleTopo_c = "Topography of node strengths, for freq. "
-            self.btn_r2map2.clicked.connect(lambda: self.btnR2(self.Features2, titleR2_c))
+            self.btn_r2map2.clicked.connect(lambda: self.btnR2(self.Features2, titleR2_c, False))
             self.btn_metric.clicked.connect(lambda: self.btnMetric(self.Features2, titleMetric_c))
             self.btn_topo2.clicked.connect(lambda: self.btnTopo(self.Features2, titleTopo_c))
+            if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+                self.btn_r2mapAutoFeat2 = QPushButton("R² map (sub-select.)")
+                self.btn_r2mapAutoFeat2.clicked.connect(lambda: self.btnR2(self.Features2, titleR2, True))
+                self.parallelVizLayouts[1].addWidget(self.btn_r2mapAutoFeat2)
             self.parallelVizLayouts[1].addWidget(self.btn_r2map2)
             self.parallelVizLayouts[1].addWidget(self.btn_metric)
             self.parallelVizLayouts[1].addWidget(self.btn_topo2)
@@ -684,6 +692,9 @@ class Dialog(QDialog):
             self.btn_r2map2.setEnabled(myBool)
             self.btn_metric.setEnabled(myBool)
             self.btn_topo2.setEnabled(myBool)
+            if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+                self.btn_r2mapAutoFeat.setEnabled(myBool)
+                self.btn_r2mapAutoFeat2.setEnabled(myBool)
 
         if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
             self.btn_autoFeat.setEnabled(myBool)
@@ -1343,13 +1354,28 @@ class Dialog(QDialog):
         print(newDict)
         return newDict
 
-    def btnR2(self, features, title):
+    def btnR2(self, features, title, useSubselection):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
-            plot_stats(features.Rsigned,
-                       features.freqs_array,
-                       features.electrodes_final,
-                       features.fres, int(self.userFmin.text()), int(self.userFmax.text()),
-                       self.colormapScale.isChecked(), title)
+
+            if not useSubselection:
+                plot_stats(features.Rsigned,
+                           features.freqs_array,
+                           features.electrodes_final,
+                           features.fres, int(self.userFmin.text()), int(self.userFmax.text()),
+                           self.colormapScale.isChecked(), title)
+            else:
+                subR2 = []
+                subElectrodes = []
+                freqMin = int(self.autoFeatFreqRange.split(":")[0])
+                freqMax = int(self.autoFeatFreqRange.split(":")[1])
+                freqRange = np.arange(freqMin, freqMax+1, features.fres)
+                for chan in self.autoFeatChannelList:
+                    subR2.append(features.Rsigned[features.electrodes_final.index(chan), freqMin:(freqMax+1)])
+                    subElectrodes.append(chan)
+
+                subR2 = np.array(subR2)
+                plot_stats(subR2, freqRange, subElectrodes, features.fres, freqMin, freqMax,
+                           self.colormapScale.isChecked(), title)
 
     def btnW2(self, features, title):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
