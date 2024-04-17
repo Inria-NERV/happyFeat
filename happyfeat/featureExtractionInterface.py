@@ -1047,15 +1047,15 @@ class Dialog(QDialog):
         # Instantiate the thread...
         # TODO : refactor using automatic feature selection possibility
         if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
-            self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq, None, None)
+            self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq)
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
-            self.loadFilesForVizThread = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features, self.samplingFreq, None, None)
+            self.loadFilesForVizThread = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features, self.samplingFreq)
         elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
-            self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq, None, None)
-            self.loadFilesForVizThread2 = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features2, self.samplingFreq, None, None)
+            self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq)
+            self.loadFilesForVizThread2 = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features2, self.samplingFreq)
         elif self.parameterDict["pipelineType"] == settings.optionKeys[4]:
-            self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq, self.autoFeatChannelList, self.autoFeatFreqRange)
-            self.loadFilesForVizThread2 = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features2, self.samplingFreq, self.autoFeatChannelList, self.autoFeatFreqRange)
+            self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq)
+            self.loadFilesForVizThread2 = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features2, self.samplingFreq)
 
         # create progress bar window...
         self.progressBarViz = ProgressBar("Feature Visualization", "Loading data from Csv files...",
@@ -1555,10 +1555,61 @@ class Dialog(QDialog):
 
     def btnAutoFeat(self, resultsPSD, resultsNS):
 
-        if len(resultsPSD.autoselected) < 1 \
-                or len(resultsNS.autoselected) < 1:
-            myMsgBox("Error in automatic selection of best features")  # Todo: make more secure & explicit
+        # Automatic feature selection : find best R² among
+        # predetermined list of channels and in range of frequencies
+
+        # Note: if dual mode, we assume the sampling freq,
+        # list of electrodes, etc. are the same for PSD & NS cases
+
+        if not resultsPSD and not resultsNS:
+            myMsgBox("What are you doing???")
             return
+
+        resultsPSD.autoselected = None
+        resultsNS.autoselected = None
+
+        # If Freq range &/or Channel list are empty, use full range
+        if self.autoFeatFreqRange == "":
+            if resultsPSD:
+                self.autoFeatFreqRange = "1:" + str(int(resultsPSD.samplingFreq/2+1))
+            else:
+                self.autoFeatFreqRange = "1:" + str(int(resultsNS.samplingFreq/2+1))
+        if self.autoFeatChannelList == []:
+            if resultsPSD:
+                self.autoFeatChannelList = resultsPSD.electrodes_final
+            else:
+                self.autoFeatChannelList = resultsNS.electrodes_final
+
+        print("AutoFeat: Sublist of channels: " + str(self.autoFeatChannelList))
+        print("AutoFeat: Frequency range: " + str(self.autoFeatFreqRange))
+
+        Index_electrode = []
+        for chan in self.autoFeatChannelList:
+            Index_electrode.append(resultsPSD.electrodes_final.index(chan))
+        print("Index_electrode:  " + str(Index_electrode))
+
+        freqMin = int(self.autoFeatFreqRange.split(":")[0])
+        freqMax = int(self.autoFeatFreqRange.split(":")[1])
+        # freqRange = [i for i in range(freqMin, freqMax+1)]
+
+        for result in [resultsPSD, resultsNS]:
+            if result:
+                result.autoselected = []
+                Rsigned_reduced = result.Rsigned[Index_electrode, freqMin:freqMax]
+                Max_per_electrode = Rsigned_reduced.max(1)
+                indices_max = list(reversed(np.argsort(Max_per_electrode)))[0:3]  # indices of 3 max values within the scope of Index_electrodes
+                indices_max_final = [Index_electrode[i] for i in indices_max]
+
+                for idx in indices_max_final:
+                    r2Vals = result.Rsigned[idx, freqMin:freqMax]
+                    idxfreqMax = 7 + np.argmax(r2Vals)
+                    result.autoselected.append((result.electrodes_final[idx], idxfreqMax))
+
+                print("Best feats: " + str(result.autoselected))
+                if len(result.autoselected) < 1:
+                    myMsgBox("Error in automatic selection of best features")
+                    # Todo: make more secure & explicit
+                    return
 
         # Remove all pairs of features in both columns
         # TODO : refactor. A bit dirty...
@@ -1649,6 +1700,9 @@ class Dialog(QDialog):
                     if c != ";":
                         myMsgBox("Please respect formatting: channels as alphanumeric characters, separated with \";\"")
                         return
+            if text == "":
+                self.autoFeatChannelList = []
+                return
 
             self.autoFeatChannelList = text.split(";")
 
@@ -1667,6 +1721,10 @@ class Dialog(QDialog):
                     if c != ":":
                         myMsgBox("Please respect formatting: two numbers separated with \":\"")
                         return
+
+            if text == "":
+                self.autoFeatFreqRange = ""
+                return
 
             range = text.split(":")
             if len(range) != 2:

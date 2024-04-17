@@ -178,7 +178,7 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
     info2 = Signal(str)
     over = Signal(bool, str)
 
-    def __init__(self, analysisFiles, workingFolder, parameterDict, Features, sampFreq, autoFeatChannelList, autoFeatFreqRange, parent=None):
+    def __init__(self, analysisFiles, workingFolder, parameterDict, Features, sampFreq, parent=None):
 
         super().__init__(parent)
         self.stop = False
@@ -188,8 +188,6 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         self.extractDict = parameterDict["Sessions"][parameterDict["currentSessionId"]]["ExtractionParams"].copy()
         self.Features = Features
         self.samplingFreq = sampFreq
-        self.autoFeatChannelList = autoFeatChannelList
-        self.autoFeatFreqRange = autoFeatFreqRange
         self.useBaselineFiles = False
 
         self.dataNp1 = []
@@ -394,38 +392,7 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
                 = Reorder_custom_plus(Rsigned, Wsquare, Wpvalues, self.parameterDict["customMontagePath"], electrodeList, power_cond1_final, power_cond2_final,
                                    timefreq_cond1_final, timefreq_cond2_final)
 
-        self.Features.autoselected = None
-
-        if self.autoFeatFreqRange and self.autoFeatChannelList:
-            # Automatic feature selection : find best R² among predetermined list of channels and in
-            # (so far hardcoded) range of frequencies
-            # TODO : make frequencies NOT hard coded! (featureExtractionInterface.py)
-            autoSelectedFeats = []
-            Index_electrode = []
-            print("Sublist of channels: " + str(self.autoFeatChannelList))
-            print("Frequency range: " + str(self.autoFeatFreqRange))
-            for chan in self.autoFeatChannelList:
-                Index_electrode.append(electrodes_final.index(chan))
-            print("Index_electrode:  " + str(Index_electrode))
-
-            freqMin = int(self.autoFeatFreqRange.split(":")[0])
-            freqMax = int(self.autoFeatFreqRange.split(":")[1])
-            # freqRange = [i for i in range(freqMin, freqMax+1)]
-
-            Rsigned_reduced = Rsigned_2[Index_electrode, freqMin:freqMax]
-            Max_per_electrode = Rsigned_reduced.max(1)
-            indices_max = list(reversed(np.argsort(Max_per_electrode)))[0:3]  # indices of 3 max values within the scope of Index_electrodes
-            indices_max_final = [Index_electrode[i] for i in indices_max]
-
-            for idx in indices_max_final:
-                r2Vals = Rsigned_2[idx, freqMin:freqMax]
-                idxfreqMax = 7 + np.argmax(r2Vals)
-                autoSelectedFeats.append((electrodes_final[idx], idxfreqMax))
-
-            print(autoSelectedFeats)
-
         # Fill result structure...
-        self.Features.autoselected = autoSelectedFeats
         self.Features.electrodes_orig = electrodeList
         self.Features.power_cond2 = power_cond2_2
         self.Features.power_cond1 = power_cond1_2
@@ -461,7 +428,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
     info2 = Signal(str)
     over = Signal(bool, str)
 
-    def __init__(self, analysisFiles, workingFolder, metaFolder, parameterDict, Features, sampFreq, autoFeatChannelList, autoFeatFreqRange, parent=None):
+    def __init__(self, analysisFiles, workingFolder, metaFolder, parameterDict, Features, sampFreq, parent=None):
 
         super().__init__(parent)
         self.stop = False
@@ -472,8 +439,6 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         self.extractDict = parameterDict["Sessions"][parameterDict["currentSessionId"]]["ExtractionParams"].copy()
         self.Features = Features
         self.samplingFreq = sampFreq
-        self.autoFeatChannelList = autoFeatChannelList
-        self.autoFeatFreqRange = autoFeatFreqRange
 
         self.dataNp1 = []
         self.dataNp2 = []
@@ -645,39 +610,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
                                       electrodeList, connect_cond1_final, connect_cond2_final,
                                       timefreq_cond1_final, timefreq_cond2_final)
 
-        self.Features.autoselected = None
-
-        if self.autoFeatFreqRange and self.autoFeatChannelList:
-            # Automatic feature selection : find best R² among predetermined list of channels and in
-            # (so far hardcoded) range of frequencies
-            # TODO : make frequencies NOT hard coded! (featureExtractionInterface.py)
-            autoSelectedFeats = []
-            Index_electrode = []
-            print("Sublist of channels: " + str(self.autoFeatChannelList))
-            print("Frequency range: " + str(self.autoFeatFreqRange))
-            for chan in self.autoFeatChannelList:
-                Index_electrode.append(electrodes_final.index(chan))
-            print("Index_electrode:  " + str(Index_electrode))
-
-            freqMin = int(self.autoFeatFreqRange.split(":")[0])
-            freqMax = int(self.autoFeatFreqRange.split(":")[1])
-            # freqRange = [i for i in range(freqMin, freqMax + 1)]
-
-            Rsigned_reduced = Rsigned_2[Index_electrode, freqMin:freqMax]
-            Max_per_electrode = Rsigned_reduced.max(1)
-            indices_max = list(reversed(np.argsort(Max_per_electrode)))[0:3]  # indices of 3 max values within the scope of Index_electrodes
-            indices_max_final = [Index_electrode[i] for i in indices_max]
-
-            for idx in indices_max_final:
-                r2Vals = Rsigned_2[idx, freqMin:freqMax]
-                idxfreqMax = 7 + np.argmax(r2Vals)
-                autoSelectedFeats.append((electrodes_final[idx], idxfreqMax))
-
-            print(autoSelectedFeats)
-
-
         # Fill Features struct...
-        self.Features.autoselected = autoSelectedFeats
         self.Features.electrodes_orig = electrodeList
         self.Features.electrodes_final = electrodes_final
         self.Features.power_cond1 = connect_cond1_2
