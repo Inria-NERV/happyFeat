@@ -1,7 +1,7 @@
 <OpenViBE-Scenario>
 	<FormatVersion>2</FormatVersion>
 	<Creator>OpenViBE Designer</Creator>
-	<CreatorVersion>3.5.0</CreatorVersion>
+	<CreatorVersion>3.6.0</CreatorVersion>
 	<Settings>
 		<Setting>
 			<Identifier>(0xd84e1a1e, 0x3991fc6e)</Identifier>
@@ -2537,6 +2537,17 @@
 			<Target>
 				<BoxIdentifier>(0x0000538d, 0x000075ed)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
+			<Identifier>(0x00003d7f, 0x00004bec)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x1f046833, 0x21a8a876)</BoxIdentifier>
+				<BoxOutputIndex>1</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x000065af, 0x0000612c)</BoxIdentifier>
+				<BoxInputIndex>1</BoxInputIndex>
 			</Target>
 		</Link>
 		<Link>
