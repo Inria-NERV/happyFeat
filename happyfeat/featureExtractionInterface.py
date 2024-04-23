@@ -1143,6 +1143,14 @@ class Dialog(QDialog):
         for selectedItem in self.fileListWidgetTrain.selectedItems():
             self.trainingFiles.append(selectedItem.text())
 
+        # 1-class specific case: check if "baseline" files also exist
+        if self.parameterDict["pipelineType"] == optionKeys[4]:
+            for trainingFile in self.trainingFiles:
+                baselineFile = trainingFile.replace("TRIALS", "BASELINE")
+                if not os.path.exists(os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", baselineFile)):
+                    myMsgBox("Error in training: missing BASELINE file. Check your workspace folder and extraction scenario")
+                    return
+
         # Initialize structure for reporting results in workspace file...
         self.currentAttempt = {"SignalFiles": self.trainingFiles,
                                "CompositeFile": None, "Features": None, "Score": ""}

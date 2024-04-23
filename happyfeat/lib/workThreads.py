@@ -142,11 +142,16 @@ class Extraction(QtCore.QThread):
             outputSpect2 = str(filename + "-SPECTRUM-" + self.parameterDict["AcquisitionParams"]["Class2"] + ".csv")
             outputConnect1 = str(filename + "-CONNECT-" + self.parameterDict["AcquisitionParams"]["Class1"] + ".csv")
             outputConnect2 = str(filename + "-CONNECT-" + self.parameterDict["AcquisitionParams"]["Class2"] + ".csv")
-            outputBaseline1 = str(filename + "-SPECTRUM-" + self.parameterDict["AcquisitionParams"]["Class1"] + "-BASELINE.csv")
-            outputBaseline2 = str(filename + "-SPECTRUM-" + self.parameterDict["AcquisitionParams"]["Class2"] + "-BASELINE.csv")
+            outputSpectBaseline1 = str(filename + "-SPECTRUM-" + self.parameterDict["AcquisitionParams"]["Class1"] + "-BASELINE.csv")
+            outputSpectBaseline2 = str(filename + "-SPECTRUM-" + self.parameterDict["AcquisitionParams"]["Class2"] + "-BASELINE.csv")
             outputTrials = str(filename + "-TRIALS.csv")
-            modifyExtractionIO(self.scenFile, signalFile, outputSpect1, outputSpect2,
-                               outputBaseline1, outputBaseline2, outputConnect1, outputConnect2, outputTrials, self.currentSessionId)
+            outputBaseline = str(filename + "-BASELINE.csv")
+            modifyExtractionIO(self.scenFile, signalFile,
+                               outputSpect1, outputSpect2,
+                               outputSpectBaseline1, outputSpectBaseline2,
+                               outputConnect1, outputConnect2,
+                               outputTrials, outputBaseline,
+                               self.currentSessionId)
 
             # Launch OV scenario !
             p = subprocess.Popen([command, "--invisible", "--play-fast", self.scenFile],
@@ -663,7 +668,10 @@ class TrainClassifier(QtCore.QThread):
         self.samplingFreq = sampFreq
         self.exitText = ""
 
-        self.usingDualFeatures = self.parameterDict["pipelineType"] == optionKeys[3]
+        self.usingDualFeatures = False
+        if self.parameterDict["pipelineType"] == optionKeys[3] \
+            or self.parameterDict["pipelineType"] == optionKeys[4]:
+            self.usingDualFeatures = True
 
     def run(self):
         # Get electrodes lists and sampling freqs, and check that they match
@@ -677,6 +685,14 @@ class TrainClassifier(QtCore.QThread):
             listSampFreq.append(int(header[0].split(':')[1].removesuffix('Hz')))
             listElectrodeList.append(header[2:-3])
             trainingSigList.append(path)
+
+            if self.parameterDict["pipelineType"] == optionKeys[4]:
+                baselineFile = trainingFile.replace('TRIALS', 'BASELINE')
+                path = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", baselineFile)
+                header = pd.read_csv(path, nrows=0).columns.tolist()
+                listSampFreq.append(int(header[0].split(':')[1].removesuffix('Hz')))
+                listElectrodeList.append(header[2:-3])
+                trainingSigList.append(path)
 
         if not all(freqsamp == listSampFreq[0] for freqsamp in listSampFreq):
             errMsg = str("Error when loading CSV files\n")
@@ -722,7 +738,8 @@ class TrainClassifier(QtCore.QThread):
             overlap = float(self.extractDict["ConnectivityOverlap"])
             winShift = winLength * (100.0-overlap) / 100.0
             epochCount[0] = np.floor((stimEpochLength - winLength) / winShift) + 1
-        elif self.parameterDict["pipelineType"] == optionKeys[3]:
+        elif self.parameterDict["pipelineType"] == optionKeys[3] \
+                or self.parameterDict["pipelineType"] == optionKeys[4]:
             winLength0 = float(self.extractDict["TimeWindowLength"])
             winShift0 = float(self.extractDict["TimeWindowShift"])
             epochCount[0] = np.floor((stimEpochLength - winLength0) / winShift0) + 1
@@ -1144,7 +1161,10 @@ class RunClassifier(QtCore.QThread):
         self.electrodeList = electrodeList
         self.exitText = ""
 
-        self.usingDualFeatures = self.parameterDict["pipelineType"] == optionKeys[3]
+        self.usingDualFeatures = False
+        if self.parameterDict["pipelineType"] == optionKeys[3] \
+                or self.parameterDict["pipelineType"] == optionKeys[4]:
+            self.usingDualFeatures = True
 
     def run(self):
         # Get electrodes lists and sampling freqs, and check that they match
@@ -1207,7 +1227,8 @@ class RunClassifier(QtCore.QThread):
             overlap = float(self.extractDict["ConnectivityOverlap"])
             winShift = winLength * (100.0-overlap) / 100.0
             epochCount[0] = np.floor((stimEpochLength - winLength) / winShift) + 1
-        elif self.parameterDict["pipelineType"] == optionKeys[3]:
+        elif self.parameterDict["pipelineType"] == optionKeys[3] \
+                or self.parameterDict["pipelineType"] == optionKeys[4]:
             winLength0 = float(self.extractDict["TimeWindowLength"])
             winShift0 = float(self.extractDict["TimeWindowShift"])
             epochCount[0] = np.floor((stimEpochLength - winLength0) / winShift0) + 1

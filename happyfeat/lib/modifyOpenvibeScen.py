@@ -36,7 +36,7 @@ def modifyScenarioGeneralSettings(scenXml, parameterDict):
     tree.write(scenXml)
     return
 
-def modifyExtractionIO(scenXml, newFilename, newOutputSpect1, newOutputSpect2, newOutputBaseline1, newOutputBaseline2, newOutputConnect1, newOutputConnect2, newOutputTrials, newExtractIdx):
+def modifyExtractionIO(scenXml, newFilename, newOutputSpect1, newOutputSpect2, newOutputSpectBaseline1, newOutputSpectBaseline2, newOutputConnect1, newOutputConnect2, newOutputTrials, newOutputBaseline, newExtractIdx):
     print("---Modifying " + scenXml + " input and output")
     tree = ET.parse(scenXml)
     root = tree.getroot()
@@ -62,13 +62,16 @@ def modifyExtractionIO(scenXml, newFilename, newOutputSpect1, newOutputSpect2, n
                 xmlVal.text = newOutputConnect2
             elif setting.find('Name').text == "OutputBaseline1":
                 xmlVal = setting.find('Value')
-                xmlVal.text = newOutputBaseline1
+                xmlVal.text = newOutputSpectBaseline1
             elif setting.find('Name').text == "OutputBaseline2":
                 xmlVal = setting.find('Value')
-                xmlVal.text = newOutputBaseline2
+                xmlVal.text = newOutputSpectBaseline2
             elif setting.find('Name').text == "OutputTrials":
                 xmlVal = setting.find('Value')
                 xmlVal.text = newOutputTrials
+            elif setting.find('Name').text == "OutputBaseline":
+                xmlVal = setting.find('Value')
+                xmlVal.text = newOutputBaseline
             elif setting.find('Name').text == "ExtractionIdx":
                 xmlVal = setting.find('Value')
                 xmlVal.text = newExtractIdx

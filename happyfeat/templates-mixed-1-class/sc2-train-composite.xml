@@ -1,7 +1,7 @@
 <OpenViBE-Scenario>
 	<FormatVersion>2</FormatVersion>
 	<Creator>OpenViBE Designer</Creator>
-	<CreatorVersion>3.5.0</CreatorVersion>
+	<CreatorVersion>3.6.0</CreatorVersion>
 	<Settings>
 		<Setting>
 			<Identifier>(0x1c0e7c81, 0x94da0a11)</Identifier>
@@ -49,6 +49,13 @@
 			<Identifier>(0xce530209, 0x7f7f326e)</Identifier>
 			<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 			<Name>StimulationEpoch</Name>
+			<DefaultValue>3</DefaultValue>
+			<Value>3</Value>
+		</Setting>
+		<Setting>
+			<Identifier>(0xf5f59406, 0x1b8b136d)</Identifier>
+			<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
+			<Name>StimulationDelay</Name>
 			<DefaultValue>3</DefaultValue>
 			<Value>3</Value>
 		</Setting>
@@ -1466,7 +1473,7 @@
 					<TypeIdentifier>(0x2c132d6e, 0x44ab0d97)</TypeIdentifier>
 					<Name>Stimulation 1</Name>
 					<DefaultValue>OVTK_StimulationId_Label_00</DefaultValue>
-					<Value>OVTK_GDF_Left</Value>
+					<Value>OVTK_GDF_Right</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
@@ -1533,7 +1540,7 @@
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
 					<Name>Epoch offset (in sec)</Name>
 					<DefaultValue>0.5</DefaultValue>
-					<Value>$var{StimulationDelay}</Value>
+					<Value>0</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
