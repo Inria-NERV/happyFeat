@@ -6,8 +6,10 @@ import platform
 import json
 import numpy as np
 import matplotlib.pyplot as plt
+import threading
 
 from PySide2 import QtCore
+from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
 from PySide2.QtWidgets import QDialog
 from PySide2.QtWidgets import QVBoxLayout
@@ -31,6 +33,7 @@ from PySide2.QtWidgets import QMenuBar
 from PySide2.QtWidgets import QMenu
 from PySide2.QtWidgets import QAction
 from PySide2.QtWidgets import QInputDialog
+from PySide2.QtWidgets import QAbstractItemView
 
 from PySide2.QtGui import QFont
 from PySide2.QtCore import QTimer
@@ -117,6 +120,7 @@ class Dialog(QDialog):
         self.extractThread = None
         self.loadFilesForVizThread = None
         self.loadFilesForVizThread2 = None
+        self.lockVizGui = threading.Lock()
         self.trainClassThread = None
         self.progressBarExtract = None
         self.progressBarViz = None
@@ -578,8 +582,12 @@ class Dialog(QDialog):
 
         # Classifier training button
         self.btn_trainClassif = QPushButton("TRAIN CLASSIFIER")
-        self.btn_trainClassif.clicked.connect(lambda: self.btnTrainClassif())
+        self.btn_trainClassif.clicked.connect(lambda: self.btnTrainClassif(False))
         self.btn_trainClassif.setStyleSheet("font-weight: bold")
+        # Find best combination of features (present only in pipeline 4)
+        self.btn_trainClassifCombination = QPushButton("TRAIN - FIND BEST COMB.")
+        self.btn_trainClassifCombination.clicked.connect(lambda: self.btnTrainClassif(True))
+        self.btn_trainClassifCombination.setStyleSheet("font-weight: bold")
 
         # Label + QTreeWidget for training results
         labelLastResults = str("--- Last Training Results ---")
@@ -593,6 +601,7 @@ class Dialog(QDialog):
         self.lastTrainingResults.setColumnWidth(1, 60)
         minHeightTrainResults = 30
         self.lastTrainingResults.setMinimumHeight(minHeightTrainResults)
+        self.lastTrainingResults.setSelectionMode(QAbstractItemView.SingleSelection)
 
         # Update training results from config file
         self.updateTrainingAttemptsTree()
@@ -610,6 +619,11 @@ class Dialog(QDialog):
             self.speedUpLayout = QHBoxLayout()
             self.speedUpLayout.addWidget(self.speedUpLabel)
             self.speedUpLayout.addWidget(self.enableSpeedUp)
+
+        # Use the classif. weights from selected "training attempt" in the list
+        self.btn_useSelectedClassif = QPushButton("Use selected classifier (Online scen.)")
+        self.btn_useSelectedClassif.clicked.connect(lambda: self.btnUseSelectedClassif())
+        self.btn_useSelectedClassif.setStyleSheet("font-weight: bold")
 
         # Label for classifier running
         labelRunClassif = str("--- Run classification ---")
@@ -640,8 +654,11 @@ class Dialog(QDialog):
         if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             self.qvTrainingLayout.addLayout(self.speedUpLayout)
         self.qvTrainingLayout.addWidget(self.btn_trainClassif)
+        # if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+            # self.qvTrainingLayout.addWidget(self.btn_trainClassifCombination)  # Activate later when functional
         self.qvTrainingLayout.addWidget(self.labelLastResults)
         self.qvTrainingLayout.addWidget(self.lastTrainingResults)
+        self.qvTrainingLayout.addWidget(self.btn_useSelectedClassif)
 
         self.qvTrainingLayout.addWidget(self.labelRunClassif)
         self.qvTrainingLayout.addLayout(self.classifLayoutH)
@@ -1066,10 +1083,15 @@ class Dialog(QDialog):
         self.loadFilesForVizThread.info2.connect(self.progressBarViz.changeLabel)
         # Signal: Viz work thread finished
         self.loadFilesForVizThread.over.connect(self.loadFilesForViz_over)
+
+        # Manage number of threads (for GUI reactivation...)
+        self.nbThreadsViz = 1
+
         # Launch the work thread
         self.loadFilesForVizThread.start()
 
         if self.loadFilesForVizThread2:
+            self.nbThreadsViz = 2
             # create progress bar window...
             self.progressBarViz2 = ProgressBar("Feature Visualization", "Loading data from Csv files...",
                                               len(self.availableFilesForVizList.selectedItems()))
@@ -1086,25 +1108,42 @@ class Dialog(QDialog):
 
     def loadFilesForViz_over(self, success, text):
         # Viz work thread is over, so we kill the progress bar,
-        # and make the viz Gui available again
+        # and re-activate the GUI (if it's the last thread to finish)
         self.vizTimerEnd = time.perf_counter()
         elapsed = self.vizTimerEnd - self.vizTimerStart
         print("=== Viz data loaded in: ", str(elapsed))
 
         self.progressBarViz.finish()
+
         if not success:
             myMsgBox(text)
             self.plotBtnsEnabled = False
         else:
             self.samplingFreq = self.Features.samplingFreq
             self.plotBtnsEnabled = True
-        self.enableGui(True)
+
+        self.lockVizGui.acquire()
+        try:
+            self.nbThreadsViz -= 1
+            if self.nbThreadsViz == 0:
+                self.enableGui(True)
+        finally:
+            self.lockVizGui.release()
 
     def loadFilesForViz_kill_PB(self, success, text):
-        # Viz work thread2 is over, so we only kill the progress bar
+        # Viz work thread2 is over, so we kill the progress bar
+        # and re-activate the GUI (if it's the last thread to finish)
         self.progressBarViz2.finish()
 
-    def btnTrainClassif(self):
+        self.lockVizGui.acquire()
+        try:
+            self.nbThreadsViz -= 1
+            if self.nbThreadsViz == 0:
+                self.enableGui(True)
+        finally:
+            self.lockVizGui.release()
+
+    def btnTrainClassif(self, combination):
         # ----------
         # Callback from button :
         # Select features in fields, check if they're correctly formatted,
@@ -1121,10 +1160,17 @@ class Dialog(QDialog):
             if len(self.selectedFeats[0]) < 1:
                 myMsgBox("Please use at least one set of features!")
                 return
-        else:
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[4] and not combination:
             # case with 2 sets of features : one of the two can be empty
             if len(self.selectedFeats[0]) < 1 and len(self.selectedFeats[1]) < 1:
                 myMsgBox("Please use at least one set of features!")
+                return
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[4] and combination:
+            # the 2 sets of features must have the same (>0) size
+            if len(self.selectedFeats[0]) != len(self.selectedFeats[1]) \
+                    or len(self.selectedFeats[0]) == 0:
+                myMsgBox("Please use the same number of PSD and NS feats (>0)")
                 return
 
         # Get training param from GUI (to modify training scenario later on)
@@ -1229,7 +1275,8 @@ class Dialog(QDialog):
                                                 self.ovScript,
                                                 trainingSize, listFeats,
                                                 trainingParamDict, self.samplingFreq,
-                                                self.currentAttempt, attemptId, enableSpeedUp)
+                                                self.currentAttempt, attemptId,
+                                                enableSpeedUp)
 
         # Signal: Training work thread finished one step
         # Increment progress bar + change its label
@@ -1294,6 +1341,7 @@ class Dialog(QDialog):
         for idx in range(self.layoutExtractLabels.count()):
             self.layoutExtractLineEdits.itemAt(idx).widget().setEnabled(myBool)
         self.btn_runExtractionScenario.setEnabled(myBool)
+        self.btn_updateExtractParams.setEnabled(myBool)
         self.fileListWidget.setEnabled(myBool)
         # self.btn_browseOvScript.setEnabled(myBool)
         self.menuOptions.setEnabled(myBool)
@@ -1326,11 +1374,13 @@ class Dialog(QDialog):
         self.trainingPartitions.setEnabled(myBool)
         self.fileListWidgetTrain.setEnabled(myBool)
         self.menuOptions.setEnabled(myBool)
-        if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
-            self.enableSpeedUp.setEnabled(myBool)
         self.btn_runClassif.setEnabled(myBool)
         self.btn_selectFilesClassif.setEnabled(myBool)
 
+        if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+            self.enableSpeedUp.setEnabled(myBool)
+        if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+            self.btn_trainClassifCombination.setEnabled(myBool)
 
     def enableGui(self, myBool):
         # Enable/Disable ALL PARTS of the GUI
@@ -1561,6 +1611,40 @@ class Dialog(QDialog):
                 noFeatLabel.setAlignment(QtCore.Qt.AlignCenter)
                 layout.addWidget(noFeatLabel)
 
+    def browseForDesigner(self):
+        # ----------
+        # Allow user to browse for the "openvibe-designer.cmd" windows cmd
+        # ----------
+        directory = os.getcwd()
+        newPath, dummy = QFileDialog.getOpenFileName(self, "OpenViBE designer", str(directory))
+        if "openvibe-designer.cmd" or "openvibe-designer.exe" or "openvibe-designer.sh" in newPath:
+            # self.designerTextBox.setText(newPath)
+            self.parameterDict["ovDesignerPath"] = newPath
+            self.ovScript = newPath
+
+        # TODO : add some check, to verify that it's an OpenViBE exec..? how..?
+        setKeyValue(self.workspaceFile, "ovDesignerPath", self.parameterDict["ovDesignerPath"])
+        return
+
+    def toggleAdvanced(self):
+        # Toggles some options in the interface...
+
+        if self.advanced:
+            self.advanced = False
+        else:
+            self.advanced = True
+
+        self.labelRunClassif.setVisible(self.advanced)
+        self.btn_selectFilesClassif.setVisible(self.advanced)
+        self.btn_runClassif.setVisible(self.advanced)
+        self.fileListWidgetClassifRun.setVisible(self.advanced)
+
+        if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+            self.enableSpeedUp.setVisible(self.advanced)
+            self.speedUpLabel.setVisible(self.advanced)
+
+        return
+
     def btnAutoFeat(self, resultsPSD, resultsNS):
 
         # Automatic feature selection : find best R² among
@@ -1658,40 +1742,6 @@ class Dialog(QDialog):
         for featPair in resultsNS.autoselected:
             featText = str(featPair[0]) + ';' + str(featPair[1])
             self.btnAddPair(self.selectedFeats[1], self.qvFeatureLayouts[1], featText)
-
-    def browseForDesigner(self):
-        # ----------
-        # Allow user to browse for the "openvibe-designer.cmd" windows cmd
-        # ----------
-        directory = os.getcwd()
-        newPath, dummy = QFileDialog.getOpenFileName(self, "OpenViBE designer", str(directory))
-        if "openvibe-designer.cmd" or "openvibe-designer.exe" or "openvibe-designer.sh" in newPath:
-            # self.designerTextBox.setText(newPath)
-            self.parameterDict["ovDesignerPath"] = newPath
-            self.ovScript = newPath
-
-        # TODO : add some check, to verify that it's an OpenViBE exec..? how..?
-        setKeyValue(self.workspaceFile, "ovDesignerPath", self.parameterDict["ovDesignerPath"])
-        return
-
-    def toggleAdvanced(self):
-        # Toggles some options in the interface...
-
-        if self.advanced:
-            self.advanced = False
-        else:
-            self.advanced = True
-
-        self.labelRunClassif.setVisible(self.advanced)
-        self.btn_selectFilesClassif.setVisible(self.advanced)
-        self.btn_runClassif.setVisible(self.advanced)
-        self.fileListWidgetClassifRun.setVisible(self.advanced)
-
-        if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
-            self.enableSpeedUp.setVisible(self.advanced)
-            self.speedUpLabel.setVisible(self.advanced)
-
-        return
 
     def autoFeatSetChannelSubselection(self):
         # ----------
@@ -1797,6 +1847,7 @@ class Dialog(QDialog):
             for attemptId in resultsDict.keys():
                 attempts.append(attemptId)
                 attemptItem = QTreeWidgetItem(self.lastTrainingResults)
+                attemptItem.setFlags(attemptItem.flags() | Qt.ItemIsSelectable)
                 attemptItem.setText(0, attemptId)
                 attemptItem.setText(1, resultsDict[attemptId]["Score"])
                 firstFeatWritten = False
@@ -1805,6 +1856,7 @@ class Dialog(QDialog):
                         featItem = QTreeWidgetItem(None)
                         tempString = str(metricType + " " + featPair)
                         featItem.setText(2, tempString)
+                        featItem.setFlags(featItem.flags() & ~Qt.ItemIsSelectable)
                         attemptItem.addChild(featItem)
                         # add first feat to parent row, then user will need to
                         # expand row to see more...
@@ -1817,6 +1869,7 @@ class Dialog(QDialog):
                 for file in resultsDict[attemptId]["SignalFiles"]:
                     fileItem = QTreeWidgetItem(None)
                     fileItem.setText(2, file)
+                    fileItem.setFlags(fileItem.flags() & ~Qt.ItemIsSelectable)
                     attemptItem.addChild(fileItem)
 
         # collapse all items
@@ -1839,35 +1892,15 @@ class Dialog(QDialog):
                 fullpath.setText(0, path)
                 item.addChild(fullpath)
 
-    def btnRunClassif(self):
-        # ------
-        # Run the selected classifier on the selected files.
-        # ------
+    def getTrainingParamsFromSelectedAttempt(self):
 
-        # - check if files have been selected (browse...)
-        # - get the selected classifier = line in the results list
-        #   => check if a line is selected, extract its index X and feature parameters
-        # - check if associated classifier-weights-X.xml exists
-        # - update template scenario with feature(s) + weight xml file
-        # - run the scenario and get score
+        selectedAttempt = self.lastTrainingResults.selectedItems()
 
-        # === 1st step: check if signal files have been selected by browsing (= not empty list)
-        if self.fileListWidgetClassifRun.topLevelItemCount() == 0:
-            myMsgBox("Please use the \"Browse\" button to select signal file(s).")
+        if not selectedAttempt:
+            myMsgBox("Please select one training attemp in the list above")
             return
 
-        # create list of files...
-        self.classifFiles = []
-        for i in range(0, self.fileListWidgetClassifRun.topLevelItemCount()):
-            self.classifFiles.append(self.fileListWidgetClassifRun.topLevelItem(i).child(0).text(0))
-
-        # === 2nd step : get line idx (& parameters) in classification results list
-        selectedClassifIdx = self.lastTrainingResults.selectedItems()
-        if not selectedClassifIdx:
-            myMsgBox("Please select a classifier in the \"Last Results\" list above.")
-            return
-
-        baseNode = selectedClassifIdx[0]
+        baseNode = selectedAttempt[0]
         classifIdx = baseNode.text(0)
         nbChildren = baseNode.childCount()
         pipelineTextToFind = ""
@@ -1893,7 +1926,7 @@ class Dialog(QDialog):
             textInfo = baseNode.child(child).text(2)  # relevant info in column 2. Might change later...
 
             if pipelineTextToFind in textInfo:
-                textInfo = textInfo.removeprefix(str(pipelineTextToFind+" "))
+                textInfo = textInfo.removeprefix(str(pipelineTextToFind + " "))
                 listFeat.append(textInfo)
 
             # special case: "Mixed" pipeline: 2 lists to extract
@@ -1901,17 +1934,96 @@ class Dialog(QDialog):
                     or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
                 if pipelineTextToFind2 in textInfo:
                     textInfo = textInfo.removeprefix(str(pipelineTextToFind2 + " "))
-                    listFeat.append(textInfo)
+                    listFeat2.append(textInfo)
 
             if not paramsFound:
                 if "-TRIALS.csv" in textInfo:
-                    sampFreq, electrodeList = extractMetadata(os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", textInfo))
+                    sampFreq, electrodeList = extractMetadata(
+                        os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", textInfo))
                     if sampFreq and electrodeList:
                         paramsFound = True
+
+        return classifIdx, listFeat, listFeat2, sampFreq, electrodeList
+
+    def btnUseSelectedClassif(self):
+        # ----------
+        # Update "online" (sc3) scenario with "classifier-weights" file from selected
+        # training attempt in the list of attempts&results.
+        # ----------
+
+        # === 1st step : Get selected training attempt's ID and parameters (features)
+        classifIdx, listFeat, listFeat2, sampFreq, electrodeList = self.getTrainingParamsFromSelectedAttempt()
 
         print("classifIdx : " + str(classifIdx))
         print("listFeat : " + str(listFeat))
         print("listFeat2 : " + str(listFeat2))
+        print("sampFreq : " + str(sampFreq))
+        print("electrodeList: " + str(electrodeList))
+
+        # === 2nd step : check if classifier-weights-X.xml exists
+        classifWeightsPath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train",
+                                          str("classifier-weights-" + str(classifIdx) + ".xml"))
+        if not os.path.exists(classifWeightsPath):
+            myMsgBox("ERROR: for selected classification results (" + str(
+                classifIdx) + "),\nweights file not found in workspace.")
+            return
+        # Reformat to openvibe's preference... C:/etc.
+        if platform.system() == 'Windows':
+            classifWeightsPath = classifWeightsPath.replace("\\", "/")
+
+        # === 3rd step : update sc3-online.xml with classifier-weights file and relevant features
+        trainingParamDict = self.parameterDict.copy()
+        shouldRun = False
+        isOnline = True
+        templateFolder = settings.optionsTemplatesDir[self.parameterDict["pipelineType"]]
+        # Instantiate the thread...
+        self.runClassThread = RunClassifier([], templateFolder,
+                                            self.workspaceFolder, self.ovScript,
+                                            classifWeightsPath,
+                                            listFeat, listFeat2,
+                                            trainingParamDict, sampFreq, electrodeList,
+                                            shouldRun, isOnline)
+
+        # Signal: Running work thread finished
+        self.runClassThread.over.connect(self.running_over)
+        # Launch the work thread
+        self.runClassThread.start()
+
+        self.runTimerStart = time.perf_counter()
+        self.progressBarRun = None
+
+        return
+
+    def btnRunClassif(self):
+        # ------
+        # Run the selected classifier on the selected files.
+        # ------
+
+        # - check if files have been selected (browse...)
+        # - get the selected classifier = line in the results list
+        #   => check if a line is selected, extract its index X and feature parameters
+        # - check if associated classifier-weights-X.xml exists
+        # - update template scenario with feature(s) + weight xml file
+        # - run the scenario and get score
+
+        # === 1st step: check if signal files have been selected by browsing (= not empty list)
+        if self.fileListWidgetClassifRun.topLevelItemCount() == 0:
+            myMsgBox("Please use the \"Browse\" button to select signal file(s).")
+            return
+
+        # create list of files...
+        self.classifFiles = []
+        for i in range(0, self.fileListWidgetClassifRun.topLevelItemCount()):
+            self.classifFiles.append(self.fileListWidgetClassifRun.topLevelItem(i).child(0).text(0))
+
+        # === 2nd step : get line idx (& parameters) in classification results list
+        classifIdx, listFeat, listFeat2, sampFreq, electrodeList = \
+            self.getTrainingParamsFromSelectedAttempt()
+
+        print("classifIdx : " + str(classifIdx))
+        print("listFeat : " + str(listFeat))
+        print("listFeat2 : " + str(listFeat2))
+
         print("list of files: " + str(self.classifFiles))
         print("sampFreq : " + str(sampFreq))
         print("electrodeList: " + str(electrodeList))
@@ -1925,7 +2037,6 @@ class Dialog(QDialog):
         if platform.system() == 'Windows':
             classifWeightsPath = classifWeightsPath.replace("\\", "/")
 
-
         # === 4th step : run scenario thread
 
         self.enableExtractionGui(False)
@@ -1936,18 +2047,21 @@ class Dialog(QDialog):
         self.progressBarRun = ProgressBar("Running classification", "File...", len(self.classifFiles))
 
         # Instantiate the thread...
+        shouldRun = True
+        isOnline = False
         templateFolder = settings.optionsTemplatesDir[self.parameterDict["pipelineType"]]
         self.runClassThread = RunClassifier(self.classifFiles, templateFolder,
                                                 self.workspaceFolder, self.ovScript,
                                                 classifWeightsPath,
                                                 listFeat, listFeat2,
-                                                trainingParamDict, sampFreq, electrodeList)
+                                                trainingParamDict, sampFreq, electrodeList,
+                                                shouldRun, isOnline)
 
         # Signal: RunClassif work thread finished one step
         # Increment progress bar + change its label
         self.runClassThread.info.connect(self.progressBarRun.increment)
         self.runClassThread.info2.connect(self.progressBarRun.changeLabel)
-        # Signal: Training work thread finished
+        # Signal: RunClassif work thread finished
         self.runClassThread.over.connect(self.running_over)
         # Launch the work thread
         self.runClassThread.start()
@@ -1963,7 +2077,8 @@ class Dialog(QDialog):
         elapsed = self.runTimerEnd - self.runTimerStart
         print("=== Running done in: ", str(elapsed))
 
-        self.progressBarRun.finish()
+        if self.progressBarRun:
+            self.progressBarRun.finish()
 
         if success:
             textDisplayed = str(resultsText)

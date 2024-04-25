@@ -858,7 +858,8 @@ class TrainClassifier(QtCore.QThread):
 
             self.info2.emit("Finalizing Training...")
             scenXml = os.path.join(self.workspaceFolder, templateScenFilenames[5])
-            success, classifierOutputStr, accuracy = self.playClassifierScenario(scenXml)
+            oneClass = False  # TODO: watch out and change that in the future, when speed-up is available.
+            success, classifierOutputStr, accuracy = self.playClassifierScenario(scenXml, oneClass)
             if not success:
                 successGlobal = False
                 self.errorMessageTrainer()
@@ -922,7 +923,8 @@ class TrainClassifier(QtCore.QThread):
 
             # RUN THE CLASSIFIER TRAINING SCENARIO
             scenXml = os.path.join(self.workspaceFolder, templateScenFilenames[2])
-            success, classifierOutputStr, accuracy = self.playClassifierScenario(scenXml)
+            oneClass = (self.parameterDict["pipelineType"] == optionKeys[4])
+            success, classifierOutputStr, accuracy = self.playClassifierScenario(scenXml, oneClass)
 
             if not success:
                 self.errorMessageTrainer()
@@ -1005,7 +1007,7 @@ class TrainClassifier(QtCore.QThread):
 
         return selectedFeats, errMsg
 
-    def playClassifierScenario(self, scenFile):
+    def playClassifierScenario(self, scenFile, oneClass):
         # ----------
         # Run the provided training scenario, and check the console output for termination, errors, and
         # classification results
@@ -1080,20 +1082,33 @@ class TrainClassifier(QtCore.QThread):
                     target_1_True_Negative + target_1_False_Positive + target_2_False_Negative + target_2_True_Positive),
                              2)
 
-            F_1_Score_Class_1 = round(
-                2 * precision_Class_1 * sensitivity_Class_1 / (precision_Class_1 + sensitivity_Class_1), 2)
-            F_1_Score_Class_2 = round(
-                2 * precision_Class_2 * sensitivity_Class_2 / (precision_Class_2 + sensitivity_Class_2), 2)
+            if (precision_Class_1 + sensitivity_Class_1) != 0:
+                F_1_Score_Class_1 = round(
+                    2 * precision_Class_1 * sensitivity_Class_1 / (precision_Class_1 + sensitivity_Class_1), 2)
+            else:
+                F_1_Score_Class_1 = 1.0
+            if (precision_Class_2 + sensitivity_Class_2) != 0:
+                F_1_Score_Class_2 = round(
+                    2 * precision_Class_2 * sensitivity_Class_2 / (precision_Class_2 + sensitivity_Class_2), 2)
+            else:
+                F_1_Score_Class_2 = 1.0
 
-            messageClassif = "Overall accuracy : " + str(accuracy) + "%\n"
-            messageClassif += "Class 1 | Precision  : " + str(precision_Class_1) + " | " + "Sensitivity : " + str(
-                sensitivity_Class_1)
-            messageClassif += " | F_1 Score : " + str(F_1_Score_Class_1) + "\n"
-            messageClassif += "Class 2 | Precision  : " + str(precision_Class_2) + " | " + "Sensitivity : " + str(
-                sensitivity_Class_2)
-            messageClassif += " | F_1 Score : " + str(F_1_Score_Class_2)
+            if not oneClass:
+                messageClassif = "Overall accuracy : " + str(accuracy) + "%\n"
+                messageClassif += "Class 1 | Precision  : " + str(precision_Class_1) + " | " + "Sensitivity : " + str(
+                    sensitivity_Class_1)
+                messageClassif += " | F_1 Score : " + str(F_1_Score_Class_1) + "\n"
+                messageClassif += "Class 2 | Precision  : " + str(precision_Class_2) + " | " + "Sensitivity : " + str(
+                    sensitivity_Class_2)
+                messageClassif += " | F_1 Score : " + str(F_1_Score_Class_2)
 
-            return success, messageClassif, accuracy
+                return success, messageClassif, accuracy
+
+            if oneClass:
+                messageClassif = "Precision  : " + str(precision_Class_2) + " | " + "Sensitivity : " + str(
+                    sensitivity_Class_2)
+
+                return success, messageClassif, (precision_Class_2*100.0)
 
         else:
             return success
@@ -1143,7 +1158,7 @@ class RunClassifier(QtCore.QThread):
                  classifWeightsPath,
                  listFeat, listFeat2,
                  parameterDict, sampFreq, electrodeList,
-                 parent=None):
+                 shouldRun, isOnline, parent=None):
 
         super().__init__(parent)
         self.stop = False
@@ -1159,6 +1174,8 @@ class RunClassifier(QtCore.QThread):
         self.extractDict = parameterDict["Sessions"][self.parameterDict["currentSessionId"]]["ExtractionParams"].copy()
         self.samplingFreq = sampFreq
         self.electrodeList = electrodeList
+        self.shouldRun = shouldRun
+        self.isOnline = isOnline
         self.exitText = ""
 
         self.usingDualFeatures = False
@@ -1167,36 +1184,6 @@ class RunClassifier(QtCore.QThread):
             self.usingDualFeatures = True
 
     def run(self):
-        # Get electrodes lists and sampling freqs, and check that they match
-        # + that the selected channels are in the list of electrodes
-        classifSigFiles = []
-        listSampFreq = []
-        listElectrodeList = []
-        for classifFile in self.classifFiles:
-            generateMetadata(classifFile, self.ovScript)
-            metaFile = classifFile.replace(".ov", "-META.csv")
-            sampFreqTemp, electrodeListTemp = extractMetadata(metaFile)
-
-            listSampFreq.append(sampFreqTemp)
-            listElectrodeList.append(electrodeListTemp)
-            classifSigFiles.append(classifFile)  # ??
-
-        if not all(freqsamp == self.samplingFreq for freqsamp in listSampFreq):
-            errMsg = str("Error when loading signal files for classification\n")
-            errMsg = str(errMsg + "Sampling frequency mismatch (expected " + str(self.samplingFreq) + ", got " + str(listSampFreq) + ")")
-            self.over.emit(False, errMsg)
-            return
-        else:
-            print("Sampling Frequency for selected files : " + str(listSampFreq[0]))
-
-        for electrodeList in listElectrodeList:
-            if not set(electrodeList) == set(self.electrodeList):
-                errMsg = str("Error when loading signal files for classification\n")
-                errMsg = str(errMsg + "Electrode List mismatch")
-                self.over.emit(False, errMsg)
-                return
-        else:
-            print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
 
         selectedFeats = None
         selectedFeats2 = None
@@ -1248,11 +1235,17 @@ class RunClassifier(QtCore.QThread):
         if "ConnectivityOverlap" in self.extractDict.keys():
             self.extractDict["ConnectivityShift"] = str(float(self.extractDict["ConnectivityLength"]) * (100.0 - float(self.extractDict["ConnectivityOverlap"])) / 100.0)
 
-        # Case of a single feature type (power spectrum OR connectivity...)
-        # RE-COPY sc4 FROM TEMPLATE, SO THE USER CAN DO THIS MULTIPLE TIMES
-        scenIdx = 6  # idx in bcipipeline_settings.py
-        scenName = templateScenFilenames[scenIdx]
+        # Select relevant scenario (in bcipipeline_settings.py)
+        if self.isOnline:
+            scenIdx = 3  # idx in bcipipeline_settings.py
+            scenName = templateScenFilenames[scenIdx]
+        else:
+            scenIdx = 6  # idx in bcipipeline_settings.py
+            scenName = templateScenFilenames[scenIdx]
+
         destScenFile = os.path.join(self.workspaceFolder, scenName)
+
+        # COPY SCENARIO FROM TEMPLATE, SO THE USER CAN DO THIS MULTIPLE TIMES
         print("---Copying file from folder " + str(__name__.split('.')[0] + '.' + self.templateFolder))
         with resources.path(str(__name__.split('.')[0] + '.' + self.templateFolder), scenName) as srcFile:
             print("---Copying file " + str(srcFile) + " to " + str(destScenFile))
@@ -1262,7 +1255,7 @@ class RunClassifier(QtCore.QThread):
         trainingpath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train")
         modifyScenarioGeneralSettings(str(destScenFile), self.extractDict)
 
-        # running/replay scenarios
+        # modify online or replay scenario with selected features
         if not self.usingDualFeatures:
             modifyTrainScenUsingSplitAndClassifiers("SPLIT", "Classifier processor", selectedFeats, epochCount[0], destScenFile)
             # Special case: "connectivity metric"
@@ -1275,11 +1268,75 @@ class RunClassifier(QtCore.QThread):
 
         modifyOneGeneralSetting(destScenFile, "ClassifWeights", self.classifWeightsPath)
 
-        # RUN SCENARIO ON EVERY SIGNAL FILE
+        if not self.shouldRun:
+            # WE STOP HERE!
+            textOut = "Scenario sc3-online.xml has been updated with the following:\n"
+            textOut += "\t- Using " + self.classifWeightsPath + "\n"
+
+            if not self.usingDualFeatures:
+                textOut += str("\n\t- Feature(s) ")
+                textOut += str("(" + self.parameterDict["pipelineType"] + "):\n")
+                for i in range(len(selectedFeats)):
+                    textOut += str(
+                        "\t\t" + "Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+            else:
+                textOut += str("\n\t- Feature(s) for PowSpectrum:\n")
+                for i in range(len(selectedFeats)):
+                    textOut += str(
+                        "\t\t" + "Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+                textOut += str("\n\t- Feature(s) for Connectivity:\n")
+                for i in range(len(selectedFeats2)):
+                    textOut += str(
+                        "\t\t" + "Channel " + str(selectedFeats2[i][0]) + " at " + str(selectedFeats2[i][1]) + " Hz\n")
+
+            self.exitText = textOut
+            self.stop = True
+            self.over.emit(True, self.exitText)
+            return
+
+        # END SC3
+        #---------------------
+        # OTHERWISE... SC4
+
+        # Get electrodes lists and sampling freqs, and check that they match
+        # + that the selected channels are in the list of electrodes
+        classifSigFiles = []
+        listSampFreq = []
+        listElectrodeList = []
+        for classifFile in self.classifFiles:
+            generateMetadata(classifFile, self.ovScript)
+            metaFile = classifFile.replace(".ov", "-META.csv")
+            sampFreqTemp, electrodeListTemp = extractMetadata(metaFile)
+
+            listSampFreq.append(sampFreqTemp)
+            listElectrodeList.append(electrodeListTemp)
+            classifSigFiles.append(classifFile)  # ??
+
+        if not all(freqsamp == self.samplingFreq for freqsamp in listSampFreq):
+            errMsg = str("Error when loading signal files for classification\n")
+            errMsg = str(
+                errMsg + "Sampling frequency mismatch (expected " + str(self.samplingFreq) + ", got " + str(
+                    listSampFreq) + ")")
+            self.over.emit(False, errMsg)
+            return
+        else:
+            print("Sampling Frequency for selected files : " + str(listSampFreq[0]))
+
+        for electrodeList in listElectrodeList:
+            if not set(electrodeList) == set(self.electrodeList):
+                errMsg = str("Error when loading signal files for classification\n")
+                errMsg = str(errMsg + "Electrode List mismatch")
+                self.over.emit(False, errMsg)
+                return
+        else:
+            print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
+
+
         targetList = []
         classifiedList = []
         fileIdx = 1
 
+        # RUN REPLAY SCENARIO ON EVERY SIGNAL FILE
         for sigFile in classifSigFiles:
             # increment progressbars
             self.info.emit(True)
@@ -1294,7 +1351,6 @@ class RunClassifier(QtCore.QThread):
             if not success:
                 self.errorMessageRunner()
                 self.over.emit(False, self.exitText)
-
 
         # PREPARE RESULTS & GOODBYE MESSAGE...
 
