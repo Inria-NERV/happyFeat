@@ -51,11 +51,10 @@ pipelineAcqSettings = { "TrialNb": 20,
                         "Class2": "REST",  # OV : RIGHT
                         "Baseline": 20,
                         "TrialWait": 3,
-                        "TrialDelay": 1,
-                        "TrialLength": 3,
+                        "TrialLength": 3,  # Not really trial length but reaction time...
+                        "FeedbackLength": 3,  # Task / Feedback duraction
                         "EndTrialMin": 2.5,
                         "EndTrialMax": 3.5,
-                        "FeedbackLength": 3,
                         }
 
 global pipelineExtractSettings
@@ -122,11 +121,10 @@ paramIdText = {"TrialNb": "Nb Trials per class",
                "Class2": "Class / Stimulation 2",
                "Baseline": "\"Get Set\" time (s)",
                "TrialWait": "Pre-Stimulus time (s)",
-               "TrialDelay": "Offset/Delay between stimulus and actual trial (s)",
-               "TrialLength": "Trial duration (s)",
+               "TrialLength": "Reaction time (s)",
+               "FeedbackLength": "Task / Feedback time (s)",
                "EndTrialMin": "Inter-trial interval min (s)",
                "EndTrialMax": "Inter-trial interval max (s)",
-               "FeedbackLength": "Feedback time (s) (online scenario)",
                "StimulationEpoch": "Epoch of Interest (EOI) (s)",
                "StimulationDelay": "EOI offset (s)",
                "TimeWindowLength": "Sliding Window (PSD) (s)",

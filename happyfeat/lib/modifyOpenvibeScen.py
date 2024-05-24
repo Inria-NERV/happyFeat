@@ -80,7 +80,7 @@ def modifyExtractionIO(scenXml, newFilename, newOutputSpect1, newOutputSpect2, n
     tree.write(scenXml)
     return
 
-def modifyAcqScenario(scenXml, parameterDict, boolOnline):
+def modifyAcqScenario(scenXml, parameterDict):
     print("---Modifying " + scenXml + " Graz Variables")
     tree = ET.parse(scenXml)
     root = tree.getroot()
@@ -116,15 +116,18 @@ def modifyAcqScenario(scenXml, parameterDict, boolOnline):
                             xmlVal = setting.find('Value')
                             xmlVal.text = parameterDict["EndTrialMax"]
                             continue
+                        elif setting.find('Name').text == "Reaction Time (in sec)":
+                            xmlVal = setting.find('Value')
+                            xmlVal.text = parameterDict["TrialLength"]
+                            continue
+                        elif setting.find('Name').text == "MI Task Duration (in sec)":
+                            xmlVal = setting.find('Value')
+                            xmlVal.text = parameterDict["FeedbackLength"]
+                            continue
                         elif setting.find('Name').text == "Feedback Duration (in sec)":
-                            if boolOnline:
-                                xmlVal = setting.find('Value')
-                                xmlVal.text = parameterDict["FeedbackLength"]
-                                continue
-                            else:
-                                xmlVal = setting.find('Value')
-                                xmlVal.text = str(0)
-                                continue
+                            xmlVal = setting.find('Value')
+                            xmlVal.text = parameterDict["FeedbackLength"]
+                            continue
 
     # WRITE NEW XML
     tree.write(scenXml)

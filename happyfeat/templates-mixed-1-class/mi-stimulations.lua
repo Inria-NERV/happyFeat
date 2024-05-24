@@ -49,6 +49,11 @@ function process(box)
 		box:send_stimulation(1, first_class, t, 0)
 		
 		t = t + display_cue_duration
+		
+		-- feedback
+		
+		box:send_stimulation(1, OVTK_GDF_Feedback_Continuous, t, 0)
+		t = t + feedback_duration
 
 		-- ends trial
 

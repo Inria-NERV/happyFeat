@@ -1,7 +1,7 @@
 <OpenViBE-Scenario>
 	<FormatVersion>2</FormatVersion>
 	<Creator>OpenViBE Designer</Creator>
-	<CreatorVersion>3.5.0</CreatorVersion>
+	<CreatorVersion>3.6.0</CreatorVersion>
 	<Settings>
 		<Setting>
 			<Identifier>(0xe4d2d40d, 0xe63616c4)</Identifier>
@@ -83,16 +83,16 @@
 				</Setting>
 				<Setting>
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
-					<Name>Display Cue Duration (in sec)</Name>
-					<DefaultValue>1.250</DefaultValue>
-					<Value>3</Value>
+					<Name>Reaction Time (in sec)</Name>
+					<DefaultValue>1.0</DefaultValue>
+					<Value>1.0</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
-					<Name>Feedback Duration (in sec)</Name>
-					<DefaultValue>3.750</DefaultValue>
-					<Value>0</Value>
+					<Name>MI Task Duration (in sec)</Name>
+					<DefaultValue>3.0</DefaultValue>
+					<Value>3.0</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -1653,6 +1653,17 @@
 			</Source>
 			<Target>
 				<BoxIdentifier>(0x00007c73, 0x00000357)</BoxIdentifier>
+				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
+			<Identifier>(0x00003cb3, 0x00007626)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x000010c9, 0x0000521f)</BoxIdentifier>
+				<BoxOutputIndex>0</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x000016d9, 0x000055ea)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>

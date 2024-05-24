@@ -1,7 +1,7 @@
 <OpenViBE-Scenario>
 	<FormatVersion>2</FormatVersion>
 	<Creator>OpenViBE Designer</Creator>
-	<CreatorVersion>3.5.0</CreatorVersion>
+	<CreatorVersion>3.6.0</CreatorVersion>
 	<Settings>
 		<Setting>
 			<Identifier>(0xcd66436a, 0xfda9a430)</Identifier>
@@ -365,7 +365,7 @@
 			</Attributes>
 		</Box>
 		<Box>
-			<Identifier>(0x00000de5, 0x00006f3e)</Identifier>
+			<Identifier>(0x00000de5, 0x00006f3d)</Identifier>
 			<Name>Graz Motor Imagery BCI Stimulator</Name>
 			<AlgorithmClassIdentifier>(0x0b5a2787, 0x02750621)</AlgorithmClassIdentifier>
 			<Outputs>
@@ -412,16 +412,16 @@
 				</Setting>
 				<Setting>
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
-					<Name>Display Cue Duration (in sec)</Name>
-					<DefaultValue>1.250</DefaultValue>
-					<Value>3</Value>
+					<Name>Reaction Time (in sec)</Name>
+					<DefaultValue>1.0</DefaultValue>
+					<Value>1.0</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
-					<Name>Feedback Duration (in sec)</Name>
-					<DefaultValue>3.750</DefaultValue>
-					<Value>0</Value>
+					<Name>MI Task Duration (in sec)</Name>
+					<DefaultValue>3.0</DefaultValue>
+					<Value>3.0</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -443,7 +443,7 @@
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
-					<Value>576</Value>
+					<Value>560</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
@@ -3067,6 +3067,17 @@
 			</Target>
 		</Link>
 		<Link>
+			<Identifier>(0x000024c0, 0x0000718c)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x00000de5, 0x00006f3d)</BoxIdentifier>
+				<BoxOutputIndex>0</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x00006a1e, 0x000070a4)</BoxIdentifier>
+				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
 			<Identifier>(0x00002a07, 0x000021ae)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x1f046833, 0x21a8a877)</BoxIdentifier>
@@ -3276,17 +3287,6 @@
 			</Target>
 		</Link>
 		<Link>
-			<Identifier>(0x0000549e, 0x000076c8)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x00000de5, 0x00006f3e)</BoxIdentifier>
-				<BoxOutputIndex>0</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x00006a1e, 0x000070a4)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
 			<Identifier>(0x0000570c, 0x00005a07)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x00007293, 0x00001005)</BoxIdentifier>
@@ -3305,17 +3305,6 @@
 			</Source>
 			<Target>
 				<BoxIdentifier>(0x0000295f, 0x00002a7c)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
-			<Identifier>(0x000059c1, 0x00002fa3)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x00000de5, 0x00006f3e)</BoxIdentifier>
-				<BoxOutputIndex>0</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x000079c9, 0x000042d0)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>
@@ -3393,6 +3382,17 @@
 			</Source>
 			<Target>
 				<BoxIdentifier>(0x0b67ca3f, 0x2a759532)</BoxIdentifier>
+				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
+			<Identifier>(0x0000674c, 0x00005000)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x00000de5, 0x00006f3d)</BoxIdentifier>
+				<BoxOutputIndex>0</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x000079c9, 0x000042d0)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>
