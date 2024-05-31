@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/Inria-NERV/happyFeat,5,4
+/Inria-NERV/happyFeat/tree/main/happyfeat,4,2
+/Inria-NERV/happyFeat/tree/main/happyfeat/templates-connectivity,3,1
+/Inria-NERV/happyFeat/blob/main/happyfeat/templates-connectivity/sc2-extract.xml,2,1
+/Inria-NERV/happyFeat/blob/main/happyfeat/templates-connectivity/sc3-online.xml,2,1
+/Inria-NERV/happyFeat/pulse,2,1
+/Inria-NERV/happyFeat/actions,1,1
+/Inria-NERV/happyFeat/graphs/code-frequency,1,1
+/Inria-NERV/happyFeat/graphs/commit-activity,1,1
+/Inria-NERV/happyFeat/graphs/contributors,1,1
