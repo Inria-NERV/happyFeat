@@ -1290,6 +1290,7 @@ class Dialog(QDialog):
         self.trainTimerEnd = time.perf_counter()
         elapsed = self.trainTimerEnd - self.trainTimerStart
         print("=== Training done in: ", str(elapsed))
+        self.trainClassThread.clear()
 
         self.progressBarTrain.finish()
         if success:
@@ -1493,6 +1494,7 @@ class Dialog(QDialog):
             self.trainTimerEnd = time.perf_counter()
             elapsed = self.trainTimerEnd - self.trainTimerStart
             print("=== Training done in: ", str(elapsed))
+            self.trainClassThread.clear()
             lastCombination = True
 
         if success:
