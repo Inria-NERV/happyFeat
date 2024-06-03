@@ -101,7 +101,8 @@ class Dialog(QDialog):
         self.sensorMontage = None
         self.customMontagePath = None
         self.currentSessionId = None
-        self.currentAttempt = None
+        self.currentAttempt = []
+        self.currentTrainCombination = None
 
         self.extractTimerStart = 0
         self.extractTimerEnd = 0
@@ -121,7 +122,7 @@ class Dialog(QDialog):
         self.loadFilesForVizThread = None
         self.loadFilesForVizThread2 = None
         self.lockVizGui = threading.Lock()
-        self.trainClassThread = None
+        self.trainClassThread = []
         self.progressBarExtract = None
         self.progressBarViz = None
         self.progressBarViz2 = None
@@ -582,11 +583,11 @@ class Dialog(QDialog):
 
         # Classifier training button
         self.btn_trainClassif = QPushButton("TRAIN CLASSIFIER")
-        self.btn_trainClassif.clicked.connect(lambda: self.btnTrainClassif(False))
+        self.btn_trainClassif.clicked.connect(lambda: self.btnTrainClassif())
         self.btn_trainClassif.setStyleSheet("font-weight: bold")
         # Find best combination of features (present only in pipeline 4)
         self.btn_trainClassifCombination = QPushButton("TRAIN - FIND BEST COMB.")
-        self.btn_trainClassifCombination.clicked.connect(lambda: self.btnTrainClassif(True))
+        self.btn_trainClassifCombination.clicked.connect(lambda: self.btnTrainClassifCombination())
         self.btn_trainClassifCombination.setStyleSheet("font-weight: bold")
 
         # Label + QTreeWidget for training results
@@ -654,8 +655,8 @@ class Dialog(QDialog):
         if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             self.qvTrainingLayout.addLayout(self.speedUpLayout)
         self.qvTrainingLayout.addWidget(self.btn_trainClassif)
-        # if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
-            # self.qvTrainingLayout.addWidget(self.btn_trainClassifCombination)  # Activate later when functional
+        if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+            self.qvTrainingLayout.addWidget(self.btn_trainClassifCombination)  # Activate later when functional
         self.qvTrainingLayout.addWidget(self.labelLastResults)
         self.qvTrainingLayout.addWidget(self.lastTrainingResults)
         self.qvTrainingLayout.addWidget(self.btn_useSelectedClassif)
@@ -1143,7 +1144,7 @@ class Dialog(QDialog):
         finally:
             self.lockVizGui.release()
 
-    def btnTrainClassif(self, combination):
+    def btnTrainClassif(self):
         # ----------
         # Callback from button :
         # Select features in fields, check if they're correctly formatted,
@@ -1161,16 +1162,10 @@ class Dialog(QDialog):
                 myMsgBox("Please use at least one set of features!")
                 return
         elif self.parameterDict["pipelineType"] == settings.optionKeys[3] \
-                or self.parameterDict["pipelineType"] == settings.optionKeys[4] and not combination:
+                or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
             # case with 2 sets of features : one of the two can be empty
             if len(self.selectedFeats[0]) < 1 and len(self.selectedFeats[1]) < 1:
                 myMsgBox("Please use at least one set of features!")
-                return
-        elif self.parameterDict["pipelineType"] == settings.optionKeys[4] and combination:
-            # the 2 sets of features must have the same (>0) size
-            if len(self.selectedFeats[0]) != len(self.selectedFeats[1]) \
-                    or len(self.selectedFeats[0]) == 0:
-                myMsgBox("Please use the same number of PSD and NS feats (>0)")
                 return
 
         # Get training param from GUI (to modify training scenario later on)
@@ -1199,7 +1194,7 @@ class Dialog(QDialog):
 
         # Initialize structure for reporting results in workspace file...
         self.currentAttempt = {"SignalFiles": self.trainingFiles,
-                               "CompositeFile": None, "Features": None, "Score": ""}
+                                  "CompositeFile": None, "Features": None, "Score": ""}
 
         # LOAD TRAINING FEATURES
         # /!\ IMPORTANT !
@@ -1236,7 +1231,7 @@ class Dialog(QDialog):
                     for featWidget in self.selectedFeats[metric]:
                         listFeats[metric].append(featWidget.text())
                 self.currentAttempt["Features"] = {settings.optionKeys[1]: listFeats[0],
-                                                   settings.optionKeys[2]: listFeats[1]}
+                                                      settings.optionKeys[2]: listFeats[1]}
 
         # Check if training with such parameters has already been attempted
         alreadyAttempted, attemptId, score = \
@@ -1249,7 +1244,7 @@ class Dialog(QDialog):
             message += str("\n\tRun it again?")
             retVal = myOkCancelBox(message)
             if retVal == QMessageBox.Cancel:
-                self.currentAttempt = {}
+                self.currentAttempt = []
                 return
 
         # deactivate this part of the GUI (+ the extraction part)
@@ -1269,27 +1264,27 @@ class Dialog(QDialog):
                 enableSpeedUp = True
 
         templateFolder = settings.optionsTemplatesDir[trainingParamDict["pipelineType"]]
-        self.trainClassThread = TrainClassifier(self.trainingFiles,
-                                                signalFolder, templateFolder,
-                                                self.workspaceFolder,
-                                                self.ovScript,
-                                                trainingSize, listFeats,
-                                                trainingParamDict, self.samplingFreq,
-                                                self.currentAttempt, attemptId,
-                                                enableSpeedUp)
+        self.trainClassThread.append( TrainClassifier(self.trainingFiles,
+                                                    signalFolder, templateFolder,
+                                                    self.workspaceFolder,
+                                                    self.ovScript,
+                                                    trainingSize, listFeats,
+                                                    trainingParamDict, self.samplingFreq,
+                                                    self.currentAttempt, attemptId,
+                                                    enableSpeedUp) )
 
         # Signal: Training work thread finished one step
         # Increment progress bar + change its label
-        self.trainClassThread.info.connect(self.progressBarTrain.increment)
-        self.trainClassThread.info2.connect(self.progressBarTrain.changeLabel)
+        self.trainClassThread[0].info.connect(self.progressBarTrain.increment)
+        self.trainClassThread[0].info2.connect(self.progressBarTrain.changeLabel)
         # Signal: Training work thread finished
-        self.trainClassThread.over.connect(self.training_over)
+        self.trainClassThread[0].over.connect(self.training_over)
         # Launch the work thread
-        self.trainClassThread.start()
+        self.trainClassThread[0].start()
 
         self.trainTimerStart = time.perf_counter()
 
-    def training_over(self, success, resultsText):
+    def training_over(self, success, attemptIdTemp, resultsText):
         # Training work thread is over, so we kill the progress bar,
         # display a msg with results, and make the training Gui available again
         self.trainTimerEnd = time.perf_counter()
@@ -1328,6 +1323,252 @@ class Dialog(QDialog):
         else:
             myMsgBox(resultsText)
         self.enableGui(True)
+
+    def btnTrainClassifCombination(self):
+        # ----------
+        # Callback from button :
+        # Select features in fields, check if they're correctly formatted,
+        # launch openvibe with sc2-train.xml (in the background) to train the classifier,
+        # for as many combinations of Features possible
+        # (if one metric type : (1), (1+2), (1+2+3) )
+        # (if two metrics : (1+1) , (1+2 + 1+2), (1+2+3 + 1+2+3) )
+        #
+        # provide the classification score/accuracy as a textbox
+        # ----------
+
+        # basic checks
+        if not self.fileListWidgetTrain.selectedItems():
+            myMsgBox("Please select a set of files for training")
+            return
+
+        if len(self.selectedFeats[0]) < 1:
+            myMsgBox("Please use at least one set of features!")
+            return
+
+        if self.parameterDict["pipelineType"] == settings.optionKeys[3]\
+                or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+            # the 2 sets of features must have the same (>0) size
+            if len(self.selectedFeats[0]) != len(self.selectedFeats[1]):
+                myMsgBox("Please use the same number of PSD and NS feats (>0)")
+                return
+
+        # Get training param from GUI (to modify training scenario later on)
+        err = True
+        trainingSize = 0
+        if self.trainingPartitions.text().isdigit():
+            if int(self.trainingPartitions.text()) > 0:
+                trainingSize = int(self.trainingPartitions.text())
+                err = False
+        if err:
+            myMsgBox("Nb of k-fold should be a positive number")
+            return
+
+        # create list of files...
+        self.trainingFiles = []
+        for selectedItem in self.fileListWidgetTrain.selectedItems():
+            self.trainingFiles.append(selectedItem.text())
+
+        # 1-class specific case: check if "baseline" files also exist
+        if self.parameterDict["pipelineType"] == optionKeys[4]:
+            for trainingFile in self.trainingFiles:
+                baselineFile = trainingFile.replace("TRIALS", "BASELINE")
+                if not os.path.exists(os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", baselineFile)):
+                    myMsgBox("Error in training: missing BASELINE file. Check your workspace folder and extraction scenario")
+                    return
+
+        # Initialize structure for reporting results in workspace file...
+        tempAttempt = {"SignalFiles": self.trainingFiles,
+                       "CompositeFile": None, "Features": None, "Score": ""}
+        for comb in range(len(self.selectedFeats[0])):
+            self.currentAttempt.append(tempAttempt.copy())
+
+        # LOAD TRAINING FEATURES
+        # /!\ IMPORTANT !
+        # When using "mixed" pipeline, if one of the two feature lists is empty, we use
+        # the Training scenario template from the pipeline with the non-empty feature (got it?)
+        # ex: if feats(connectivity) is empty, then we use the "powerspectrum" template.
+        trainingParamDict = self.parameterDict.copy()
+        listFeats = []
+        if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+            for featWidget in self.selectedFeats[0]:
+                listFeats.append(featWidget.text())
+            listFeatsTemp = listFeats.copy()  # copy the list so that we don't lose it when exiting the scope...
+            for comb in range(len(self.selectedFeats[0])):
+                self.currentAttempt[comb]["Features"] = {self.parameterDict["pipelineType"]: list(listFeatsTemp)}
+                listFeatsTemp.pop()  # remove last element. Next iteration has 1 less element, etc.
+
+        else:
+            # save both features
+            listFeats = [[], []]
+            listFeatsTemp = [[], []]
+            for metric in [0, 1]:
+                for featWidget in self.selectedFeats[metric]:
+                    listFeats[metric].append(featWidget.text())
+                listFeatsTemp[metric] = listFeats[metric].copy()
+            for comb in range(len(self.selectedFeats[0])):
+                self.currentAttempt[comb]["Features"] = {settings.optionKeys[1]: list(listFeatsTemp[0]),
+                                                         settings.optionKeys[2]: list(listFeatsTemp[1])}
+                listFeatsTemp[0].pop()
+                listFeatsTemp[1].pop()  # remove last element. Next iteration has 1 less element, etc.
+
+        # Check if training with such parameters has already been attempted
+        # (check only for case with all features)
+        alreadyAttempted, attemptId, score = \
+            checkIfTrainingAlreadyDone(self.workspaceFile, self.currentSessionId,
+                                       self.currentAttempt[0]["SignalFiles"],
+                                       self.currentAttempt[0]["Features"])
+        if alreadyAttempted:
+            message = str("Training was already attempted (id " + attemptId + ") ")
+            message += str("\nwith an accuracy of " + score + " \%")
+            message += str("\n\tRun it again?")
+            retVal = myOkCancelBox(message)
+            if retVal == QMessageBox.Cancel:
+                self.currentAttempt = []
+                return
+
+        # deactivate this part of the GUI (+ the extraction part)
+        self.enableExtractionGui(False)
+        self.enableTrainGui(False)
+
+        # create progress bar window...
+        self.progressBarTrainCombination = ProgressBar("Classifier training", "Combination ... ", len(self.selectedFeats[0]))
+
+        # a few common inits...
+        signalFolder = os.path.join(self.workspaceFolder, "signals")
+        templateFolder = settings.optionsTemplatesDir[trainingParamDict["pipelineType"]]
+        enableSpeedUp = False
+        # if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+        #     if self.enableSpeedUp.isChecked():
+        #         enableSpeedUp = True
+
+        for comb in range(len(self.selectedFeats[0])):
+
+            # Load the specific set of features for this combination
+            if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
+                    or self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+
+                listFeats = self.currentAttempt[comb]["Features"][self.parameterDict["pipelineType"]]
+
+            else:
+                listFeats[0] = self.currentAttempt[comb]["Features"][settings.optionKeys[1]]
+                listFeats[1] = self.currentAttempt[comb]["Features"][settings.optionKeys[2]]
+
+            # we use "check if already done" again, not to prompt the user, but to get
+            # a valid "attemptId"
+            alreadyAttempted, attemptId, score = \
+                checkIfTrainingAlreadyDone(self.workspaceFile, self.currentSessionId,
+                                           self.currentAttempt[comb]["SignalFiles"],
+                                           self.currentAttempt[comb]["Features"])
+
+            # Instantiate the thread...
+            self.trainClassThread.append( TrainClassifier(  self.trainingFiles,
+                                                            signalFolder, templateFolder,
+                                                            self.workspaceFolder,
+                                                            self.ovScript,
+                                                            trainingSize, listFeats,
+                                                            trainingParamDict, self.samplingFreq,
+                                                            self.currentAttempt[comb], attemptId,
+                                                            enableSpeedUp) )
+
+
+        # Launch the first (or only) thread.
+        # Launching/management of upcoming threads in "trainingcombination_over"
+        self.trainClassThread[0].over.connect(self.trainingCombination_over)
+        self.trainClassThread[0].start()
+        self.currentTrainCombination = 0
+        self.trainTimerStart = time.perf_counter()
+
+    def trainingCombination_over(self, success, attemptIdTemp, resultsText):
+        # Training work thread is over, so we update (or kill) the progress bar,
+        # display a msg with results at the end of all attemps,
+        # and make the training Gui available again
+
+        lastCombination = False
+        # Update or kill the progress bar, and the global training timer
+        if(self.currentTrainCombination < len(self.selectedFeats[0])-1):
+            self.progressBarTrainCombination.increment()
+        else:
+            self.progressBarTrainCombination.finish()
+            self.trainTimerEnd = time.perf_counter()
+            elapsed = self.trainTimerEnd - self.trainTimerStart
+            print("=== Training done in: ", str(elapsed))
+            lastCombination = True
+
+        if success:
+
+            comb = self.currentTrainCombination
+            # Add training attempt in workspace file
+            alreadyDone, attemptId, dummy = \
+                checkIfTrainingAlreadyDone(self.workspaceFile, self.currentSessionId,
+                                           self.currentAttempt[comb]["SignalFiles"],
+                                           self.currentAttempt[comb]["Features"])
+            if alreadyDone:
+                replaceTrainingAttempt(self.workspaceFile, self.currentSessionId, attemptId,
+                                       self.currentAttempt[comb]["SignalFiles"],
+                                       self.currentAttempt[comb]["CompositeFile"],
+                                       self.currentAttempt[comb]["Features"],
+                                       self.currentAttempt[comb]["Score"])
+            else:
+                addTrainingAttempt(self.workspaceFile, self.currentSessionId,
+                                   self.currentAttempt[comb]["SignalFiles"],
+                                   self.currentAttempt[comb]["CompositeFile"],
+                                   self.currentAttempt[comb]["Features"],
+                                   self.currentAttempt[comb]["Score"])
+
+            self.updateTrainingAttemptsTree()
+
+            # Launch next thread if necessary
+            if not lastCombination:
+                self.currentTrainCombination += 1
+                self.trainClassThread[self.currentTrainCombination].over.connect(self.trainingCombination_over)
+                self.trainClassThread[self.currentTrainCombination].start()
+
+        else:
+            myMsgBox(resultsText)
+
+        if lastCombination:
+
+            trainingFilesList = self.currentAttempt[comb]["SignalFiles"]
+            exitText = str("== COMBINATION TRAINING RESULTS ==\n\n")
+            exitText += str("Using files:\n")
+            for i in range(len(trainingFilesList)):
+                exitText += str(trainingFilesList[i] + "\n")
+            exitText += str("\n")
+
+            bestScore = 0.0
+            bestAttempt = 0
+            bestFeatures = ""
+            for comb in range(len(self.selectedFeats[0])):
+                if float(self.currentAttempt[comb]["Score"]) > bestScore:
+                    bestScore = float(self.currentAttempt[comb]["Score"])
+                    alreadyDone, attemptId, dummy = \
+                        checkIfTrainingAlreadyDone(self.workspaceFile, self.currentSessionId,
+                                                   self.currentAttempt[comb]["SignalFiles"],
+                                                   self.currentAttempt[comb]["Features"])
+                    bestAttempt = attemptId
+                    bestFeatures = self.currentAttempt[comb]["Features"]
+
+                feats = self.currentAttempt[comb]["Features"]
+                exitText += "Features: "
+                # for i in range(len(feats)):
+                #     exitText += str(feats[i] + " ")
+                exitText += str(feats)
+                exitText += str("\n")
+                exitText += str("Score: " + str(self.currentAttempt[comb]["Score"]))
+                exitText += str("\n")
+
+            exitText += str("\n")
+            exitText += str("== Best score: " + str(bestScore) + ", with attempt id " + str(bestAttempt) + "\n")
+            exitText += str("   and Features: " + str(bestFeatures))
+
+            msg = QMessageBox()
+            msg.setText(exitText)
+            msg.setStyleSheet("QLabel{min-width: 1200px;}")
+            msg.setWindowTitle("Classifier Training Score")
+            msg.exec_()
+
+            self.enableGui(True)
 
     def enableAcquisitionGui(self, myBool):
         # Acquisition part...

@@ -638,7 +638,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
 class TrainClassifier(QtCore.QThread):
     info = Signal(bool)
     info2 = Signal(str)
-    over = Signal(bool, str)
+    over = Signal(bool, int, str)
 
     def __init__(self, trainingFiles,
                  signalFolder, templateFolder,
@@ -697,7 +697,7 @@ class TrainClassifier(QtCore.QThread):
         if not all(freqsamp == listSampFreq[0] for freqsamp in listSampFreq):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Sampling frequency mismatch (" + str(listSampFreq) + ")")
-            self.over.emit(False, errMsg)
+            self.over.emit(False, self.attemptId, errMsg)
             return
         else:
             print("Sampling Frequency for selected files : " + str(listSampFreq[0]))
@@ -705,7 +705,7 @@ class TrainClassifier(QtCore.QThread):
         if not all(electrodeList == listElectrodeList[0] for electrodeList in listElectrodeList):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Electrode List mismatch")
-            self.over.emit(False, errMsg)
+            self.over.emit(False, self.attemptId, errMsg)
             return
         else:
             print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
@@ -715,16 +715,16 @@ class TrainClassifier(QtCore.QThread):
         if not self.usingDualFeatures:
             selectedFeats, errMsg = self.checkSelectedFeats(self.selectedFeats, listSampFreq[0], listElectrodeList[0])
             if not selectedFeats:
-                self.over.emit(False, errMsg)
+                self.over.emit(False, self.attemptId, errMsg)
                 return
         else:
             selectedFeats, errMsg = self.checkSelectedFeats(self.selectedFeats[0], listSampFreq[0], listElectrodeList[0])
             if not selectedFeats:
-                self.over.emit(False, errMsg)
+                self.over.emit(False, self.attemptId, errMsg)
                 return
             selectedFeats2, errMsg = self.checkSelectedFeats(self.selectedFeats[1], listSampFreq[0], listElectrodeList[0])
             if not selectedFeats2:
-                self.over.emit(False, errMsg)
+                self.over.emit(False, self.attemptId, errMsg)
                 return
 
         epochCount = [0, 0]
@@ -789,7 +789,7 @@ class TrainClassifier(QtCore.QThread):
 
             elif i == 3:
                 #  "online" scenario
-                modifyAcqScenario(destFile, self.parameterDict["AcquisitionParams"], True)
+                modifyAcqScenario(destFile, self.parameterDict["AcquisitionParams"])
                 if not self.usingDualFeatures:
                     modifyTrainScenUsingSplitAndClassifiers("SPLIT", "Classifier processor", selectedFeats, epochCount[0], destFile)
                     # Special case: "connectivity metric"
@@ -831,7 +831,7 @@ class TrainClassifier(QtCore.QThread):
                 if not success:
                     successGlobal = False
                     self.errorMessageTrainer()
-                    self.over.emit(False, self.exitText)
+                    self.over.emit(False, self.attemptId, self.exitText)
                     break
 
             # NOW AGGREGATE FEATURE VECTORS PER FEATURE AND PER CLASS...
@@ -863,7 +863,7 @@ class TrainClassifier(QtCore.QThread):
             if not success:
                 successGlobal = False
                 self.errorMessageTrainer()
-                self.over.emit(False, self.exitText)
+                self.over.emit(False, self.attemptId, self.exitText)
             else:
                 # Copy weights file to <workspaceFolder>/classifier-weights.xml
                 newWeights = os.path.join(self.signalFolder, "sessions", self.currentSessionId, \
@@ -906,7 +906,7 @@ class TrainClassifier(QtCore.QThread):
                                         self.parameterDict["AcquisitionParams"]["Class2"],
                                         class1Stim, class2Stim, tmin, tmax)
             if not compositeCsv:
-                self.over.emit(False, "Error merging runs!! Most probably different list of electrodes")
+                self.over.emit(False, self.attemptId, "Error merging runs!! Most probably different list of electrodes")
                 return
 
             print("Composite file for training: " + compositeCsv)
@@ -928,7 +928,7 @@ class TrainClassifier(QtCore.QThread):
 
             if not success:
                 self.errorMessageTrainer()
-                self.over.emit(False, self.exitText)
+                self.over.emit(False, self.attemptId, self.exitText)
             else:
                 # Copy weights file to <workspaceFolder>/classifier-weights.xml
                 newWeights = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", \
@@ -966,7 +966,7 @@ class TrainClassifier(QtCore.QThread):
 
 
         self.stop = True
-        self.over.emit(True, self.exitText)
+        self.over.emit(True, self.attemptId, self.exitText)
 
     def stopThread(self):
         self.stop = True
