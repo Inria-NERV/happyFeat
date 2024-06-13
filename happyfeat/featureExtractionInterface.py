@@ -165,18 +165,17 @@ class Dialog(QDialog):
         self.qActionEnableAdvancedMode.triggered.connect(lambda: self.toggleAdvanced())
         self.menuOptions.addAction(self.qActionEnableAdvancedMode)
 
-        if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
-            # Auto-select feature: select a set of channels for autoselection
-            self.menuAutoSelect = QMenu("&Feature AutoSelect")
-            self.menuBar.addMenu(self.menuAutoSelect)
+        # Auto-select feature: select a set of channels for autoselection
+        self.menuAutoSelect = QMenu("&Feature AutoSelect")
+        self.menuBar.addMenu(self.menuAutoSelect)
 
-            self.qActionChanList = QAction("Set &Channel sub-selection", self)
-            self.qActionChanList.triggered.connect(lambda: self.autoFeatSetChannelSubselection())
-            self.menuAutoSelect.addAction(self.qActionChanList)
+        self.qActionChanList = QAction("Set &Channel sub-selection", self)
+        self.qActionChanList.triggered.connect(lambda: self.autoFeatSetChannelSubselection())
+        self.menuAutoSelect.addAction(self.qActionChanList)
 
-            self.qActionFreqRange = QAction("Set frequency &Range", self)
-            self.qActionFreqRange.triggered.connect(lambda: self.autoFeatSetFreqRange())
-            self.menuAutoSelect.addAction(self.qActionFreqRange)
+        self.qActionFreqRange = QAction("Set frequency &Range", self)
+        self.qActionFreqRange.triggered.connect(lambda: self.autoFeatSetFreqRange())
+        self.menuAutoSelect.addAction(self.qActionFreqRange)
 
         # -----------------------------------------------------------------------
         # NEW! LEFT-MOST PART: Signal acquisition & Online classification parts
@@ -396,7 +395,12 @@ class Dialog(QDialog):
             self.btn_psd.clicked.connect(lambda: self.btnPsd(self.Features, titlePsd))
             self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo))
 
+            self.btn_r2mapAutoFeat = QPushButton("R² map (sub-select.)")
+            self.btn_r2mapAutoFeat.clicked.connect(lambda: self.btnR2(self.Features, titleR2, True))
+
             self.parallelVizLayouts[0].addWidget(self.btn_r2map)
+            self.parallelVizLayouts[0].addWidget(self.btn_r2mapAutoFeat)
+
             self.parallelVizLayouts[0].addWidget(self.btn_psd)
             self.parallelVizLayouts[0].addWidget(self.btn_timefreq)
             self.parallelVizLayouts[0].addWidget(self.btn_topo)
@@ -417,7 +421,13 @@ class Dialog(QDialog):
             self.btn_metric.clicked.connect(lambda: self.btnMetric(self.Features, titleMetric))
             self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreqConnect(self.Features, titleTimeFreq))
             self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo))
+
+            self.btn_r2mapAutoFeat = QPushButton("R² map (sub-select.)")
+            self.btn_r2mapAutoFeat.clicked.connect(lambda: self.btnR2(self.Features, titleR2, True))
+
             self.parallelVizLayouts[1].addWidget(self.btn_r2map)
+            self.parallelVizLayouts[1].addWidget(self.btn_r2mapAutoFeat)
+
             self.parallelVizLayouts[1].addWidget(self.btn_metric)
             self.parallelVizLayouts[1].addWidget(self.btn_timefreq)
             self.parallelVizLayouts[1].addWidget(self.btn_topo)
@@ -446,13 +456,15 @@ class Dialog(QDialog):
             self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2, False))
             self.btn_psd.clicked.connect(lambda: self.btnPsd(self.Features, titlePsd))
             self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo))
-            if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
-                self.btn_r2mapAutoFeat = QPushButton("R² map (sub-select.)")
-                self.btn_r2mapAutoFeat.clicked.connect(lambda: self.btnR2(self.Features, titleR2, True))
-                self.parallelVizLayouts[0].addWidget(self.btn_r2mapAutoFeat)
+
+            self.btn_r2mapAutoFeat = QPushButton("R² map (sub-select.)")
+            self.btn_r2mapAutoFeat.clicked.connect(lambda: self.btnR2(self.Features, titleR2, True))
+
             self.parallelVizLayouts[0].addWidget(self.btn_r2map)
+            self.parallelVizLayouts[0].addWidget(self.btn_r2mapAutoFeat)
             self.parallelVizLayouts[0].addWidget(self.btn_psd)
             self.parallelVizLayouts[0].addWidget(self.btn_topo)
+
             # Viz options for "Connectivity" pipeline...
             self.btn_r2map2 = QPushButton("Freq.-chan. R² map")
             self.btn_metric = QPushButton("NodeStr. for the 2 classes")
@@ -464,11 +476,12 @@ class Dialog(QDialog):
             self.btn_r2map2.clicked.connect(lambda: self.btnR2(self.Features2, titleR2_c, False))
             self.btn_metric.clicked.connect(lambda: self.btnMetric(self.Features2, titleMetric_c))
             self.btn_topo2.clicked.connect(lambda: self.btnTopo(self.Features2, titleTopo_c))
-            if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
-                self.btn_r2mapAutoFeat2 = QPushButton("R² map (sub-select.)")
-                self.btn_r2mapAutoFeat2.clicked.connect(lambda: self.btnR2(self.Features2, titleR2, True))
-                self.parallelVizLayouts[1].addWidget(self.btn_r2mapAutoFeat2)
+
+            self.btn_r2mapAutoFeat2 = QPushButton("R² map (sub-select.)")
+            self.btn_r2mapAutoFeat2.clicked.connect(lambda: self.btnR2(self.Features2, titleR2, True))
+
             self.parallelVizLayouts[1].addWidget(self.btn_r2map2)
+            self.parallelVizLayouts[1].addWidget(self.btn_r2mapAutoFeat2)
             self.parallelVizLayouts[1].addWidget(self.btn_metric)
             self.parallelVizLayouts[1].addWidget(self.btn_topo2)
 
@@ -480,10 +493,9 @@ class Dialog(QDialog):
             self.layoutViz.addLayout(self.labelLayoutH)
             self.layoutViz.addLayout(self.parallelVizLayoutH)
 
-        if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
-            self.btn_autoFeat = QPushButton("Auto. select optimal features")
-            self.btn_autoFeat.clicked.connect(lambda: self.btnAutoFeat(self.Features, self.Features2))
-            self.layoutViz.addWidget(self.btn_autoFeat)
+        self.btn_autoFeat = QPushButton("Auto. select optimal features")
+        self.btn_autoFeat.clicked.connect(lambda: self.btnAutoFeat(self.Features, self.Features2))
+        self.layoutViz.addWidget(self.btn_autoFeat)
 
         # Add separator...
         separator2 = QFrame()
@@ -655,8 +667,8 @@ class Dialog(QDialog):
         if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             self.qvTrainingLayout.addLayout(self.speedUpLayout)
         self.qvTrainingLayout.addWidget(self.btn_trainClassif)
-        if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
-            self.qvTrainingLayout.addWidget(self.btn_trainClassifCombination)  # Activate later when functional
+        #if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+        self.qvTrainingLayout.addWidget(self.btn_trainClassifCombination)  # Activate later when functional
         self.qvTrainingLayout.addWidget(self.labelLastResults)
         self.qvTrainingLayout.addWidget(self.lastTrainingResults)
         self.qvTrainingLayout.addWidget(self.btn_useSelectedClassif)
@@ -691,6 +703,7 @@ class Dialog(QDialog):
         # ----------
         if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
             self.btn_r2map.setEnabled(myBool)
+            self.btn_r2mapAutoFeat.setEnabled(myBool)
             self.btn_timefreq.setEnabled(myBool)
             self.btn_psd.setEnabled(myBool)
             self.btn_topo.setEnabled(myBool)
@@ -700,22 +713,24 @@ class Dialog(QDialog):
             # self.btn_connectome.setEnabled(myBool)
             self.btn_timefreq.setEnabled(myBool)
             self.btn_r2map.setEnabled(myBool)
+            self.btn_r2mapAutoFeat.setEnabled(myBool)
             self.btn_metric.setEnabled(myBool)
             self.btn_topo.setEnabled(myBool)
         elif self.parameterDict["pipelineType"] == settings.optionKeys[3] \
                 or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
             self.btn_r2map.setEnabled(myBool)
+            self.btn_r2mapAutoFeat.setEnabled(myBool)
             self.btn_psd.setEnabled(myBool)
             self.btn_topo.setEnabled(myBool)
             self.btn_r2map2.setEnabled(myBool)
+            self.btn_r2mapAutoFeat2.setEnabled(myBool)
             self.btn_metric.setEnabled(myBool)
             self.btn_topo2.setEnabled(myBool)
             if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
                 self.btn_r2mapAutoFeat.setEnabled(myBool)
                 self.btn_r2mapAutoFeat2.setEnabled(myBool)
 
-        if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
-            self.btn_autoFeat.setEnabled(myBool)
+        self.btn_autoFeat.setEnabled(myBool)
 
         self.show()
 
@@ -1599,6 +1614,7 @@ class Dialog(QDialog):
         self.electrodePsd.setEnabled(myBool)
         self.freqTopo.setEnabled(myBool)
         self.colormapScale.setEnabled(myBool)
+        self.btn_autoFeat.setEnabled(myBool)
 
         self.btn_loadFilesForViz.setEnabled(myBool)
         if myBool and self.plotBtnsEnabled:
@@ -1611,6 +1627,7 @@ class Dialog(QDialog):
         self.btn_addPair.setEnabled(myBool)
         self.btn_removePair.setEnabled(myBool)
         self.btn_trainClassif.setEnabled(myBool)
+        self.btn_trainClassifCombination.setEnabled(myBool)
         for listOfFeatures in self.selectedFeats:
             for item in listOfFeatures:
                 item.setEnabled(myBool)
@@ -1622,8 +1639,6 @@ class Dialog(QDialog):
 
         if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             self.enableSpeedUp.setEnabled(myBool)
-        if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
-            self.btn_trainClassifCombination.setEnabled(myBool)
 
     def enableGui(self, myBool):
         # Enable/Disable ALL PARTS of the GUI
@@ -1671,7 +1686,11 @@ class Dialog(QDialog):
                 freqMax = int(self.autoFeatFreqRange.split(":")[1])
                 freqRange = np.arange(freqMin, freqMax+1, features.fres)
                 for chan in self.autoFeatChannelList:
-                    subR2.append(features.Rsigned[features.electrodes_final.index(chan), freqMin:(freqMax+1)])
+                    try:
+                        subR2.append(features.Rsigned[features.electrodes_final.index(chan), freqMin:(freqMax+1)])
+                    except ValueError:
+                        myMsgBox("Invalid electrode subselection or frequency range for auto. feature selection")
+                        return
                     subElectrodes.append(chan)
 
                 subR2 = np.array(subR2)
@@ -1832,8 +1851,9 @@ class Dialog(QDialog):
         if len(selectedFeats) == 0:
             # Remove "no feature" label
             item = layout.itemAt(3)
-            widget = item.widget()
-            widget.deleteLater()
+            if item:  # check if it exists. It may have been already deleted!
+                widget = item.widget()
+                widget.deleteLater()
 
         if not featText:
         # default text
@@ -1888,7 +1908,7 @@ class Dialog(QDialog):
 
         return
 
-    def btnAutoFeat(self, resultsPSD, resultsNS):
+    def btnAutoFeat(self, results1, results2):
 
         # Automatic feature selection : find best R² among
         # predetermined list of channels and in range of frequencies
@@ -1896,39 +1916,47 @@ class Dialog(QDialog):
         # Note: if dual mode, we assume the sampling freq,
         # list of electrodes, etc. are the same for PSD & NS cases
 
-        if not resultsPSD and not resultsNS:
+        if not results1 and not results2:
             myMsgBox("What are you doing???")
             return
 
-        resultsPSD.autoselected = None
-        resultsNS.autoselected = None
+        results1.autoselected = None
+        results2.autoselected = None
 
         # If Freq range &/or Channel list are empty, use full range
         if self.autoFeatFreqRange == "":
-            if resultsPSD:
-                self.autoFeatFreqRange = "1:" + str(int(resultsPSD.samplingFreq/2+1))
+            if results1:
+                self.autoFeatFreqRange = "1:" + str(int(results1.samplingFreq/2+1))
             else:
-                self.autoFeatFreqRange = "1:" + str(int(resultsNS.samplingFreq/2+1))
+                self.autoFeatFreqRange = "1:" + str(int(results2.samplingFreq/2+1))
         if self.autoFeatChannelList == []:
-            if resultsPSD:
-                self.autoFeatChannelList = resultsPSD.electrodes_final
+            if results1:
+                self.autoFeatChannelList = results1.electrodes_final
             else:
-                self.autoFeatChannelList = resultsNS.electrodes_final
+                self.autoFeatChannelList = results2.electrodes_final
 
         print("AutoFeat: Sublist of channels: " + str(self.autoFeatChannelList))
         print("AutoFeat: Frequency range: " + str(self.autoFeatFreqRange))
 
         Index_electrode = []
         for chan in self.autoFeatChannelList:
-            Index_electrode.append(resultsPSD.electrodes_final.index(chan))
+            try:
+                idx = results1.electrodes_final.index(chan)
+            except ValueError:
+                myMsgBox("Electrode " + chan + " not in electrode list of selected files")
+                return
+            Index_electrode.append(idx)
         print("Index_electrode:  " + str(Index_electrode))
 
+        # TODO : add check on frequencies...
         freqMin = int(self.autoFeatFreqRange.split(":")[0])
         freqMax = int(self.autoFeatFreqRange.split(":")[1])
-        # freqRange = [i for i in range(freqMin, freqMax+1)]
+        if freqMax <= freqMin or freqMax > self.samplingFreq / 2 or freqMin < 0 or freqMax < 1 :
+            myMsgBox("Invalid frequency range for AutoFeat ( freqmin:freqmax )" )
+            return
 
-        for result in [resultsPSD, resultsNS]:
-            if result:
+        for result in [results1, results2]:
+            if len(result.Rsigned) > 0:
                 result.autoselected = []
                 Rsigned_reduced = result.Rsigned[Index_electrode, freqMin:freqMax]
                 Max_per_electrode = Rsigned_reduced.max(1)
@@ -1946,7 +1974,7 @@ class Dialog(QDialog):
                     # Todo: make more secure & explicit
                     return
 
-        # Remove all pairs of features in both columns
+        # Remove all pairs of features in columns
         # TODO : refactor. A bit dirty...
 
         if len(self.selectedFeats[0]) == 0:
@@ -1954,37 +1982,46 @@ class Dialog(QDialog):
             item = self.qvFeatureLayouts[0].itemAt(3)
             widget = item.widget()
             widget.deleteLater()
-        if len(self.selectedFeats[1]) == 0:
-            # Remove "no feature" label
-            item = self.qvFeatureLayouts[1].itemAt(3)
-            widget = item.widget()
-            widget.deleteLater()
 
         while len(self.selectedFeats[0]) > 0:
             result = self.qvFeatureLayouts[0].getWidgetPosition(self.selectedFeats[0][-1])
             self.qvFeatureLayouts[0].removeRow(result[0])
             self.selectedFeats[0].pop()
-        if len(self.selectedFeats[0]) == 0:
-            noFeatLabel0 = QLabel("No feature")
-            noFeatLabel0.setAlignment(QtCore.Qt.AlignCenter)
-            self.qvFeatureLayouts[0].addWidget(noFeatLabel0)
-        while len(self.selectedFeats[1]) > 0:
-            result = self.qvFeatureLayouts[1].getWidgetPosition(self.selectedFeats[1][-1])
-            self.qvFeatureLayouts[1].removeRow(result[0])
-            self.selectedFeats[1].pop()
-        if len(self.selectedFeats[1]) == 0:
-            noFeatLabel1 = QLabel("No feature")
-            noFeatLabel1.setAlignment(QtCore.Qt.AlignCenter)
-            self.qvFeatureLayouts[1].addWidget(noFeatLabel1)
+
+        # Same, in case with two feature/metric types...
+        if self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+            if len(self.selectedFeats[1]) == 0:
+                # Remove "no feature" label
+                item = self.qvFeatureLayouts[1].itemAt(3)
+                widget = item.widget()
+                widget.deleteLater()
+            while len(self.selectedFeats[1]) > 0:
+                result = self.qvFeatureLayouts[1].getWidgetPosition(self.selectedFeats[1][-1])
+                self.qvFeatureLayouts[1].removeRow(result[0])
+                self.selectedFeats[1].pop()
+            if len(self.selectedFeats[1]) == 0:
+                noFeatLabel1 = QLabel("No feature")
+                noFeatLabel1.setAlignment(QtCore.Qt.AlignCenter)
+                self.qvFeatureLayouts[1].addWidget(noFeatLabel1)
+
 
         # get auto-selected features and add them to the interface
-        for featPair in resultsPSD.autoselected:
-            featText = str(featPair[0]) + ';' + str(featPair[1])
-            self.btnAddPair(self.selectedFeats[0], self.qvFeatureLayouts[0], featText)
+        if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+            for featPair in results1.autoselected:
+                featText = str(featPair[0]) + ';' + str(featPair[1])
+                self.btnAddPair(self.selectedFeats[0], self.qvFeatureLayouts[0], featText)
 
-        for featPair in resultsNS.autoselected:
-            featText = str(featPair[0]) + ';' + str(featPair[1])
-            self.btnAddPair(self.selectedFeats[1], self.qvFeatureLayouts[1], featText)
+        # Special cases for pipelines 3&4 (dual features)
+        if self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[4] :
+            for featPair in results1.autoselected:
+                featText = str(featPair[0]) + ';' + str(featPair[1])
+                self.btnAddPair(self.selectedFeats[0], self.qvFeatureLayouts[0], featText)
+            for featPair in results2.autoselected:
+                featText = str(featPair[0]) + ';' + str(featPair[1])
+                self.btnAddPair(self.selectedFeats[1], self.qvFeatureLayouts[1], featText)
 
     def autoFeatSetChannelSubselection(self):
         # ----------
