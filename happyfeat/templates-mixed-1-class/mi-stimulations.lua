@@ -9,7 +9,8 @@ function initialize(box)
 	wait_for_cue_duration = box:get_setting(5)
 	display_cue_duration = box:get_setting(6)
 	feedback_duration = box:get_setting(7)
-	end_of_trial_duration = box:get_setting(8)
+	end_of_trial_min_duration = box:get_setting(8)
+	end_of_trial_max_duration = box:get_setting(9)
 
 end
 
@@ -58,7 +59,7 @@ function process(box)
 		-- ends trial
 
 		box:send_stimulation(1, OVTK_GDF_End_Of_Trial, t, 0)
-		t = t + end_of_trial_duration
+		t = t + math.random(end_of_trial_min_duration, end_of_trial_max_duration)
 
 	end
 

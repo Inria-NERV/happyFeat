@@ -365,7 +365,7 @@
 			</Attributes>
 		</Box>
 		<Box>
-			<Identifier>(0x00000de5, 0x00006f3d)</Identifier>
+			<Identifier>(0x00000de5, 0x00006f3e)</Identifier>
 			<Name>Graz Motor Imagery BCI Stimulator</Name>
 			<AlgorithmClassIdentifier>(0x0b5a2787, 0x02750621)</AlgorithmClassIdentifier>
 			<Outputs>
@@ -426,9 +426,17 @@
 				</Setting>
 				<Setting>
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
-					<Name>End of Trial Duration (in sec)</Name>
+					<Name>End of Trial Minimum Duration (in sec)</Name>
 					<DefaultValue>2.000</DefaultValue>
 					<Value>2.000</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+				<Setting>
+					<Identifier>(0x79574f40, 0x3a5535bd)</Identifier>
+					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
+					<Name>End of Trial Maximum Duration (in sec)</Name>
+					<DefaultValue>3.500</DefaultValue>
+					<Value>3.500</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
@@ -443,7 +451,7 @@
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
-					<Value>560</Value>
+					<Value>544</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
@@ -2902,6 +2910,17 @@
 	</Boxes>
 	<Links>
 		<Link>
+			<Identifier>(0x0000068e, 0x000039d2)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x00000de5, 0x00006f3e)</BoxIdentifier>
+				<BoxOutputIndex>0</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x00006a1e, 0x000070a4)</BoxIdentifier>
+				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
 			<Identifier>(0x000006a3, 0x00004da8)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x000016d9, 0x000055e9)</BoxIdentifier>
@@ -3063,17 +3082,6 @@
 			</Source>
 			<Target>
 				<BoxIdentifier>(0x4cd78e38, 0x35301f86)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
-			<Identifier>(0x000024c0, 0x0000718c)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x00000de5, 0x00006f3d)</BoxIdentifier>
-				<BoxOutputIndex>0</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x00006a1e, 0x000070a4)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>
@@ -3386,17 +3394,6 @@
 			</Target>
 		</Link>
 		<Link>
-			<Identifier>(0x0000674c, 0x00005000)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x00000de5, 0x00006f3d)</BoxIdentifier>
-				<BoxOutputIndex>0</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x000079c9, 0x000042d0)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
 			<Identifier>(0x00006751, 0x00004bbf)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x00006c51, 0x000077b8)</BoxIdentifier>
@@ -3404,6 +3401,17 @@
 			</Source>
 			<Target>
 				<BoxIdentifier>(0x00006bc5, 0x00007712)</BoxIdentifier>
+				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
+			<Identifier>(0x00006978, 0x0000204a)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x00000de5, 0x00006f3e)</BoxIdentifier>
+				<BoxOutputIndex>0</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x000079c9, 0x000042d0)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>

@@ -97,9 +97,17 @@
 				</Setting>
 				<Setting>
 					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
-					<Name>End of Trial Duration (in sec)</Name>
+					<Name>End of Trial Minimum Duration (in sec)</Name>
 					<DefaultValue>2.000</DefaultValue>
 					<Value>2.000</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+				<Setting>
+					<Identifier>(0x79574f40, 0x3a5535bd)</Identifier>
+					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
+					<Name>End of Trial Maximum Duration (in sec)</Name>
+					<DefaultValue>3.500</DefaultValue>
+					<Value>3.500</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
