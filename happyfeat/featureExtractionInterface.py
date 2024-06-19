@@ -1122,7 +1122,7 @@ class Dialog(QDialog):
 
         self.vizTimerStart = time.perf_counter()
 
-    def loadFilesForViz_over(self, success, text):
+    def loadFilesForViz_over(self, success, text, fileValidityList):
         # Viz work thread is over, so we kill the progress bar,
         # and re-activate the GUI (if it's the last thread to finish)
         self.vizTimerEnd = time.perf_counter()
@@ -1138,6 +1138,7 @@ class Dialog(QDialog):
             self.samplingFreq = self.Features.samplingFreq
             self.plotBtnsEnabled = True
 
+        # unlock viz buttons only if both threads have finished.
         self.lockVizGui.acquire()
         try:
             self.nbThreadsViz -= 1
@@ -1146,11 +1147,26 @@ class Dialog(QDialog):
         finally:
             self.lockVizGui.release()
 
-    def loadFilesForViz_kill_PB(self, success, text):
+        # Handle case in which we had to prune out trials with invalid values (NaN)
+        if not all(fileValidityList):
+            analysisFiles = []
+            for selectedItem in self.availableFilesForVizList.selectedItems():
+                analysisFiles.append(selectedItem.text())
+            invalidFiles = [i for i in range(len(fileValidityList)) if not fileValidityList[i]]
+            warnText = str("--Warning: the following files contained invalid values (NaN).\n")
+            warnText += str("\nTrials with invalid values were dropped.")
+            warnText += str("\n /!\\ The displayed statistics (R2 maps, etc.) might be biased...\n")
+            for i in invalidFiles:
+                warnText += str("\n" + analysisFiles[i])
+
+            myMsgBox(warnText)
+
+    def loadFilesForViz_kill_PB(self, success, text, fileValidityList):
         # Viz work thread2 is over, so we kill the progress bar
         # and re-activate the GUI (if it's the last thread to finish)
         self.progressBarViz2.finish()
 
+        # unlock viz buttons only if both threads have finished.
         self.lockVizGui.acquire()
         try:
             self.nbThreadsViz -= 1
@@ -1158,6 +1174,20 @@ class Dialog(QDialog):
                 self.enableGui(True)
         finally:
             self.lockVizGui.release()
+
+        # Handle case in which we had to prune out trials with invalid values (NaN)
+        if not all(fileValidityList):
+            analysisFiles = []
+            for selectedItem in self.availableFilesForVizList.selectedItems():
+                analysisFiles.append(selectedItem.text())
+            invalidFiles = [i for i in range(len(fileValidityList)) if not fileValidityList[i]]
+            warnText = str("--Warning: the following files contained invalid values (NaN).\n")
+            warnText += str("\nTrials with invalid values were dropped.")
+            warnText += str("\n /!\\ The displayed statistics (R2 maps, etc.) might be biased...\n")
+            for i in invalidFiles:
+                warnText += str("\n" + analysisFiles[i])
+
+            myMsgBox(warnText)
 
     def btnTrainClassif(self):
         # ----------

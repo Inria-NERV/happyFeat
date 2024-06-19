@@ -181,7 +181,7 @@ class Extraction(QtCore.QThread):
 class LoadFilesForVizPowSpectrum(QtCore.QThread):
     info = Signal(bool)
     info2 = Signal(str)
-    over = Signal(bool, str)
+    over = Signal(bool, str, list)
 
     def __init__(self, analysisFiles, workingFolder, parameterDict, Features, sampFreq, parent=None):
 
@@ -209,6 +209,7 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
 
         self.useBaselineFiles = self.parameterDict["pipelineType"] == optionKeys[1]
 
+        validFiles = []
         for selectedFilesForViz in self.analysisFiles:
             idxFile += 1
             pipelineLabel = "SPECTRUM"
@@ -242,7 +243,7 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
                 errMsg = str(errMsg + "\nSampling frequency or frequency bins mismatch")
                 errMsg = str(errMsg + "\n(" + str(sampFreq1) + " vs " + str(sampFreq2) + " or ")
                 errMsg = str(errMsg + str(freqBins1) + " vs " + str(freqBins2) + ")")
-                self.over.emit(False, errMsg)
+                self.over.emit(False, errMsg, None)
                 return
 
             listSampFreq.append(sampFreq1)
@@ -259,10 +260,19 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
             if electrodeList1 != electrodeList2:
                 errMsg = str("Error when loading " + path1 + "\n" + " and " + path2)
                 errMsg = str(errMsg + "\nElectrode List mismatch")
-                self.over.emit(False, errMsg)
+                self.over.emit(False, errMsg, None)
                 return
 
             listElectrodeList.append(electrodeList1)
+
+            # check for invalid values...
+            newData1, valid1 = check_valid_np(data1)
+            newData2, valid2 = check_valid_np(data2)
+
+            if valid1 and valid2:
+                validFiles.append(True)
+            else:
+                validFiles.append(False)
 
             self.dataNp1.append(data1)
             self.dataNp2.append(data2)
@@ -275,7 +285,7 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         if not all(freqsamp == listSampFreq[0] for freqsamp in listSampFreq):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Sampling frequency mismatch (" + str(listSampFreq) + ")")
-            self.over.emit(False, errMsg)
+            self.over.emit(False, errMsg, None)
             return
         else:
             self.samplingFreq = listSampFreq[0]
@@ -284,7 +294,7 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         if not all(electrodeList == listElectrodeList[0] for electrodeList in listElectrodeList):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Electrode List mismatch")
-            self.over.emit(False, errMsg)
+            self.over.emit(False, errMsg, None)
             return
         else:
             print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
@@ -292,7 +302,7 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         if not all(freqBins == listFreqBins[0] for freqBins in listFreqBins):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Not same number of frequency bins (" + str(listSampFreq) + ")")
-            self.over.emit(False, errMsg)
+            self.over.emit(False, errMsg, None)
             return
         else:
             print("Frequency bins: " + str(listFreqBins[0]))
@@ -382,19 +392,17 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
 
         Rsigned = Compute_Rsquare_Map(power_cond2_final[:, :, :(n_bins - 1)],
                                       power_cond1_final[:, :, :(n_bins - 1)])
-        Wsquare, Wpvalues = Compute_Wilcoxon_Map(power_cond2_final[:, :, :(n_bins - 1)],
-                                                 power_cond1_final[:, :, :(n_bins - 1)])
 
         # Reordering for R map and topography...
         if self.parameterDict["sensorMontage"] == "standard_1020" \
             or self.parameterDict["sensorMontage"] == "biosemi64":
-            Rsigned_2, Wsquare_2, Wpvalues_2, electrodes_final, power_cond1_2, power_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
-                = Reorder_plusplus(Rsigned, Wsquare, Wpvalues, electrodeList, power_cond1_final, power_cond2_final,
+            Rsigned_2, electrodes_final, power_cond1_2, power_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
+                = Reorder_plusplus(Rsigned, electrodeList, power_cond1_final, power_cond2_final,
                                    timefreq_cond1_final, timefreq_cond2_final)
         elif self.parameterDict["sensorMontage"] == "custom" \
             and self.parameterDict["customMontagePath"] != "":
-            Rsigned_2, Wsquare_2, Wpvalues_2, electrodes_final, power_cond1_2, power_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
-                = Reorder_custom_plus(Rsigned, Wsquare, Wpvalues, self.parameterDict["customMontagePath"], electrodeList, power_cond1_final, power_cond2_final,
+            Rsigned_2, electrodes_final, power_cond1_2, power_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
+                = Reorder_custom_plus(Rsigned, self.parameterDict["customMontagePath"], electrodeList, power_cond1_final, power_cond2_final,
                                    timefreq_cond1_final, timefreq_cond2_final)
 
         # Fill result structure...
@@ -409,7 +417,6 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         self.Features.fres = fres
         self.Features.electrodes_final = electrodes_final
         self.Features.Rsigned = Rsigned_2
-        self.Features.Wsigned = Wsquare_2
 
         if self.useBaselineFiles:
             self.Features.average_baseline_cond1 = np.mean(power_cond1_baseline_final, axis=0)
@@ -420,7 +427,7 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         self.Features.samplingFreq = self.samplingFreq
 
         self.stop = True
-        self.over.emit(True, "")
+        self.over.emit(True, "", validFiles)
 
     def stopThread(self):
         self.stop = True
@@ -431,7 +438,7 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
 class LoadFilesForVizConnectivity(QtCore.QThread):
     info = Signal(bool)
     info2 = Signal(str)
-    over = Signal(bool, str)
+    over = Signal(bool, str, list)
 
     def __init__(self, analysisFiles, workingFolder, metaFolder, parameterDict, Features, sampFreq, parent=None):
 
@@ -455,6 +462,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         listElectrodeList = []
         idxFile = 0
 
+        validFiles = []
         for selectedFilesForViz in self.analysisFiles:
             idxFile += 1
             pipelineLabel = "CONNECT"
@@ -485,7 +493,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
                 errMsg = str("Error when loading " + path1 + "\n" + " and " + path2)
                 errMsg = str(errMsg + "\nfrequency bins mismatch")
                 errMsg = str(errMsg + "\n(" + str(freqBins1) + " vs " + str(freqBins2) + ")")
-                self.over.emit(False, errMsg)
+                self.over.emit(False, errMsg, None)
                 return
 
             listFreqs.append(freqBins1)
@@ -504,13 +512,22 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
             if electrodeList1 != electrodeList2:
                 errMsg = str("Error when loading " + path1 + "\n" + " and " + path2)
                 errMsg = str(errMsg + "\nElectrode List mismatch")
-                self.over.emit(False, errMsg)
+                self.over.emit(False, errMsg, None)
                 return
 
             listElectrodeList.append(electrodeList1)
 
-            self.dataNp1.append(data1)
-            self.dataNp2.append(data2)
+            # check that the data is valid, and doesn't contain NaN
+            newdata1, valid1 = check_valid_np(data1)
+            newdata2, valid2 = check_valid_np(data2)
+
+            if valid1 and valid2:
+                validFiles.append(True)
+            else:
+                validFiles.append(False)
+
+            self.dataNp1.append(newdata1)
+            self.dataNp2.append(newdata2)
 
             self.info.emit(True)
 
@@ -518,7 +535,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         if not all(nbfreqs == listFreqs[0] for nbfreqs in listFreqs):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "nb of frequency mismatch (" + str(listFreqs) + ")")
-            self.over.emit(False, errMsg)
+            self.over.emit(False, errMsg, None)
             return
         else:
             print("Nb of Frequency bins for selected files : " + str(listFreqs[0]))
@@ -526,7 +543,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         if not all(electrodeList == listElectrodeList[0] for electrodeList in listElectrodeList):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Sensor List mismatch")
-            self.over.emit(False, errMsg)
+            self.over.emit(False, errMsg, None)
             return
         else:
             print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
@@ -534,7 +551,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         if not all(sampFreq == listSamplingFreqs[0] for sampFreq in listSamplingFreqs):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Sampling Freq mismatch")
-            self.over.emit(False, errMsg)
+            self.over.emit(False, errMsg, None)
             return
         else:
             print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
@@ -599,19 +616,17 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         freqs_array = np.arange(0, n_bins, fres)
         Rsigned = Compute_Rsquare_Map(connect_cond2_final[:, :, :(n_bins - 1)],
                                       connect_cond1_final[:, :, :(n_bins - 1)])
-        Wsquare, Wpvalues = Compute_Wilcoxon_Map(connect_cond2_final[:, :, :(n_bins - 1)],
-                                                 connect_cond1_final[:, :, :(n_bins - 1)])
 
         # Reordering for R map and topography...
         if self.parameterDict["sensorMontage"] == "standard_1020" \
                 or self.parameterDict["sensorMontage"] == "biosemi64":
-            Rsigned_2, Wsquare_2, Wpvalues_2, electrodes_final, connect_cond1_2, connect_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
-                = Reorder_plusplus(Rsigned, Wsquare, Wpvalues, electrodeList, connect_cond1_final, connect_cond2_final,
+            Rsigned_2, electrodes_final, connect_cond1_2, connect_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
+                = Reorder_plusplus(Rsigned, electrodeList, connect_cond1_final, connect_cond2_final,
                                    timefreq_cond1_final, timefreq_cond2_final)
         elif self.parameterDict["sensorMontage"] == "custom" \
                 and self.parameterDict["customMontagePath"] != "":
-            Rsigned_2, Wsquare_2, Wpvalues_2, electrodes_final, connect_cond1_2, connect_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
-                = Reorder_custom_plus(Rsigned, Wsquare, Wpvalues, self.parameterDict["customMontagePath"],
+            Rsigned_2, electrodes_final, connect_cond1_2, connect_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
+                = Reorder_custom_plus(Rsigned, self.parameterDict["customMontagePath"],
                                       electrodeList, connect_cond1_final, connect_cond2_final,
                                       timefreq_cond1_final, timefreq_cond2_final)
 
@@ -629,7 +644,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         self.Features.Rsigned = Rsigned_2
 
         self.stop = True
-        self.over.emit(True, "")
+        self.over.emit(True, "", validFiles)
 
     def stopThread(self):
         self.stop = True
