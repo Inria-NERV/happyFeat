@@ -4,7 +4,20 @@ from xml.dom import minidom
 import os
 import binascii
 
+def modifyOneGeneralSetting(scenXml, settingName, newVal):
+    print("---Modifying " + scenXml)
+    tree = ET.parse(scenXml)
+    root = tree.getroot()
 
+    for settings in root.findall('Settings'):
+        for setting in settings.findall('Setting'):
+            if setting.find('Name').text == settingName:
+                xmlVal = setting.find('Value')
+                xmlVal.text = newVal
+
+    # WRITE NEW XML
+    tree.write(scenXml)
+    return
 def modifyScenarioGeneralSettings(scenXml, parameterDict):
     print("---Modifying " + scenXml)
     tree = ET.parse(scenXml)
@@ -23,7 +36,7 @@ def modifyScenarioGeneralSettings(scenXml, parameterDict):
     tree.write(scenXml)
     return
 
-def modifyExtractionIO(scenXml, newFilename, newOutputSpect1, newOutputSpect2, newOutputBaseline1, newOutputBaseline2, newOutputConnect1, newOutputConnect2, newOutputTrials, newExtractIdx):
+def modifyExtractionIO(scenXml, newFilename, newOutputSpect1, newOutputSpect2, newOutputSpectBaseline1, newOutputSpectBaseline2, newOutputConnect1, newOutputConnect2, newOutputTrials, newOutputBaseline, newExtractIdx):
     print("---Modifying " + scenXml + " input and output")
     tree = ET.parse(scenXml)
     root = tree.getroot()
@@ -49,13 +62,16 @@ def modifyExtractionIO(scenXml, newFilename, newOutputSpect1, newOutputSpect2, n
                 xmlVal.text = newOutputConnect2
             elif setting.find('Name').text == "OutputBaseline1":
                 xmlVal = setting.find('Value')
-                xmlVal.text = newOutputBaseline1
+                xmlVal.text = newOutputSpectBaseline1
             elif setting.find('Name').text == "OutputBaseline2":
                 xmlVal = setting.find('Value')
-                xmlVal.text = newOutputBaseline2
+                xmlVal.text = newOutputSpectBaseline2
             elif setting.find('Name').text == "OutputTrials":
                 xmlVal = setting.find('Value')
                 xmlVal.text = newOutputTrials
+            elif setting.find('Name').text == "OutputBaseline":
+                xmlVal = setting.find('Value')
+                xmlVal.text = newOutputBaseline
             elif setting.find('Name').text == "ExtractionIdx":
                 xmlVal = setting.find('Value')
                 xmlVal.text = newExtractIdx
@@ -64,7 +80,7 @@ def modifyExtractionIO(scenXml, newFilename, newOutputSpect1, newOutputSpect2, n
     tree.write(scenXml)
     return
 
-def modifyAcqScenario(scenXml, parameterDict, boolOnline):
+def modifyAcqScenario(scenXml, parameterDict):
     print("---Modifying " + scenXml + " Graz Variables")
     tree = ET.parse(scenXml)
     root = tree.getroot()
@@ -100,15 +116,18 @@ def modifyAcqScenario(scenXml, parameterDict, boolOnline):
                             xmlVal = setting.find('Value')
                             xmlVal.text = parameterDict["EndTrialMax"]
                             continue
+                        elif setting.find('Name').text == "Reaction Time (in sec)":
+                            xmlVal = setting.find('Value')
+                            xmlVal.text = parameterDict["TrialLength"]
+                            continue
+                        elif setting.find('Name').text == "MI Task Duration (in sec)":
+                            xmlVal = setting.find('Value')
+                            xmlVal.text = parameterDict["FeedbackLength"]
+                            continue
                         elif setting.find('Name').text == "Feedback Duration (in sec)":
-                            if boolOnline:
-                                xmlVal = setting.find('Value')
-                                xmlVal.text = parameterDict["FeedbackLength"]
-                                continue
-                            else:
-                                xmlVal = setting.find('Value')
-                                xmlVal.text = str(0)
-                                continue
+                            xmlVal = setting.find('Value')
+                            xmlVal.text = parameterDict["FeedbackLength"]
+                            continue
 
     # WRITE NEW XML
     tree.write(scenXml)
@@ -552,6 +571,26 @@ def modifyOnlineScenario(chanFreqPairs, scenXml):
                 featAggInputIdx += 1
                 linkBoxes(root, listofBoxesToChain, nbOfOutputs, featAggInputIdx)
 
+    # WRITE NEW XML
+    tree.write(scenXml)
+    return
+
+def modifyClassifierWeights(weightsFile, scenXml):
+    print("---Modifying " + scenXml + " to set " + weightsFile + " as Classifier Processor's weights file")
+    tree = ET.parse(scenXml)
+    root = tree.getroot()
+
+    for boxes in root.findall('Boxes'):
+        for box in boxes.findall('Box'):
+            if box.find('Name').text == 'Classifier Processor':
+                for settings in box.findall('Settings'):
+                    for setting in settings.findall('Setting'):
+                        if setting.find('Name').text == "Filename to load configuration from":   # nice name !
+                            xmlVal = setting.find('Value')
+                            print("       replacing " + xmlVal.text)
+                            xmlVal.text = weightsFile
+                            print("            with " + xmlVal.text)
+                            break
     # WRITE NEW XML
     tree.write(scenXml)
     return

@@ -142,11 +142,16 @@ class Extraction(QtCore.QThread):
             outputSpect2 = str(filename + "-SPECTRUM-" + self.parameterDict["AcquisitionParams"]["Class2"] + ".csv")
             outputConnect1 = str(filename + "-CONNECT-" + self.parameterDict["AcquisitionParams"]["Class1"] + ".csv")
             outputConnect2 = str(filename + "-CONNECT-" + self.parameterDict["AcquisitionParams"]["Class2"] + ".csv")
-            outputBaseline1 = str(filename + "-SPECTRUM-" + self.parameterDict["AcquisitionParams"]["Class1"] + "-BASELINE.csv")
-            outputBaseline2 = str(filename + "-SPECTRUM-" + self.parameterDict["AcquisitionParams"]["Class2"] + "-BASELINE.csv")
+            outputSpectBaseline1 = str(filename + "-SPECTRUM-" + self.parameterDict["AcquisitionParams"]["Class1"] + "-BASELINE.csv")
+            outputSpectBaseline2 = str(filename + "-SPECTRUM-" + self.parameterDict["AcquisitionParams"]["Class2"] + "-BASELINE.csv")
             outputTrials = str(filename + "-TRIALS.csv")
-            modifyExtractionIO(self.scenFile, signalFile, outputSpect1, outputSpect2,
-                               outputBaseline1, outputBaseline2, outputConnect1, outputConnect2, outputTrials, self.currentSessionId)
+            outputBaseline = str(filename + "-BASELINE.csv")
+            modifyExtractionIO(self.scenFile, signalFile,
+                               outputSpect1, outputSpect2,
+                               outputSpectBaseline1, outputSpectBaseline2,
+                               outputConnect1, outputConnect2,
+                               outputTrials, outputBaseline,
+                               self.currentSessionId)
 
             # Launch OV scenario !
             p = subprocess.Popen([command, "--invisible", "--play-fast", self.scenFile],
@@ -176,7 +181,7 @@ class Extraction(QtCore.QThread):
 class LoadFilesForVizPowSpectrum(QtCore.QThread):
     info = Signal(bool)
     info2 = Signal(str)
-    over = Signal(bool, str)
+    over = Signal(bool, str, list)
 
     def __init__(self, analysisFiles, workingFolder, parameterDict, Features, sampFreq, parent=None):
 
@@ -188,6 +193,7 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         self.extractDict = parameterDict["Sessions"][parameterDict["currentSessionId"]]["ExtractionParams"].copy()
         self.Features = Features
         self.samplingFreq = sampFreq
+        self.useBaselineFiles = False
 
         self.dataNp1 = []
         self.dataNp2 = []
@@ -201,6 +207,9 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         listFreqBins = []
         idxFile = 0
 
+        self.useBaselineFiles = self.parameterDict["pipelineType"] == optionKeys[1]
+
+        validFiles = []
         for selectedFilesForViz in self.analysisFiles:
             idxFile += 1
             pipelineLabel = "SPECTRUM"
@@ -210,15 +219,16 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
 
             path1 = os.path.join(self.workingFolder, str(selectedBasename + "-" + pipelineLabel + "-" + class1label + ".csv"))
             path2 = os.path.join(self. workingFolder, str(selectedBasename + "-" + pipelineLabel + "-" + class2label + ".csv"))
-            path1baseline = os.path.join(self.workingFolder, str(selectedBasename + "-" + pipelineLabel + "-" + class1label + "-BASELINE.csv"))
-            path2baseline = os.path.join(self.workingFolder, str(selectedBasename + "-" + pipelineLabel + "-" + class2label + "-BASELINE.csv"))
-
             self.info2.emit(str("Loading " + pipelineLabel + " Data for file " + str(idxFile) + " : " + selectedFilesForViz))
             [header1, data1] = load_csv_np(path1)
             [header2, data2] = load_csv_np(path2)
-            self.info2.emit(str("Loading " + pipelineLabel + " Baseline Data for file " + str(idxFile) + " : " + selectedFilesForViz))
-            [header1baseline, data1baseline] = load_csv_np(path1baseline)
-            [header2baseline, data2baseline] = load_csv_np(path2baseline)
+
+            if self.useBaselineFiles:
+                path1baseline = os.path.join(self.workingFolder, str(selectedBasename + "-" + pipelineLabel + "-" + class1label + "-BASELINE.csv"))
+                path2baseline = os.path.join(self.workingFolder, str(selectedBasename + "-" + pipelineLabel + "-" + class2label + "-BASELINE.csv"))
+                self.info2.emit(str("Loading " + pipelineLabel + " Baseline Data for file " + str(idxFile) + " : " + selectedFilesForViz))
+                [header1baseline, data1baseline] = load_csv_np(path1baseline)
+                [header2baseline, data2baseline] = load_csv_np(path2baseline)
 
             # Sampling frequency
             # Infos in the columns header of the CSVs in format "Time:32x251:500"
@@ -233,7 +243,7 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
                 errMsg = str(errMsg + "\nSampling frequency or frequency bins mismatch")
                 errMsg = str(errMsg + "\n(" + str(sampFreq1) + " vs " + str(sampFreq2) + " or ")
                 errMsg = str(errMsg + str(freqBins1) + " vs " + str(freqBins2) + ")")
-                self.over.emit(False, errMsg)
+                self.over.emit(False, errMsg, None)
                 return
 
             listSampFreq.append(sampFreq1)
@@ -250,22 +260,32 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
             if electrodeList1 != electrodeList2:
                 errMsg = str("Error when loading " + path1 + "\n" + " and " + path2)
                 errMsg = str(errMsg + "\nElectrode List mismatch")
-                self.over.emit(False, errMsg)
+                self.over.emit(False, errMsg, None)
                 return
 
             listElectrodeList.append(electrodeList1)
 
+            # check for invalid values...
+            newData1, valid1 = check_valid_np(data1)
+            newData2, valid2 = check_valid_np(data2)
+
+            if valid1 and valid2:
+                validFiles.append(True)
+            else:
+                validFiles.append(False)
+
             self.dataNp1.append(data1)
             self.dataNp2.append(data2)
-            self.dataNp1baseline.append(data1baseline)
-            self.dataNp2baseline.append(data2baseline)
+            if self.useBaselineFiles:
+                self.dataNp1baseline.append(data1baseline)
+                self.dataNp2baseline.append(data2baseline)
             self.info.emit(True)
 
         # Check if all files have the same sampling freq and electrode list. If not, for now, we don't process further
         if not all(freqsamp == listSampFreq[0] for freqsamp in listSampFreq):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Sampling frequency mismatch (" + str(listSampFreq) + ")")
-            self.over.emit(False, errMsg)
+            self.over.emit(False, errMsg, None)
             return
         else:
             self.samplingFreq = listSampFreq[0]
@@ -274,7 +294,7 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         if not all(electrodeList == listElectrodeList[0] for electrodeList in listElectrodeList):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Electrode List mismatch")
-            self.over.emit(False, errMsg)
+            self.over.emit(False, errMsg, None)
             return
         else:
             print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
@@ -282,7 +302,7 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         if not all(freqBins == listFreqBins[0] for freqBins in listFreqBins):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Not same number of frequency bins (" + str(listSampFreq) + ")")
-            self.over.emit(False, errMsg)
+            self.over.emit(False, errMsg, None)
             return
         else:
             print("Frequency bins: " + str(listFreqBins[0]))
@@ -317,31 +337,37 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
                 Extract_CSV_Data(self.dataNp1[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
             power_cond2, timefreq_cond2 = \
                 Extract_CSV_Data(self.dataNp2[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
-            power_cond1_baseline, timefreq_cond1_baseline = \
-                Extract_CSV_Data(self.dataNp1baseline[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
-            power_cond2_baseline, timefreq_cond2_baseline = \
-                Extract_CSV_Data(self.dataNp2baseline[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
+            if self.useBaselineFiles:
+                power_cond1_baseline, timefreq_cond1_baseline = \
+                    Extract_CSV_Data(self.dataNp1baseline[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
+                power_cond2_baseline, timefreq_cond2_baseline = \
+                    Extract_CSV_Data(self.dataNp2baseline[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
 
             if power_cond1_final is None:
                 power_cond1_final = power_cond1
                 power_cond2_final = power_cond2
-                power_cond1_baseline_final = power_cond1_baseline
-                power_cond2_baseline_final = power_cond2_baseline
                 timefreq_cond1_final = timefreq_cond1
                 timefreq_cond2_final = timefreq_cond2
-                timefreq_cond1_baseline_final = timefreq_cond1_baseline
-                timefreq_cond2_baseline_final = timefreq_cond2_baseline
+                if self.useBaselineFiles:
+                    power_cond1_baseline_final = power_cond1_baseline
+                    power_cond2_baseline_final = power_cond2_baseline
+                    timefreq_cond1_baseline_final = timefreq_cond1_baseline
+                    timefreq_cond2_baseline_final = timefreq_cond2_baseline
             else:
                 power_cond1_final = np.concatenate((power_cond1_final, power_cond1))
                 power_cond2_final = np.concatenate((power_cond2_final, power_cond2))
-                power_cond1_baseline_final = np.concatenate((power_cond1_baseline_final, power_cond1_baseline))
-                power_cond2_baseline_final = np.concatenate((power_cond2_baseline_final, power_cond2_baseline))
                 timefreq_cond1_final = np.concatenate((timefreq_cond1_final, timefreq_cond1))
                 timefreq_cond2_final = np.concatenate((timefreq_cond2_final, timefreq_cond2))
-                timefreq_cond1_baseline_final = np.concatenate((timefreq_cond1_baseline_final, timefreq_cond1_baseline))
-                timefreq_cond2_baseline_final = np.concatenate((timefreq_cond2_baseline_final, timefreq_cond2_baseline))
+                if self.useBaselineFiles:
+                    power_cond1_baseline_final = np.concatenate((power_cond1_baseline_final, power_cond1_baseline))
+                    power_cond2_baseline_final = np.concatenate((power_cond2_baseline_final, power_cond2_baseline))
+                    timefreq_cond1_baseline_final = np.concatenate((timefreq_cond1_baseline_final, timefreq_cond1_baseline))
+                    timefreq_cond2_baseline_final = np.concatenate((timefreq_cond2_baseline_final, timefreq_cond2_baseline))
 
         self.info2.emit("Computing statistics")
+
+        print(np.shape(power_cond1_final))
+        print(np.shape(power_cond2_final))
 
         trialLengthSec = float(self.parameterDict["AcquisitionParams"]["TrialLength"])
         totalTrials = len(self.dataNp1) * trials
@@ -366,21 +392,20 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
 
         Rsigned = Compute_Rsquare_Map(power_cond2_final[:, :, :(n_bins - 1)],
                                       power_cond1_final[:, :, :(n_bins - 1)])
-        Wsquare, Wpvalues = Compute_Wilcoxon_Map(power_cond2_final[:, :, :(n_bins - 1)],
-                                                 power_cond1_final[:, :, :(n_bins - 1)])
 
         # Reordering for R map and topography...
         if self.parameterDict["sensorMontage"] == "standard_1020" \
             or self.parameterDict["sensorMontage"] == "biosemi64":
-            Rsigned_2, Wsquare_2, Wpvalues_2, electrodes_final, power_cond1_2, power_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
-                = Reorder_plusplus(Rsigned, Wsquare, Wpvalues, electrodeList, power_cond1_final, power_cond2_final,
+            Rsigned_2, electrodes_final, power_cond1_2, power_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
+                = Reorder_plusplus(Rsigned, electrodeList, power_cond1_final, power_cond2_final,
                                    timefreq_cond1_final, timefreq_cond2_final)
         elif self.parameterDict["sensorMontage"] == "custom" \
             and self.parameterDict["customMontagePath"] != "":
-            Rsigned_2, Wsquare_2, Wpvalues_2, electrodes_final, power_cond1_2, power_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
-                = Reorder_custom_plus(Rsigned, Wsquare, Wpvalues, self.parameterDict["customMontagePath"], electrodeList, power_cond1_final, power_cond2_final,
+            Rsigned_2, electrodes_final, power_cond1_2, power_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
+                = Reorder_custom_plus(Rsigned, self.parameterDict["customMontagePath"], electrodeList, power_cond1_final, power_cond2_final,
                                    timefreq_cond1_final, timefreq_cond2_final)
 
+        # Fill result structure...
         self.Features.electrodes_orig = electrodeList
         self.Features.power_cond2 = power_cond2_2
         self.Features.power_cond1 = power_cond1_2
@@ -392,17 +417,17 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         self.Features.fres = fres
         self.Features.electrodes_final = electrodes_final
         self.Features.Rsigned = Rsigned_2
-        self.Features.Wsigned = Wsquare_2
 
-        self.Features.average_baseline_cond1 = np.mean(power_cond1_baseline_final, axis=0)
-        self.Features.std_baseline_cond1 = np.std(power_cond1_baseline_final, axis=0)
-        self.Features.average_baseline_cond2 = np.mean(power_cond2_baseline_final, axis=0)
-        self.Features.std_baseline_cond2 = np.std(power_cond2_baseline_final, axis=0)
+        if self.useBaselineFiles:
+            self.Features.average_baseline_cond1 = np.mean(power_cond1_baseline_final, axis=0)
+            self.Features.std_baseline_cond1 = np.std(power_cond1_baseline_final, axis=0)
+            self.Features.average_baseline_cond2 = np.mean(power_cond2_baseline_final, axis=0)
+            self.Features.std_baseline_cond2 = np.std(power_cond2_baseline_final, axis=0)
 
         self.Features.samplingFreq = self.samplingFreq
 
         self.stop = True
-        self.over.emit(True, "")
+        self.over.emit(True, "", validFiles)
 
     def stopThread(self):
         self.stop = True
@@ -413,7 +438,7 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
 class LoadFilesForVizConnectivity(QtCore.QThread):
     info = Signal(bool)
     info2 = Signal(str)
-    over = Signal(bool, str)
+    over = Signal(bool, str, list)
 
     def __init__(self, analysisFiles, workingFolder, metaFolder, parameterDict, Features, sampFreq, parent=None):
 
@@ -437,6 +462,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         listElectrodeList = []
         idxFile = 0
 
+        validFiles = []
         for selectedFilesForViz in self.analysisFiles:
             idxFile += 1
             pipelineLabel = "CONNECT"
@@ -467,7 +493,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
                 errMsg = str("Error when loading " + path1 + "\n" + " and " + path2)
                 errMsg = str(errMsg + "\nfrequency bins mismatch")
                 errMsg = str(errMsg + "\n(" + str(freqBins1) + " vs " + str(freqBins2) + ")")
-                self.over.emit(False, errMsg)
+                self.over.emit(False, errMsg, None)
                 return
 
             listFreqs.append(freqBins1)
@@ -486,13 +512,22 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
             if electrodeList1 != electrodeList2:
                 errMsg = str("Error when loading " + path1 + "\n" + " and " + path2)
                 errMsg = str(errMsg + "\nElectrode List mismatch")
-                self.over.emit(False, errMsg)
+                self.over.emit(False, errMsg, None)
                 return
 
             listElectrodeList.append(electrodeList1)
 
-            self.dataNp1.append(data1)
-            self.dataNp2.append(data2)
+            # check that the data is valid, and doesn't contain NaN
+            newdata1, valid1 = check_valid_np(data1)
+            newdata2, valid2 = check_valid_np(data2)
+
+            if valid1 and valid2:
+                validFiles.append(True)
+            else:
+                validFiles.append(False)
+
+            self.dataNp1.append(newdata1)
+            self.dataNp2.append(newdata2)
 
             self.info.emit(True)
 
@@ -500,7 +535,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         if not all(nbfreqs == listFreqs[0] for nbfreqs in listFreqs):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "nb of frequency mismatch (" + str(listFreqs) + ")")
-            self.over.emit(False, errMsg)
+            self.over.emit(False, errMsg, None)
             return
         else:
             print("Nb of Frequency bins for selected files : " + str(listFreqs[0]))
@@ -508,7 +543,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         if not all(electrodeList == listElectrodeList[0] for electrodeList in listElectrodeList):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Sensor List mismatch")
-            self.over.emit(False, errMsg)
+            self.over.emit(False, errMsg, None)
             return
         else:
             print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
@@ -516,7 +551,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         if not all(sampFreq == listSamplingFreqs[0] for sampFreq in listSamplingFreqs):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Sampling Freq mismatch")
-            self.over.emit(False, errMsg)
+            self.over.emit(False, errMsg, None)
             return
         else:
             print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
@@ -529,8 +564,9 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         electrodeList = listElectrodeList[0]
         nbElectrodes = len(electrodeList)
         n_bins = listFreqs[0]
-        connectLength = float(self.extractDict["ConnectivityLength"])
-        connectOverlap = float(self.extractDict["ConnectivityOverlap"])
+        winLen = float(self.extractDict["ConnectivityLength"])
+        overlap = float(self.extractDict["ConnectivityOverlap"])
+        winShift = winLen * (1.0 - overlap/ 100)
         sampFreq = listSamplingFreqs[0]
 
         # For multiple runs (ie. multiple selected CSV files), we just concatenate
@@ -538,20 +574,38 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         # will be computed as averages over all the trials.
         connect_cond1_final = None
         connect_cond2_final = None
+        timefreq_cond1_final = None
+        timefreq_cond2_final = None
+        timefreq_cond1_baseline_final = None
+        timefreq_cond2_baseline_final = None
         idxFile = 0
         for run in range(len(self.dataNp1)):
             idxFile += 1
             self.info2.emit(str("Processing data for file " + str(idxFile)))
-            connect_cond1 = Extract_Connect_NodeStrength_CSV_Data(self.dataNp1[run], trialLength, nbElectrodes, n_bins,
-                                                                  connectLength, connectOverlap)
-            connect_cond2 = Extract_Connect_NodeStrength_CSV_Data(self.dataNp2[run], trialLength, nbElectrodes, n_bins,
-                                                                  connectLength, connectOverlap)
+            connect_cond1, timefreq_cond1 = \
+                Extract_Connect_NodeStrength_TimeFreq_CSV_Data(self.dataNp1[run], trialLength, nbElectrodes, n_bins,
+                                                               winLen, overlap)
+            connect_cond2, timefreq_cond2 = \
+                Extract_Connect_NodeStrength_TimeFreq_CSV_Data(self.dataNp2[run], trialLength, nbElectrodes, n_bins,
+                                                               winLen, overlap)
+
+            # transpose to fit data format with future reordering functions...
+            timefreq_cond1_transp = timefreq_cond1.transpose(0, 3, 1, 2)
+            timefreq_cond2_transp = timefreq_cond2.transpose(0, 3, 1, 2)
+
             if connect_cond1_final is None:
                 connect_cond1_final = connect_cond1
                 connect_cond2_final = connect_cond2
+
+                timefreq_cond1_final = timefreq_cond1_transp
+                timefreq_cond2_final = timefreq_cond2_transp
+
             else:
                 connect_cond1_final = np.concatenate((connect_cond1_final, connect_cond1))
                 connect_cond2_final = np.concatenate((connect_cond2_final, connect_cond2))
+
+                timefreq_cond1_final = np.concatenate((timefreq_cond1_final, timefreq_cond1_transp))
+                timefreq_cond2_final = np.concatenate((timefreq_cond2_final, timefreq_cond2_transp))
 
         self.info2.emit("Computing statistics")
         trialLengthSec = float(self.parameterDict["AcquisitionParams"]["TrialLength"])
@@ -563,23 +617,26 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         Rsigned = Compute_Rsquare_Map(connect_cond2_final[:, :, :(n_bins - 1)],
                                       connect_cond1_final[:, :, :(n_bins - 1)])
 
-
         # Reordering for R map and topography...
         if self.parameterDict["sensorMontage"] == "standard_1020" \
-            or self.parameterDict["sensorMontage"] == "biosemi64":
-            Rsigned_2, electrodes_final, connect_cond1_2, connect_cond2_2, \
-                = Reorder_Rsquare(Rsigned, electrodeList, connect_cond1_final, connect_cond2_final)
-
+                or self.parameterDict["sensorMontage"] == "biosemi64":
+            Rsigned_2, electrodes_final, connect_cond1_2, connect_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
+                = Reorder_plusplus(Rsigned, electrodeList, connect_cond1_final, connect_cond2_final,
+                                   timefreq_cond1_final, timefreq_cond2_final)
         elif self.parameterDict["sensorMontage"] == "custom" \
-            and self.parameterDict["customMontagePath"] != "":
-            Rsigned_2, electrodes_final, connect_cond1_2, connect_cond2_2, \
-                = Reorder_custom(Rsigned, self.parameterDict["customMontagePath"], electrodeList, connect_cond1_final, connect_cond2_final,)
+                and self.parameterDict["customMontagePath"] != "":
+            Rsigned_2, electrodes_final, connect_cond1_2, connect_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
+                = Reorder_custom_plus(Rsigned, self.parameterDict["customMontagePath"],
+                                      electrodeList, connect_cond1_final, connect_cond2_final,
+                                      timefreq_cond1_final, timefreq_cond2_final)
 
         # Fill Features struct...
         self.Features.electrodes_orig = electrodeList
         self.Features.electrodes_final = electrodes_final
         self.Features.power_cond1 = connect_cond1_2
         self.Features.power_cond2 = connect_cond2_2
+        self.Features.timefreq_cond1 = timefreq_cond1_2
+        self.Features.timefreq_cond2 = timefreq_cond2_2
         self.Features.fres = fres
         self.Features.samplingFreq = sampFreq
         self.Features.freqs_array = freqs_array
@@ -587,7 +644,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         self.Features.Rsigned = Rsigned_2
 
         self.stop = True
-        self.over.emit(True, "")
+        self.over.emit(True, "", validFiles)
 
     def stopThread(self):
         self.stop = True
@@ -596,7 +653,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
 class TrainClassifier(QtCore.QThread):
     info = Signal(bool)
     info2 = Signal(str)
-    over = Signal(bool, str)
+    over = Signal(bool, int, str)
 
     def __init__(self, trainingFiles,
                  signalFolder, templateFolder,
@@ -626,7 +683,10 @@ class TrainClassifier(QtCore.QThread):
         self.samplingFreq = sampFreq
         self.exitText = ""
 
-        self.usingDualFeatures = self.parameterDict["pipelineType"] == optionKeys[3]
+        self.usingDualFeatures = False
+        if self.parameterDict["pipelineType"] == optionKeys[3] \
+            or self.parameterDict["pipelineType"] == optionKeys[4]:
+            self.usingDualFeatures = True
 
     def run(self):
         # Get electrodes lists and sampling freqs, and check that they match
@@ -641,10 +701,18 @@ class TrainClassifier(QtCore.QThread):
             listElectrodeList.append(header[2:-3])
             trainingSigList.append(path)
 
+            if self.parameterDict["pipelineType"] == optionKeys[4]:
+                baselineFile = trainingFile.replace('TRIALS', 'BASELINE')
+                path = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", baselineFile)
+                header = pd.read_csv(path, nrows=0).columns.tolist()
+                listSampFreq.append(int(header[0].split(':')[1].removesuffix('Hz')))
+                listElectrodeList.append(header[2:-3])
+                trainingSigList.append(path)
+
         if not all(freqsamp == listSampFreq[0] for freqsamp in listSampFreq):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Sampling frequency mismatch (" + str(listSampFreq) + ")")
-            self.over.emit(False, errMsg)
+            self.over.emit(False, self.attemptId, errMsg)
             return
         else:
             print("Sampling Frequency for selected files : " + str(listSampFreq[0]))
@@ -652,7 +720,7 @@ class TrainClassifier(QtCore.QThread):
         if not all(electrodeList == listElectrodeList[0] for electrodeList in listElectrodeList):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Electrode List mismatch")
-            self.over.emit(False, errMsg)
+            self.over.emit(False, self.attemptId, errMsg)
             return
         else:
             print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
@@ -662,16 +730,16 @@ class TrainClassifier(QtCore.QThread):
         if not self.usingDualFeatures:
             selectedFeats, errMsg = self.checkSelectedFeats(self.selectedFeats, listSampFreq[0], listElectrodeList[0])
             if not selectedFeats:
-                self.over.emit(False, errMsg)
+                self.over.emit(False, self.attemptId, errMsg)
                 return
         else:
             selectedFeats, errMsg = self.checkSelectedFeats(self.selectedFeats[0], listSampFreq[0], listElectrodeList[0])
             if not selectedFeats:
-                self.over.emit(False, errMsg)
+                self.over.emit(False, self.attemptId, errMsg)
                 return
             selectedFeats2, errMsg = self.checkSelectedFeats(self.selectedFeats[1], listSampFreq[0], listElectrodeList[0])
             if not selectedFeats2:
-                self.over.emit(False, errMsg)
+                self.over.emit(False, self.attemptId, errMsg)
                 return
 
         epochCount = [0, 0]
@@ -685,7 +753,8 @@ class TrainClassifier(QtCore.QThread):
             overlap = float(self.extractDict["ConnectivityOverlap"])
             winShift = winLength * (100.0-overlap) / 100.0
             epochCount[0] = np.floor((stimEpochLength - winLength) / winShift) + 1
-        elif self.parameterDict["pipelineType"] == optionKeys[3]:
+        elif self.parameterDict["pipelineType"] == optionKeys[3] \
+                or self.parameterDict["pipelineType"] == optionKeys[4]:
             winLength0 = float(self.extractDict["TimeWindowLength"])
             winShift0 = float(self.extractDict["TimeWindowShift"])
             epochCount[0] = np.floor((stimEpochLength - winLength0) / winShift0) + 1
@@ -735,7 +804,7 @@ class TrainClassifier(QtCore.QThread):
 
             elif i == 3:
                 #  "online" scenario
-                modifyAcqScenario(destFile, self.parameterDict["AcquisitionParams"], True)
+                modifyAcqScenario(destFile, self.parameterDict["AcquisitionParams"])
                 if not self.usingDualFeatures:
                     modifyTrainScenUsingSplitAndClassifiers("SPLIT", "Classifier processor", selectedFeats, epochCount[0], destFile)
                     # Special case: "connectivity metric"
@@ -777,7 +846,7 @@ class TrainClassifier(QtCore.QThread):
                 if not success:
                     successGlobal = False
                     self.errorMessageTrainer()
-                    self.over.emit(False, self.exitText)
+                    self.over.emit(False, self.attemptId, self.exitText)
                     break
 
             # NOW AGGREGATE FEATURE VECTORS PER FEATURE AND PER CLASS...
@@ -804,11 +873,12 @@ class TrainClassifier(QtCore.QThread):
 
             self.info2.emit("Finalizing Training...")
             scenXml = os.path.join(self.workspaceFolder, templateScenFilenames[5])
-            success, classifierOutputStr, accuracy = self.runClassifierScenario(scenXml)
+            oneClass = False  # TODO: watch out and change that in the future, when speed-up is available.
+            success, classifierOutputStr, accuracy = self.playClassifierScenario(scenXml, oneClass)
             if not success:
                 successGlobal = False
                 self.errorMessageTrainer()
-                self.over.emit(False, self.exitText)
+                self.over.emit(False, self.attemptId, self.exitText)
             else:
                 # Copy weights file to <workspaceFolder>/classifier-weights.xml
                 newWeights = os.path.join(self.signalFolder, "sessions", self.currentSessionId, \
@@ -851,7 +921,7 @@ class TrainClassifier(QtCore.QThread):
                                         self.parameterDict["AcquisitionParams"]["Class2"],
                                         class1Stim, class2Stim, tmin, tmax)
             if not compositeCsv:
-                self.over.emit(False, "Error merging runs!! Most probably different list of electrodes")
+                self.over.emit(False, self.attemptId, "Error merging runs!! Most probably different list of electrodes")
                 return
 
             print("Composite file for training: " + compositeCsv)
@@ -868,11 +938,12 @@ class TrainClassifier(QtCore.QThread):
 
             # RUN THE CLASSIFIER TRAINING SCENARIO
             scenXml = os.path.join(self.workspaceFolder, templateScenFilenames[2])
-            success, classifierOutputStr, accuracy = self.runClassifierScenario(scenXml)
+            oneClass = (self.parameterDict["pipelineType"] == optionKeys[4])
+            success, classifierOutputStr, accuracy = self.playClassifierScenario(scenXml, oneClass)
 
             if not success:
                 self.errorMessageTrainer()
-                self.over.emit(False, self.exitText)
+                self.over.emit(False, self.attemptId, self.exitText)
             else:
                 # Copy weights file to <workspaceFolder>/classifier-weights.xml
                 newWeights = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", \
@@ -910,7 +981,7 @@ class TrainClassifier(QtCore.QThread):
 
 
         self.stop = True
-        self.over.emit(True, self.exitText)
+        self.over.emit(True, self.attemptId, self.exitText)
 
     def stopThread(self):
         self.stop = True
@@ -951,7 +1022,7 @@ class TrainClassifier(QtCore.QThread):
 
         return selectedFeats, errMsg
 
-    def runClassifierScenario(self, scenFile):
+    def playClassifierScenario(self, scenFile, oneClass):
         # ----------
         # Run the provided training scenario, and check the console output for termination, errors, and
         # classification results
@@ -1026,20 +1097,33 @@ class TrainClassifier(QtCore.QThread):
                     target_1_True_Negative + target_1_False_Positive + target_2_False_Negative + target_2_True_Positive),
                              2)
 
-            F_1_Score_Class_1 = round(
-                2 * precision_Class_1 * sensitivity_Class_1 / (precision_Class_1 + sensitivity_Class_1), 2)
-            F_1_Score_Class_2 = round(
-                2 * precision_Class_2 * sensitivity_Class_2 / (precision_Class_2 + sensitivity_Class_2), 2)
+            if (precision_Class_1 + sensitivity_Class_1) != 0:
+                F_1_Score_Class_1 = round(
+                    2 * precision_Class_1 * sensitivity_Class_1 / (precision_Class_1 + sensitivity_Class_1), 2)
+            else:
+                F_1_Score_Class_1 = 1.0
+            if (precision_Class_2 + sensitivity_Class_2) != 0:
+                F_1_Score_Class_2 = round(
+                    2 * precision_Class_2 * sensitivity_Class_2 / (precision_Class_2 + sensitivity_Class_2), 2)
+            else:
+                F_1_Score_Class_2 = 1.0
 
-            messageClassif = "Overall accuracy : " + str(accuracy) + "%\n"
-            messageClassif += "Class 1 | Precision  : " + str(precision_Class_1) + " | " + "Sensitivity : " + str(
-                sensitivity_Class_1)
-            messageClassif += " | F_1 Score : " + str(F_1_Score_Class_1) + "\n"
-            messageClassif += "Class 2 | Precision  : " + str(precision_Class_2) + " | " + "Sensitivity : " + str(
-                sensitivity_Class_2)
-            messageClassif += " | F_1 Score : " + str(F_1_Score_Class_2)
+            if not oneClass:
+                messageClassif = "Overall accuracy : " + str(accuracy) + "%\n"
+                messageClassif += "Class 1 | Precision  : " + str(precision_Class_1) + " | " + "Sensitivity : " + str(
+                    sensitivity_Class_1)
+                messageClassif += " | F_1 Score : " + str(F_1_Score_Class_1) + "\n"
+                messageClassif += "Class 2 | Precision  : " + str(precision_Class_2) + " | " + "Sensitivity : " + str(
+                    sensitivity_Class_2)
+                messageClassif += " | F_1 Score : " + str(F_1_Score_Class_2)
 
-            return success, messageClassif, accuracy
+                return success, messageClassif, accuracy
+
+            if oneClass:
+                messageClassif = "Precision  : " + str(precision_Class_2) + " | " + "Sensitivity : " + str(
+                    sensitivity_Class_2)
+
+                return success, messageClassif, (precision_Class_2*100.0)
 
         else:
             return success
@@ -1079,3 +1163,350 @@ class TrainClassifier(QtCore.QThread):
 
         return success
 
+class RunClassifier(QtCore.QThread):
+    info = Signal(bool)
+    info2 = Signal(str)
+    over = Signal(bool, str)
+
+    def __init__(self, classifFiles, templateFolder,
+                 workspaceFolder, ovScript,
+                 classifWeightsPath,
+                 listFeat, listFeat2,
+                 parameterDict, sampFreq, electrodeList,
+                 shouldRun, isOnline, parent=None):
+
+        super().__init__(parent)
+        self.stop = False
+        self.classifFiles = classifFiles
+        self.templateFolder = templateFolder
+        self.workspaceFolder = workspaceFolder
+        self.ovScript = ovScript
+        self.listFeat = listFeat
+        self.listFeat2 = listFeat2
+        self.classifWeightsPath = classifWeightsPath
+        self.parameterDict = parameterDict.copy()
+        self.currentSessionId = self.parameterDict["currentSessionId"]
+        self.extractDict = parameterDict["Sessions"][self.parameterDict["currentSessionId"]]["ExtractionParams"].copy()
+        self.samplingFreq = sampFreq
+        self.electrodeList = electrodeList
+        self.shouldRun = shouldRun
+        self.isOnline = isOnline
+        self.exitText = ""
+
+        self.usingDualFeatures = False
+        if self.parameterDict["pipelineType"] == optionKeys[3] \
+                or self.parameterDict["pipelineType"] == optionKeys[4]:
+            self.usingDualFeatures = True
+
+    def run(self):
+
+        selectedFeats = None
+        selectedFeats2 = None
+        if not self.usingDualFeatures:
+            selectedFeats, errMsg = self.checkSelectedFeats(self.listFeat, self.samplingFreq, self.electrodeList)
+            if not selectedFeats:
+                self.over.emit(False, errMsg)
+                return
+        else:
+            selectedFeats, errMsg = self.checkSelectedFeats(self.listFeat, self.samplingFreq, self.electrodeList)
+            if not selectedFeats:
+                self.over.emit(False, errMsg)
+                return
+            selectedFeats2, errMsg = self.checkSelectedFeats(self.listFeat2, self.samplingFreq, self.electrodeList)
+            if not selectedFeats2:
+                self.over.emit(False, errMsg)
+                return
+
+        # Computing the "Epoch Average" count, important in the classification scenario.
+        epochCount = [0, 0]
+        stimEpochLength = float(self.extractDict["StimulationEpoch"])
+        if self.parameterDict["pipelineType"] == optionKeys[1]:
+            winLength = float(self.extractDict["TimeWindowLength"])
+            winShift = float(self.extractDict["TimeWindowShift"])
+            epochCount[0] = np.floor((stimEpochLength - winLength) / winShift) + 1
+        elif self.parameterDict["pipelineType"] == optionKeys[2]:
+            winLength = float(self.extractDict["ConnectivityLength"])
+            overlap = float(self.extractDict["ConnectivityOverlap"])
+            winShift = winLength * (100.0-overlap) / 100.0
+            epochCount[0] = np.floor((stimEpochLength - winLength) / winShift) + 1
+        elif self.parameterDict["pipelineType"] == optionKeys[3] \
+                or self.parameterDict["pipelineType"] == optionKeys[4]:
+            winLength0 = float(self.extractDict["TimeWindowLength"])
+            winShift0 = float(self.extractDict["TimeWindowShift"])
+            epochCount[0] = np.floor((stimEpochLength - winLength0) / winShift0) + 1
+            winLength1 = float(self.extractDict["ConnectivityLength"])
+            overlap = float(self.extractDict["ConnectivityOverlap"])
+            winShift1 = winLength1 * (100.0-overlap) / 100.0
+            epochCount[1] = np.floor((stimEpochLength - winLength1) / winShift1) + 1
+
+        ## MODIFY THE SCENARIO with entered parameters
+        # /!\ after updating ARburg order and FFT size using sampfreq
+        self.extractDict["ChannelNames"] = ";".join(self.electrodeList)
+        self.extractDict["AutoRegressiveOrder"] = str(
+            timeToSamples(float(self.extractDict["AutoRegressiveOrderTime"]), self.samplingFreq))
+        self.extractDict["PsdSize"] = str(freqResToPsdSize(float(self.extractDict["FreqRes"]), self.samplingFreq))
+
+        # Special case : "connectivity shift", used in scenarios but not set that way in the interface
+        if "ConnectivityOverlap" in self.extractDict.keys():
+            self.extractDict["ConnectivityShift"] = str(float(self.extractDict["ConnectivityLength"]) * (100.0 - float(self.extractDict["ConnectivityOverlap"])) / 100.0)
+
+        # Select relevant scenario (in bcipipeline_settings.py)
+        if self.isOnline:
+            scenIdx = 3  # idx in bcipipeline_settings.py
+            scenName = templateScenFilenames[scenIdx]
+        else:
+            scenIdx = 6  # idx in bcipipeline_settings.py
+            scenName = templateScenFilenames[scenIdx]
+
+        destScenFile = os.path.join(self.workspaceFolder, scenName)
+
+        # COPY SCENARIO FROM TEMPLATE, SO THE USER CAN DO THIS MULTIPLE TIMES
+        print("---Copying file from folder " + str(__name__.split('.')[0] + '.' + self.templateFolder))
+        with resources.path(str(__name__.split('.')[0] + '.' + self.templateFolder), scenName) as srcFile:
+            print("---Copying file " + str(srcFile) + " to " + str(destScenFile))
+            copyfile(srcFile, destScenFile)
+
+        # current session (linked to extraction parameters), to know where to get training results...
+        trainingpath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train")
+        modifyScenarioGeneralSettings(str(destScenFile), self.extractDict)
+
+        # modify online or replay scenario with selected features
+        if not self.usingDualFeatures:
+            modifyTrainScenUsingSplitAndClassifiers("SPLIT", "Classifier processor", selectedFeats, epochCount[0], destScenFile)
+            # Special case: "connectivity metric"
+            if "ConnectivityMetric" in self.extractDict.keys():
+                modifyConnectivityMetric(self.extractDict["ConnectivityMetric"], destScenFile)
+        else:
+            modifyTrainScenUsingSplitAndClassifiers("SPLIT POWSPECTRUM", "Classifier processor", selectedFeats, epochCount[0], destScenFile)
+            modifyTrainScenUsingSplitAndClassifiers("SPLIT CONNECT", "Classifier processor", selectedFeats2, epochCount[1], destScenFile)
+            modifyConnectivityMetric(self.extractDict["ConnectivityMetric"], destScenFile)
+
+        modifyOneGeneralSetting(destScenFile, "ClassifWeights", self.classifWeightsPath)
+
+        if not self.shouldRun:
+            # WE STOP HERE!
+            textOut = "Scenario sc3-online.xml has been updated with the following:\n"
+            textOut += "\t- Using " + self.classifWeightsPath + "\n"
+
+            if not self.usingDualFeatures:
+                textOut += str("\n\t- Feature(s) ")
+                textOut += str("(" + self.parameterDict["pipelineType"] + "):\n")
+                for i in range(len(selectedFeats)):
+                    textOut += str(
+                        "\t\t" + "Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+            else:
+                textOut += str("\n\t- Feature(s) for PowSpectrum:\n")
+                for i in range(len(selectedFeats)):
+                    textOut += str(
+                        "\t\t" + "Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+                textOut += str("\n\t- Feature(s) for Connectivity:\n")
+                for i in range(len(selectedFeats2)):
+                    textOut += str(
+                        "\t\t" + "Channel " + str(selectedFeats2[i][0]) + " at " + str(selectedFeats2[i][1]) + " Hz\n")
+
+            self.exitText = textOut
+            self.stop = True
+            self.over.emit(True, self.exitText)
+            return
+
+        # END SC3
+        #---------------------
+        # OTHERWISE... SC4
+
+        # Get electrodes lists and sampling freqs, and check that they match
+        # + that the selected channels are in the list of electrodes
+        classifSigFiles = []
+        listSampFreq = []
+        listElectrodeList = []
+        for classifFile in self.classifFiles:
+            generateMetadata(classifFile, self.ovScript)
+            metaFile = classifFile.replace(".ov", "-META.csv")
+            sampFreqTemp, electrodeListTemp = extractMetadata(metaFile)
+
+            listSampFreq.append(sampFreqTemp)
+            listElectrodeList.append(electrodeListTemp)
+            classifSigFiles.append(classifFile)  # ??
+
+        if not all(freqsamp == self.samplingFreq for freqsamp in listSampFreq):
+            errMsg = str("Error when loading signal files for classification\n")
+            errMsg = str(
+                errMsg + "Sampling frequency mismatch (expected " + str(self.samplingFreq) + ", got " + str(
+                    listSampFreq) + ")")
+            self.over.emit(False, errMsg)
+            return
+        else:
+            print("Sampling Frequency for selected files : " + str(listSampFreq[0]))
+
+        for electrodeList in listElectrodeList:
+            if not set(electrodeList) == set(self.electrodeList):
+                errMsg = str("Error when loading signal files for classification\n")
+                errMsg = str(errMsg + "Electrode List mismatch")
+                self.over.emit(False, errMsg)
+                return
+        else:
+            print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
+
+
+        targetList = []
+        classifiedList = []
+        fileIdx = 1
+
+        # RUN REPLAY SCENARIO ON EVERY SIGNAL FILE
+        for sigFile in classifSigFiles:
+            # increment progressbars
+            self.info.emit(True)
+            self.info2.emit("Running Scenario on file" +  str(fileIdx) +"/" + str(len(classifSigFiles)))
+
+            # change scenario IO
+            modifyOneGeneralSetting(destScenFile, "EEGData", sigFile)
+            success, targetListTemp, classifiedListTemp = self.playClassifierScenario(destScenFile)
+            targetList.extend(targetListTemp)
+            classifiedList.extend(classifiedListTemp)
+
+            if not success:
+                self.errorMessageRunner()
+                self.over.emit(False, self.exitText)
+
+        # PREPARE RESULTS & GOODBYE MESSAGE...
+
+        # count nb of differences in both (ordered) lists
+        nbClassifs = len(targetList)
+        nbErrors = sum(map(lambda x, y: bool(x - y), targetList, classifiedList))
+        accuracy = 100.0 * float((nbClassifs - nbErrors) / nbClassifs)
+
+        tp1 = 0
+        fn1 = 0
+        tp2 = 0
+        fn2 = 0
+        for idx in range(len(targetList)):
+            if targetList[idx] == classifiedList[idx]:
+                if targetList[idx] == 1:
+                    tp1 += 1
+                else:
+                    tp2 += 1
+            else:
+                if targetList[idx] == 1:
+                    fn1 += 1
+                else:
+                    fn2 += 1
+
+        precision1 = 100.0*float(tp1 / (tp1 + fn1))
+        precision2 = 100.0*float(tp2 / (tp2 + fn2))
+
+        messageClassif = "Overall accuracy : " + str(accuracy) + "% (" + str(nbClassifs) + " trials)\n"
+        messageClassif += "\tClass 1 (" + self.parameterDict["AcquisitionParams"]["Class1"] + ")| Precision  : " + str(precision1) + "% (" + str(tp1+fn1) + " trials)\n"
+        messageClassif += "\tClass 2 (" + self.parameterDict["AcquisitionParams"]["Class2"] + ")| Precision  : " + str(precision2) + "% (" + str(tp2+fn2) + " trials)\n"
+
+        # PREPARE DISPLAYED MESSAGE...
+        textFeats = str("======CLASSIFICATION ATTEMPT=======\n")
+        textFeats += str("Signal Files\n")
+        for i in range(len(classifSigFiles)):
+            textFeats += str("\t" + os.path.basename(classifSigFiles[i]) + "\n")
+
+        if not self.usingDualFeatures:
+            textFeats += str("\nFeature(s) ")
+            textFeats += str("(" + self.parameterDict["pipelineType"]+"):\n")
+            for i in range(len(selectedFeats)):
+                textFeats += str("\t"+"Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+        else:
+            textFeats += str("\nFeature(s) for PowSpectrum:\n")
+            for i in range(len(selectedFeats)):
+                textFeats += str(
+                    "\t" + "Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+            textFeats += str("Feature(s) for Connectivity:\n")
+            for i in range(len(selectedFeats2)):
+                textFeats += str(
+                    "\t" + "Channel " + str(selectedFeats2[i][0]) + " at " + str(selectedFeats2[i][1]) + " Hz\n")
+
+        textDisplay = textFeats
+        textDisplay += str("\n" + messageClassif)
+
+        self.exitText = textDisplay
+
+
+        self.stop = True
+        self.over.emit(True, self.exitText)
+
+    def stopThread(self):
+        self.stop = True
+
+    def errorMessageRunner(self):
+        textError = str("Error running \"Run/Replay\" scenario\n")
+        self.exitText = textError
+
+    def checkSelectedFeats(self, inputSelectedFeats, sampFreq, electrodeList):
+        selectedFeats = []
+        errMsg = ""
+        # Checks :
+        # - No empty field
+        # - frequencies in acceptable ranges
+        # - channels in list
+        n_bins = int((sampFreq / 2) + 1)
+        for idx, feat in enumerate(inputSelectedFeats):
+            if feat == "":
+                errMsg = str("Pair " + str(idx + 1) + " is empty...")
+                return None, errMsg
+            [chan, freqstr] = feat.split(";")
+            if chan not in electrodeList:
+                errMsg = str("Channel in pair " + str(idx + 1) + " (" + str(chan) + ") is not in the list...")
+                return None, errMsg
+            freqs = freqstr.split(":")
+            for freq in freqs:
+                if not freq.isdigit():
+                    errMsg = str("Frequency in pair " + str(idx + 1) + " (" + str(
+                        freq) + ") has an invalid format, must be an integer...")
+                    return None, errMsg
+                if int(freq) >= n_bins:
+                    errMsg = str(
+                        "Frequency in pair " + str(idx + 1) + " (" + str(freq) + ") is not in the acceptable range...")
+                    return None, errMsg
+            selectedFeats.append(feat.split(";"))
+            print(feat)
+
+        return selectedFeats, errMsg
+
+    def playClassifierScenario(self, scenFile):
+        # ----------
+        # Run the provided run/replay scenario, and check the console output for termination, errors, and
+        # classification results
+        # ----------
+
+        # BUILD THE COMMAND (use designer.cmd from GUI)
+        command = self.ovScript
+        if platform.system() == 'Windows':
+            command = command.replace("/", "\\")
+
+        # Run actual command (openvibe-designer.cmd --no-gui --play-fast <scen.xml>)
+        p = subprocess.Popen([command, "--invisible", "--play-fast", scenFile],
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+
+        # Read console output to detect end of process
+        # and prompt user with classification score. Quite artisanal but works
+        success = True
+        classifierOutputStr = ""
+        targetList = []
+        classifiedList = []
+        while True:
+            output = p.stdout.readline()
+            if p.poll() is not None:
+                break
+            if output:
+                print(str(output))
+                if "Invalid indexes: stopIdx - trainIndex = 1" in str(output):
+                    success = False
+                    return success, None, None
+                if "Application terminated" in str(output):
+                    break
+
+                if "aka Target" in str(output):
+                    if "769[OVTK_GDF_Left]" in str(output):
+                        targetList.append(1)
+                    elif "770[OVTK_GDF_Right]" in str(output):
+                        targetList.append(2)
+                if "aka Classified" in str(output):
+                    if "769[OVTK_GDF_Left]" in str(output):
+                        classifiedList.append(1)
+                    elif "770[OVTK_GDF_Right]" in str(output):
+                        classifiedList.append(2)
+
+        return success, targetList, classifiedList

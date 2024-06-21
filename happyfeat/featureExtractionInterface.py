@@ -6,8 +6,10 @@ import platform
 import json
 import numpy as np
 import matplotlib.pyplot as plt
+import threading
 
 from PySide2 import QtCore
+from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
 from PySide2.QtWidgets import QDialog
 from PySide2.QtWidgets import QVBoxLayout
@@ -30,6 +32,8 @@ from PySide2.QtWidgets import QSizePolicy
 from PySide2.QtWidgets import QMenuBar
 from PySide2.QtWidgets import QMenu
 from PySide2.QtWidgets import QAction
+from PySide2.QtWidgets import QInputDialog
+from PySide2.QtWidgets import QAbstractItemView
 
 from PySide2.QtGui import QFont
 from PySide2.QtCore import QTimer
@@ -69,6 +73,7 @@ class Features:
 
     samplingFreq = []
 
+    autoselected = []
 
 class Dialog(QDialog):
 
@@ -96,7 +101,8 @@ class Dialog(QDialog):
         self.sensorMontage = None
         self.customMontagePath = None
         self.currentSessionId = None
-        self.currentAttempt = None
+        self.currentAttempt = []
+        self.currentTrainCombination = None
 
         self.extractTimerStart = 0
         self.extractTimerEnd = 0
@@ -105,16 +111,25 @@ class Dialog(QDialog):
         self.trainTimerStart = 0
         self.trainTimerEnd = 0
 
+        # default parameters for automatic selection
+        self.autoFeatChannelList = ['C5', 'C3', 'C1', 'CP5', 'CP3', 'CP1', 'FC5', 'FC3', 'FC1',
+                                    'Cz', 'CPz', 'FCz', 'C6', 'C4', 'C2', 'CP6', 'CP4', 'CP2', 'FC6', 'FC4', 'FC2']
+        self.autoFeatFreqRange = "7:35"
+
         # Work Threads & Progress bars
         self.acquisitionThread = None
         self.extractThread = None
         self.loadFilesForVizThread = None
         self.loadFilesForVizThread2 = None
-        self.trainClassThread = None
+        self.lockVizGui = threading.Lock()
+        self.trainClassThread = []
         self.progressBarExtract = None
         self.progressBarViz = None
         self.progressBarViz2 = None
         self.progressBarTrain = None
+
+        # "Advanced mode" with more options...?
+        self.advanced = False
 
         # GET BASIC SETTINGS FROM WORKSPACE FILE
         if self.workspaceFile:
@@ -140,10 +155,27 @@ class Dialog(QDialog):
         self.dlgLayout.setMenuBar(self.menuBar)
         self.menuOptions = QMenu("&Options")
         self.menuBar.addMenu(self.menuOptions)
+
         # OpenViBE designer browser...
         self.qActionFindOV = QAction("&Browse for OpenViBE", self)
         self.qActionFindOV.triggered.connect(lambda: self.browseForDesigner())
         self.menuOptions.addAction(self.qActionFindOV)
+        # Activate/deactivate advanced options...
+        self.qActionEnableAdvancedMode = QAction("&Enable/Disable Advanced Mode", self)
+        self.qActionEnableAdvancedMode.triggered.connect(lambda: self.toggleAdvanced())
+        self.menuOptions.addAction(self.qActionEnableAdvancedMode)
+
+        # Auto-select feature: select a set of channels for autoselection
+        self.menuAutoSelect = QMenu("&Feature AutoSelect")
+        self.menuBar.addMenu(self.menuAutoSelect)
+
+        self.qActionChanList = QAction("Set &Channel sub-selection", self)
+        self.qActionChanList.triggered.connect(lambda: self.autoFeatSetChannelSubselection())
+        self.menuAutoSelect.addAction(self.qActionChanList)
+
+        self.qActionFreqRange = QAction("Set frequency &Range", self)
+        self.qActionFreqRange.triggered.connect(lambda: self.autoFeatSetFreqRange())
+        self.menuAutoSelect.addAction(self.qActionFreqRange)
 
         # -----------------------------------------------------------------------
         # NEW! LEFT-MOST PART: Signal acquisition & Online classification parts
@@ -358,12 +390,17 @@ class Dialog(QDialog):
             titleTimeFreq = "Time-Frequency ERD/ERS analysis"
             titlePsd = "Power Spectrum "
             titleTopo = "Topography of power spectra, for freq. "
-            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2))
+            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2, False))
             self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq(self.Features, titleTimeFreq))
             self.btn_psd.clicked.connect(lambda: self.btnPsd(self.Features, titlePsd))
             self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo))
 
+            self.btn_r2mapAutoFeat = QPushButton("R² map (sub-select.)")
+            self.btn_r2mapAutoFeat.clicked.connect(lambda: self.btnR2(self.Features, titleR2, True))
+
             self.parallelVizLayouts[0].addWidget(self.btn_r2map)
+            self.parallelVizLayouts[0].addWidget(self.btn_r2mapAutoFeat)
+
             self.parallelVizLayouts[0].addWidget(self.btn_psd)
             self.parallelVizLayouts[0].addWidget(self.btn_timefreq)
             self.parallelVizLayouts[0].addWidget(self.btn_topo)
@@ -373,25 +410,32 @@ class Dialog(QDialog):
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             # Viz options for "Connectivity" pipeline...
             self.btn_r2map = QPushButton("Display Frequency-channel R² map (NODE STRENGTH)")
-            # self.btn_timefreq = QPushButton("Display Time-Frequency ERD/ERS analysis")
+            self.btn_timefreq = QPushButton("Display Time-Frequency ERD/ERS analysis")
             self.btn_metric = QPushButton("Display NODE STRENGTH comparison between classes")
             self.btn_topo = QPushButton("Display NODE STRENGTH Brain Topography")
             titleR2 = "Freq.-chan. map of R² values of node strength"
             titleTimeFreq = "Time-Frequency ERD/ERS analysis"
             titleMetric = "Connectivity-based node strength, "
             titleTopo = "Topography of node strengths, for freq. "
-            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2))
+            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2, False))
             self.btn_metric.clicked.connect(lambda: self.btnMetric(self.Features, titleMetric))
-            # self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq(self.Features, titleTimeFreq))
+            self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreqConnect(self.Features, titleTimeFreq))
             self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo))
+
+            self.btn_r2mapAutoFeat = QPushButton("R² map (sub-select.)")
+            self.btn_r2mapAutoFeat.clicked.connect(lambda: self.btnR2(self.Features, titleR2, True))
+
             self.parallelVizLayouts[1].addWidget(self.btn_r2map)
+            self.parallelVizLayouts[1].addWidget(self.btn_r2mapAutoFeat)
+
             self.parallelVizLayouts[1].addWidget(self.btn_metric)
-            # self.parallelVizLayouts[1].addWidget(self.btn_timefreq)
+            self.parallelVizLayouts[1].addWidget(self.btn_timefreq)
             self.parallelVizLayouts[1].addWidget(self.btn_topo)
 
             self.layoutViz.addLayout(self.parallelVizLayouts[1])
 
-        elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
             # Viz options in parallel
             labelPowSpectViz = QLabel("Power Spectrum")
             labelPowSpectViz.setAlignment(QtCore.Qt.AlignCenter)
@@ -409,10 +453,15 @@ class Dialog(QDialog):
             titleTimeFreq = "Time-Frequency ERD/ERS analysis"
             titlePsd = "Power Spectrum "
             titleTopo = "Topography of power spectra, for freq. "
-            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2))
+            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2, False))
             self.btn_psd.clicked.connect(lambda: self.btnPsd(self.Features, titlePsd))
             self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo))
+
+            self.btn_r2mapAutoFeat = QPushButton("R² map (sub-select.)")
+            self.btn_r2mapAutoFeat.clicked.connect(lambda: self.btnR2(self.Features, titleR2, True))
+
             self.parallelVizLayouts[0].addWidget(self.btn_r2map)
+            self.parallelVizLayouts[0].addWidget(self.btn_r2mapAutoFeat)
             self.parallelVizLayouts[0].addWidget(self.btn_psd)
             self.parallelVizLayouts[0].addWidget(self.btn_topo)
 
@@ -424,10 +473,15 @@ class Dialog(QDialog):
             titleTimeFreq_c = "Time-Frequency ERD/ERS analysis"
             titleMetric_c = "Connectivity-based Node Strength, "
             titleTopo_c = "Topography of node strengths, for freq. "
-            self.btn_r2map2.clicked.connect(lambda: self.btnR2(self.Features2, titleR2_c))
+            self.btn_r2map2.clicked.connect(lambda: self.btnR2(self.Features2, titleR2_c, False))
             self.btn_metric.clicked.connect(lambda: self.btnMetric(self.Features2, titleMetric_c))
             self.btn_topo2.clicked.connect(lambda: self.btnTopo(self.Features2, titleTopo_c))
+
+            self.btn_r2mapAutoFeat2 = QPushButton("R² map (sub-select.)")
+            self.btn_r2mapAutoFeat2.clicked.connect(lambda: self.btnR2(self.Features2, titleR2, True))
+
             self.parallelVizLayouts[1].addWidget(self.btn_r2map2)
+            self.parallelVizLayouts[1].addWidget(self.btn_r2mapAutoFeat2)
             self.parallelVizLayouts[1].addWidget(self.btn_metric)
             self.parallelVizLayouts[1].addWidget(self.btn_topo2)
 
@@ -438,6 +492,10 @@ class Dialog(QDialog):
 
             self.layoutViz.addLayout(self.labelLayoutH)
             self.layoutViz.addLayout(self.parallelVizLayoutH)
+
+        self.btn_autoFeat = QPushButton("Auto. select optimal features")
+        self.btn_autoFeat.clicked.connect(lambda: self.btnAutoFeat(self.Features, self.Features2))
+        self.layoutViz.addWidget(self.btn_autoFeat)
 
         # Add separator...
         separator2 = QFrame()
@@ -457,7 +515,7 @@ class Dialog(QDialog):
         self.layoutTrain = QVBoxLayout()
         self.layoutTrain.setAlignment(QtCore.Qt.AlignTop)
 
-        self.labelTrain = QLabel('== CLASSIFIER TRAINING ==')
+        self.labelTrain = QLabel('== CLASSIFICATION ==')
         self.labelTrain.setAlignment(QtCore.Qt.AlignCenter)
         self.labelTrain.setFont(QFont("system-ui", 12))
         self.labelTrain.setStyleSheet("font-weight: bold")
@@ -473,7 +531,8 @@ class Dialog(QDialog):
         self.qvFeatureLayouts = [None, None]
         self.qvFeatureLayouts[0] = QFormLayout()
         self.qvFeatureLayouts[1] = QFormLayout()
-        if self.parameterDict["pipelineType"] != settings.optionKeys[3]:
+        if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             self.layoutTrain.addLayout(self.qvFeatureLayouts[0])
         else:
             labelFeat = [None, None]
@@ -496,23 +555,24 @@ class Dialog(QDialog):
         self.selectedFeats = [[], []]
 
         self.selectedFeats[0].append(QLineEdit())
-        self.selectedFeats[0][0].setText('CP3;22')
+        self.selectedFeats[0][0].setText('CP3;8')
 
         self.btn_addPair = QPushButton("Add feature")
         self.btn_removePair = QPushButton("Remove feature")
-        self.btn_addPair.clicked.connect(lambda: self.btnAddPair(self.selectedFeats[0], self.qvFeatureLayouts[0]))
+        self.btn_addPair.clicked.connect(lambda: self.btnAddPair(self.selectedFeats[0], self.qvFeatureLayouts[0], None))
         self.btn_removePair.clicked.connect(lambda: self.btnRemovePair(self.selectedFeats[0], self.qvFeatureLayouts[0]))
         self.qvFeatureLayouts[0].addWidget(self.btn_addPair)
         self.qvFeatureLayouts[0].addWidget(self.btn_removePair)
         self.qvFeatureLayouts[0].addWidget(self.selectedFeats[0][0])
 
-        if self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+        if self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
             self.selectedFeats[1].append(QLineEdit())
-            self.selectedFeats[1][0].setText('CP3;22')
+            self.selectedFeats[1][0].setText('CP3;8')
 
             self.btn_addPair2 = QPushButton("Add feature")
             self.btn_removePair2 = QPushButton("Remove feature")
-            self.btn_addPair2.clicked.connect(lambda: self.btnAddPair(self.selectedFeats[1], self.qvFeatureLayouts[1]))
+            self.btn_addPair2.clicked.connect(lambda: self.btnAddPair(self.selectedFeats[1], self.qvFeatureLayouts[1], None))
             self.btn_removePair2.clicked.connect(lambda: self.btnRemovePair(self.selectedFeats[1], self.qvFeatureLayouts[1]))
             self.qvFeatureLayouts[1].addWidget(self.btn_addPair2)
             self.qvFeatureLayouts[1].addWidget(self.btn_removePair2)
@@ -533,6 +593,15 @@ class Dialog(QDialog):
         self.fileListWidgetTrain = QListWidget()
         self.fileListWidgetTrain.setSelectionMode(QListWidget.MultiSelection)
 
+        # Classifier training button
+        self.btn_trainClassif = QPushButton("TRAIN CLASSIFIER")
+        self.btn_trainClassif.clicked.connect(lambda: self.btnTrainClassif())
+        self.btn_trainClassif.setStyleSheet("font-weight: bold")
+        # Find best combination of features (present only in pipeline 4)
+        self.btn_trainClassifCombination = QPushButton("TRAIN - FIND BEST COMB.")
+        self.btn_trainClassifCombination.clicked.connect(lambda: self.btnTrainClassifCombination())
+        self.btn_trainClassifCombination.setStyleSheet("font-weight: bold")
+
         # Label + QTreeWidget for training results
         labelLastResults = str("--- Last Training Results ---")
         self.labelLastResults = QLabel(labelLastResults)
@@ -545,34 +614,69 @@ class Dialog(QDialog):
         self.lastTrainingResults.setColumnWidth(1, 60)
         minHeightTrainResults = 30
         self.lastTrainingResults.setMinimumHeight(minHeightTrainResults)
+        self.lastTrainingResults.setSelectionMode(QAbstractItemView.SingleSelection)
 
         # Update training results from config file
         self.updateTrainingAttemptsTree()
-
-        # Select / all combinations buttons...
-        self.btn_trainClassif = QPushButton("TRAIN CLASSIFIER")
-        self.btn_trainClassif.clicked.connect(lambda: self.btnTrainClassif())
-        self.btn_trainClassif.setStyleSheet("font-weight: bold")
 
         # Connectivity: allow to enable/disable "Speed up" training"
         if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             self.enableSpeedUp = QCheckBox()
             self.enableSpeedUp.setTristate(False)
             self.enableSpeedUp.setChecked(False)
+            self.enableSpeedUp.setVisible(False)  # advanced option
             speedUpLabel = str("Speed-up training (experimental)")
             self.speedUpLabel = QLabel(speedUpLabel)
             self.speedUpLabel.setAlignment(QtCore.Qt.AlignCenter)
+            self.speedUpLabel.setVisible(False)  # advanced option
             self.speedUpLayout = QHBoxLayout()
             self.speedUpLayout.addWidget(self.speedUpLabel)
             self.speedUpLayout.addWidget(self.enableSpeedUp)
 
+        # Use the classif. weights from selected "training attempt" in the list
+        self.btn_useSelectedClassif = QPushButton("Use selected classifier (Online scen.)")
+        self.btn_useSelectedClassif.clicked.connect(lambda: self.btnUseSelectedClassif())
+        self.btn_useSelectedClassif.setStyleSheet("font-weight: bold")
+
+        # Label for classifier running
+        labelRunClassif = str("--- Run classification ---")
+        self.labelRunClassif = QLabel(labelRunClassif)
+        self.labelRunClassif.setAlignment(QtCore.Qt.AlignCenter)
+        self.labelRunClassif.setVisible(False)  # advanced option
+
+        # Select files + apply selected classifier
+        self.classifLayoutH = QHBoxLayout()
+        self.btn_selectFilesClassif = QPushButton("Browse for files...")
+        self.btn_selectFilesClassif.setVisible(False) # advanced option
+        self.btn_runClassif = QPushButton("RUN CLASSIFIER")
+        self.btn_runClassif.setVisible(False) # advanced option
+        self.btn_selectFilesClassif.clicked.connect(lambda: self.btnSelectFilesClassif())
+
+        self.btn_runClassif.clicked.connect(lambda: self.btnRunClassif())
+        self.classifLayoutH.addWidget(self.btn_selectFilesClassif)
+        self.classifLayoutH.addWidget(self.btn_runClassif)
+
+        self.fileListWidgetClassifRun = QTreeWidget()
+        self.fileListWidgetClassifRun.setColumnCount(1)
+        self.fileListWidgetClassifRun.setHeaderLabels([""])
+        self.fileListWidgetClassifRun.setVisible(False) # advanced option
+
+        # Update GUI layout
         self.qvTrainingLayout.addLayout(self.trainingParamsLayout)
         self.qvTrainingLayout.addWidget(self.fileListWidgetTrain)
-        self.qvTrainingLayout.addWidget(self.labelLastResults)
-        self.qvTrainingLayout.addWidget(self.lastTrainingResults)
         if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             self.qvTrainingLayout.addLayout(self.speedUpLayout)
         self.qvTrainingLayout.addWidget(self.btn_trainClassif)
+        #if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+        self.qvTrainingLayout.addWidget(self.btn_trainClassifCombination)  # Activate later when functional
+        self.qvTrainingLayout.addWidget(self.labelLastResults)
+        self.qvTrainingLayout.addWidget(self.lastTrainingResults)
+        self.qvTrainingLayout.addWidget(self.btn_useSelectedClassif)
+
+        self.qvTrainingLayout.addWidget(self.labelRunClassif)
+        self.qvTrainingLayout.addLayout(self.classifLayoutH)
+        self.qvTrainingLayout.addWidget(self.fileListWidgetClassifRun)
+
         self.dlgLayout.addLayout(self.layoutTrain, 1)
 
         # display initial layout
@@ -599,6 +703,7 @@ class Dialog(QDialog):
         # ----------
         if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
             self.btn_r2map.setEnabled(myBool)
+            self.btn_r2mapAutoFeat.setEnabled(myBool)
             self.btn_timefreq.setEnabled(myBool)
             self.btn_psd.setEnabled(myBool)
             self.btn_topo.setEnabled(myBool)
@@ -606,16 +711,26 @@ class Dialog(QDialog):
             # self.btn_connectSpect.setEnabled(myBool)
             # self.btn_connectMatrices.setEnabled(myBool)
             # self.btn_connectome.setEnabled(myBool)
+            self.btn_timefreq.setEnabled(myBool)
             self.btn_r2map.setEnabled(myBool)
+            self.btn_r2mapAutoFeat.setEnabled(myBool)
             self.btn_metric.setEnabled(myBool)
             self.btn_topo.setEnabled(myBool)
-        elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
             self.btn_r2map.setEnabled(myBool)
+            self.btn_r2mapAutoFeat.setEnabled(myBool)
             self.btn_psd.setEnabled(myBool)
             self.btn_topo.setEnabled(myBool)
             self.btn_r2map2.setEnabled(myBool)
+            self.btn_r2mapAutoFeat2.setEnabled(myBool)
             self.btn_metric.setEnabled(myBool)
             self.btn_topo2.setEnabled(myBool)
+            if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+                self.btn_r2mapAutoFeat.setEnabled(myBool)
+                self.btn_r2mapAutoFeat2.setEnabled(myBool)
+
+        self.btn_autoFeat.setEnabled(myBool)
 
         self.show()
 
@@ -667,7 +782,8 @@ class Dialog(QDialog):
             suffix1 = "-SPECTRUM"
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             suffix1 = "-CONNECT"
-        elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
             suffix1 = "-SPECTRUM"
             suffix2 = "-CONNECT"
         suffixFinal = suffix1
@@ -948,7 +1064,8 @@ class Dialog(QDialog):
            suffix = "-SPECTRUM"
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             suffix = "-CONNECT"
-        elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
             suffix = "-SPECTRUM-CONNECT"
 
         analysisFiles = []
@@ -961,11 +1078,15 @@ class Dialog(QDialog):
         self.enableVizGui(False)
 
         # Instantiate the thread...
+        # TODO : refactor using automatic feature selection possibility
         if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
             self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq)
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             self.loadFilesForVizThread = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features, self.samplingFreq)
         elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+            self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq)
+            self.loadFilesForVizThread2 = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features2, self.samplingFreq)
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[4]:
             self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq)
             self.loadFilesForVizThread2 = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features2, self.samplingFreq)
 
@@ -978,10 +1099,15 @@ class Dialog(QDialog):
         self.loadFilesForVizThread.info2.connect(self.progressBarViz.changeLabel)
         # Signal: Viz work thread finished
         self.loadFilesForVizThread.over.connect(self.loadFilesForViz_over)
+
+        # Manage number of threads (for GUI reactivation...)
+        self.nbThreadsViz = 1
+
         # Launch the work thread
         self.loadFilesForVizThread.start()
 
         if self.loadFilesForVizThread2:
+            self.nbThreadsViz = 2
             # create progress bar window...
             self.progressBarViz2 = ProgressBar("Feature Visualization", "Loading data from Csv files...",
                                               len(self.availableFilesForVizList.selectedItems()))
@@ -996,25 +1122,72 @@ class Dialog(QDialog):
 
         self.vizTimerStart = time.perf_counter()
 
-    def loadFilesForViz_over(self, success, text):
+    def loadFilesForViz_over(self, success, text, fileValidityList):
         # Viz work thread is over, so we kill the progress bar,
-        # and make the viz Gui available again
+        # and re-activate the GUI (if it's the last thread to finish)
         self.vizTimerEnd = time.perf_counter()
         elapsed = self.vizTimerEnd - self.vizTimerStart
         print("=== Viz data loaded in: ", str(elapsed))
 
         self.progressBarViz.finish()
+
         if not success:
             myMsgBox(text)
             self.plotBtnsEnabled = False
         else:
             self.samplingFreq = self.Features.samplingFreq
             self.plotBtnsEnabled = True
-        self.enableGui(True)
 
-    def loadFilesForViz_kill_PB(self, success, text):
-        # Viz work thread2 is over, so we only kill the progress bar
+        # unlock viz buttons only if both threads have finished.
+        self.lockVizGui.acquire()
+        try:
+            self.nbThreadsViz -= 1
+            if self.nbThreadsViz == 0:
+                self.enableGui(True)
+        finally:
+            self.lockVizGui.release()
+
+        # Handle case in which we had to prune out trials with invalid values (NaN)
+        if not all(fileValidityList):
+            analysisFiles = []
+            for selectedItem in self.availableFilesForVizList.selectedItems():
+                analysisFiles.append(selectedItem.text())
+            invalidFiles = [i for i in range(len(fileValidityList)) if not fileValidityList[i]]
+            warnText = str("--Warning: the following files contained invalid values (NaN).\n")
+            warnText += str("\nTrials with invalid values were dropped.")
+            warnText += str("\n /!\\ The displayed statistics (R2 maps, etc.) might be biased...\n")
+            for i in invalidFiles:
+                warnText += str("\n" + analysisFiles[i])
+
+            myMsgBox(warnText)
+
+    def loadFilesForViz_kill_PB(self, success, text, fileValidityList):
+        # Viz work thread2 is over, so we kill the progress bar
+        # and re-activate the GUI (if it's the last thread to finish)
         self.progressBarViz2.finish()
+
+        # unlock viz buttons only if both threads have finished.
+        self.lockVizGui.acquire()
+        try:
+            self.nbThreadsViz -= 1
+            if self.nbThreadsViz == 0:
+                self.enableGui(True)
+        finally:
+            self.lockVizGui.release()
+
+        # Handle case in which we had to prune out trials with invalid values (NaN)
+        if not all(fileValidityList):
+            analysisFiles = []
+            for selectedItem in self.availableFilesForVizList.selectedItems():
+                analysisFiles.append(selectedItem.text())
+            invalidFiles = [i for i in range(len(fileValidityList)) if not fileValidityList[i]]
+            warnText = str("--Warning: the following files contained invalid values (NaN).\n")
+            warnText += str("\nTrials with invalid values were dropped.")
+            warnText += str("\n /!\\ The displayed statistics (R2 maps, etc.) might be biased...\n")
+            for i in invalidFiles:
+                warnText += str("\n" + analysisFiles[i])
+
+            myMsgBox(warnText)
 
     def btnTrainClassif(self):
         # ----------
@@ -1027,18 +1200,20 @@ class Dialog(QDialog):
             myMsgBox("Please select a set of files for training")
             return
 
-        if not self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+        if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             # case with 1 set of features...
             if len(self.selectedFeats[0]) < 1:
                 myMsgBox("Please use at least one set of features!")
                 return
-        else:
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
             # case with 2 sets of features : one of the two can be empty
             if len(self.selectedFeats[0]) < 1 and len(self.selectedFeats[1]) < 1:
                 myMsgBox("Please use at least one set of features!")
                 return
 
-        # Get training param from GUI and modify training scenario
+        # Get training param from GUI (to modify training scenario later on)
         err = True
         trainingSize = 0
         if self.trainingPartitions.text().isdigit():
@@ -1054,9 +1229,17 @@ class Dialog(QDialog):
         for selectedItem in self.fileListWidgetTrain.selectedItems():
             self.trainingFiles.append(selectedItem.text())
 
+        # 1-class specific case: check if "baseline" files also exist
+        if self.parameterDict["pipelineType"] == optionKeys[4]:
+            for trainingFile in self.trainingFiles:
+                baselineFile = trainingFile.replace("TRIALS", "BASELINE")
+                if not os.path.exists(os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", baselineFile)):
+                    myMsgBox("Error in training: missing BASELINE file. Check your workspace folder and extraction scenario")
+                    return
+
         # Initialize structure for reporting results in workspace file...
         self.currentAttempt = {"SignalFiles": self.trainingFiles,
-                               "CompositeFile": None, "Features": None, "Score": ""}
+                                  "CompositeFile": None, "Features": None, "Score": ""}
 
         # LOAD TRAINING FEATURES
         # /!\ IMPORTANT !
@@ -1065,7 +1248,8 @@ class Dialog(QDialog):
         # ex: if feats(connectivity) is empty, then we use the "powerspectrum" template.
         trainingParamDict = self.parameterDict.copy()
         listFeats = []
-        if self.parameterDict["pipelineType"] != settings.optionKeys[3]:
+        if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             for featWidget in self.selectedFeats[0]:
                 listFeats.append(featWidget.text())
             self.currentAttempt["Features"] = {self.parameterDict["pipelineType"]: listFeats}
@@ -1092,7 +1276,7 @@ class Dialog(QDialog):
                     for featWidget in self.selectedFeats[metric]:
                         listFeats[metric].append(featWidget.text())
                 self.currentAttempt["Features"] = {settings.optionKeys[1]: listFeats[0],
-                                                   settings.optionKeys[2]: listFeats[1]}
+                                                      settings.optionKeys[2]: listFeats[1]}
 
         # Check if training with such parameters has already been attempted
         alreadyAttempted, attemptId, score = \
@@ -1105,7 +1289,7 @@ class Dialog(QDialog):
             message += str("\n\tRun it again?")
             retVal = myOkCancelBox(message)
             if retVal == QMessageBox.Cancel:
-                self.currentAttempt = {}
+                self.currentAttempt = []
                 return
 
         # deactivate this part of the GUI (+ the extraction part)
@@ -1124,32 +1308,34 @@ class Dialog(QDialog):
             if self.enableSpeedUp.isChecked():
                 enableSpeedUp = True
 
-        templateFolder = settings.optionsTemplatesDir[self.parameterDict["pipelineType"]]
-        self.trainClassThread = TrainClassifier(self.trainingFiles,
-                                                signalFolder, templateFolder,
-                                                self.workspaceFolder,
-                                                self.ovScript,
-                                                trainingSize, listFeats,
-                                                trainingParamDict, self.samplingFreq,
-                                                self.currentAttempt, attemptId, enableSpeedUp)
+        templateFolder = settings.optionsTemplatesDir[trainingParamDict["pipelineType"]]
+        self.trainClassThread.append( TrainClassifier(self.trainingFiles,
+                                                    signalFolder, templateFolder,
+                                                    self.workspaceFolder,
+                                                    self.ovScript,
+                                                    trainingSize, listFeats,
+                                                    trainingParamDict, self.samplingFreq,
+                                                    self.currentAttempt, attemptId,
+                                                    enableSpeedUp) )
 
         # Signal: Training work thread finished one step
         # Increment progress bar + change its label
-        self.trainClassThread.info.connect(self.progressBarTrain.increment)
-        self.trainClassThread.info2.connect(self.progressBarTrain.changeLabel)
+        self.trainClassThread[0].info.connect(self.progressBarTrain.increment)
+        self.trainClassThread[0].info2.connect(self.progressBarTrain.changeLabel)
         # Signal: Training work thread finished
-        self.trainClassThread.over.connect(self.training_over)
+        self.trainClassThread[0].over.connect(self.training_over)
         # Launch the work thread
-        self.trainClassThread.start()
+        self.trainClassThread[0].start()
 
         self.trainTimerStart = time.perf_counter()
 
-    def training_over(self, success, resultsText):
+    def training_over(self, success, attemptIdTemp, resultsText):
         # Training work thread is over, so we kill the progress bar,
         # display a msg with results, and make the training Gui available again
         self.trainTimerEnd = time.perf_counter()
         elapsed = self.trainTimerEnd - self.trainTimerStart
         print("=== Training done in: ", str(elapsed))
+        self.trainClassThread.clear()
 
         self.progressBarTrain.finish()
         if success:
@@ -1184,6 +1370,253 @@ class Dialog(QDialog):
             myMsgBox(resultsText)
         self.enableGui(True)
 
+    def btnTrainClassifCombination(self):
+        # ----------
+        # Callback from button :
+        # Select features in fields, check if they're correctly formatted,
+        # launch openvibe with sc2-train.xml (in the background) to train the classifier,
+        # for as many combinations of Features possible
+        # (if one metric type : (1), (1+2), (1+2+3) )
+        # (if two metrics : (1+1) , (1+2 + 1+2), (1+2+3 + 1+2+3) )
+        #
+        # provide the classification score/accuracy as a textbox
+        # ----------
+
+        # basic checks
+        if not self.fileListWidgetTrain.selectedItems():
+            myMsgBox("Please select a set of files for training")
+            return
+
+        if len(self.selectedFeats[0]) < 1:
+            myMsgBox("Please use at least one set of features!")
+            return
+
+        if self.parameterDict["pipelineType"] == settings.optionKeys[3]\
+                or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+            # the 2 sets of features must have the same (>0) size
+            if len(self.selectedFeats[0]) != len(self.selectedFeats[1]):
+                myMsgBox("Please use the same number of PSD and NS feats (>0)")
+                return
+
+        # Get training param from GUI (to modify training scenario later on)
+        err = True
+        trainingSize = 0
+        if self.trainingPartitions.text().isdigit():
+            if int(self.trainingPartitions.text()) > 0:
+                trainingSize = int(self.trainingPartitions.text())
+                err = False
+        if err:
+            myMsgBox("Nb of k-fold should be a positive number")
+            return
+
+        # create list of files...
+        self.trainingFiles = []
+        for selectedItem in self.fileListWidgetTrain.selectedItems():
+            self.trainingFiles.append(selectedItem.text())
+
+        # 1-class specific case: check if "baseline" files also exist
+        if self.parameterDict["pipelineType"] == optionKeys[4]:
+            for trainingFile in self.trainingFiles:
+                baselineFile = trainingFile.replace("TRIALS", "BASELINE")
+                if not os.path.exists(os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", baselineFile)):
+                    myMsgBox("Error in training: missing BASELINE file. Check your workspace folder and extraction scenario")
+                    return
+
+        # Initialize structure for reporting results in workspace file...
+        tempAttempt = {"SignalFiles": self.trainingFiles,
+                       "CompositeFile": None, "Features": None, "Score": ""}
+        for comb in range(len(self.selectedFeats[0])):
+            self.currentAttempt.append(tempAttempt.copy())
+
+        # LOAD TRAINING FEATURES
+        # /!\ IMPORTANT !
+        # When using "mixed" pipeline, if one of the two feature lists is empty, we use
+        # the Training scenario template from the pipeline with the non-empty feature (got it?)
+        # ex: if feats(connectivity) is empty, then we use the "powerspectrum" template.
+        trainingParamDict = self.parameterDict.copy()
+        listFeats = []
+        if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+            for featWidget in self.selectedFeats[0]:
+                listFeats.append(featWidget.text())
+            listFeatsTemp = listFeats.copy()  # copy the list so that we don't lose it when exiting the scope...
+            for comb in range(len(self.selectedFeats[0])):
+                self.currentAttempt[comb]["Features"] = {self.parameterDict["pipelineType"]: list(listFeatsTemp)}
+                listFeatsTemp.pop()  # remove last element. Next iteration has 1 less element, etc.
+
+        else:
+            # save both features
+            listFeats = [[], []]
+            listFeatsTemp = [[], []]
+            for metric in [0, 1]:
+                for featWidget in self.selectedFeats[metric]:
+                    listFeats[metric].append(featWidget.text())
+                listFeatsTemp[metric] = listFeats[metric].copy()
+            for comb in range(len(self.selectedFeats[0])):
+                self.currentAttempt[comb]["Features"] = {settings.optionKeys[1]: list(listFeatsTemp[0]),
+                                                         settings.optionKeys[2]: list(listFeatsTemp[1])}
+                listFeatsTemp[0].pop()
+                listFeatsTemp[1].pop()  # remove last element. Next iteration has 1 less element, etc.
+
+        # Check if training with such parameters has already been attempted
+        # (check only for case with all features)
+        alreadyAttempted, attemptId, score = \
+            checkIfTrainingAlreadyDone(self.workspaceFile, self.currentSessionId,
+                                       self.currentAttempt[0]["SignalFiles"],
+                                       self.currentAttempt[0]["Features"])
+        if alreadyAttempted:
+            message = str("Training was already attempted (id " + attemptId + ") ")
+            message += str("\nwith an accuracy of " + score + " \%")
+            message += str("\n\tRun it again?")
+            retVal = myOkCancelBox(message)
+            if retVal == QMessageBox.Cancel:
+                self.currentAttempt = []
+                return
+
+        # deactivate this part of the GUI (+ the extraction part)
+        self.enableExtractionGui(False)
+        self.enableTrainGui(False)
+
+        # create progress bar window...
+        self.progressBarTrainCombination = ProgressBar("Classifier training", "Combination ... ", len(self.selectedFeats[0]))
+
+        # a few common inits...
+        signalFolder = os.path.join(self.workspaceFolder, "signals")
+        templateFolder = settings.optionsTemplatesDir[trainingParamDict["pipelineType"]]
+        enableSpeedUp = False
+        # if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+        #     if self.enableSpeedUp.isChecked():
+        #         enableSpeedUp = True
+
+        for comb in range(len(self.selectedFeats[0])):
+
+            # Load the specific set of features for this combination
+            if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
+                    or self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+
+                listFeats = self.currentAttempt[comb]["Features"][self.parameterDict["pipelineType"]]
+
+            else:
+                listFeats[0] = self.currentAttempt[comb]["Features"][settings.optionKeys[1]]
+                listFeats[1] = self.currentAttempt[comb]["Features"][settings.optionKeys[2]]
+
+            # we use "check if already done" again, not to prompt the user, but to get
+            # a valid "attemptId"
+            alreadyAttempted, attemptId, score = \
+                checkIfTrainingAlreadyDone(self.workspaceFile, self.currentSessionId,
+                                           self.currentAttempt[comb]["SignalFiles"],
+                                           self.currentAttempt[comb]["Features"])
+
+            # Instantiate the thread...
+            self.trainClassThread.append( TrainClassifier(  self.trainingFiles,
+                                                            signalFolder, templateFolder,
+                                                            self.workspaceFolder,
+                                                            self.ovScript,
+                                                            trainingSize, listFeats,
+                                                            trainingParamDict, self.samplingFreq,
+                                                            self.currentAttempt[comb], attemptId,
+                                                            enableSpeedUp) )
+
+
+        # Launch the first (or only) thread.
+        # Launching/management of upcoming threads in "trainingcombination_over"
+        self.trainClassThread[0].over.connect(self.trainingCombination_over)
+        self.trainClassThread[0].start()
+        self.currentTrainCombination = 0
+        self.trainTimerStart = time.perf_counter()
+
+    def trainingCombination_over(self, success, attemptIdTemp, resultsText):
+        # Training work thread is over, so we update (or kill) the progress bar,
+        # display a msg with results at the end of all attemps,
+        # and make the training Gui available again
+
+        lastCombination = False
+        # Update or kill the progress bar, and the global training timer
+        if(self.currentTrainCombination < len(self.selectedFeats[0])-1):
+            self.progressBarTrainCombination.increment()
+        else:
+            self.progressBarTrainCombination.finish()
+            self.trainTimerEnd = time.perf_counter()
+            elapsed = self.trainTimerEnd - self.trainTimerStart
+            print("=== Training done in: ", str(elapsed))
+            self.trainClassThread.clear()
+            lastCombination = True
+
+        if success:
+
+            comb = self.currentTrainCombination
+            # Add training attempt in workspace file
+            alreadyDone, attemptId, dummy = \
+                checkIfTrainingAlreadyDone(self.workspaceFile, self.currentSessionId,
+                                           self.currentAttempt[comb]["SignalFiles"],
+                                           self.currentAttempt[comb]["Features"])
+            if alreadyDone:
+                replaceTrainingAttempt(self.workspaceFile, self.currentSessionId, attemptId,
+                                       self.currentAttempt[comb]["SignalFiles"],
+                                       self.currentAttempt[comb]["CompositeFile"],
+                                       self.currentAttempt[comb]["Features"],
+                                       self.currentAttempt[comb]["Score"])
+            else:
+                addTrainingAttempt(self.workspaceFile, self.currentSessionId,
+                                   self.currentAttempt[comb]["SignalFiles"],
+                                   self.currentAttempt[comb]["CompositeFile"],
+                                   self.currentAttempt[comb]["Features"],
+                                   self.currentAttempt[comb]["Score"])
+
+            self.updateTrainingAttemptsTree()
+
+            # Launch next thread if necessary
+            if not lastCombination:
+                self.currentTrainCombination += 1
+                self.trainClassThread[self.currentTrainCombination].over.connect(self.trainingCombination_over)
+                self.trainClassThread[self.currentTrainCombination].start()
+
+        else:
+            myMsgBox(resultsText)
+
+        if lastCombination:
+
+            trainingFilesList = self.currentAttempt[comb]["SignalFiles"]
+            exitText = str("== COMBINATION TRAINING RESULTS ==\n\n")
+            exitText += str("Using files:\n")
+            for i in range(len(trainingFilesList)):
+                exitText += str(trainingFilesList[i] + "\n")
+            exitText += str("\n")
+
+            bestScore = 0.0
+            bestAttempt = 0
+            bestFeatures = ""
+            for comb in range(len(self.selectedFeats[0])):
+                if float(self.currentAttempt[comb]["Score"]) > bestScore:
+                    bestScore = float(self.currentAttempt[comb]["Score"])
+                    alreadyDone, attemptId, dummy = \
+                        checkIfTrainingAlreadyDone(self.workspaceFile, self.currentSessionId,
+                                                   self.currentAttempt[comb]["SignalFiles"],
+                                                   self.currentAttempt[comb]["Features"])
+                    bestAttempt = attemptId
+                    bestFeatures = self.currentAttempt[comb]["Features"]
+
+                feats = self.currentAttempt[comb]["Features"]
+                exitText += "Features: "
+                # for i in range(len(feats)):
+                #     exitText += str(feats[i] + " ")
+                exitText += str(feats)
+                exitText += str("\n")
+                exitText += str("Score: " + str(self.currentAttempt[comb]["Score"]))
+                exitText += str("\n")
+
+            exitText += str("\n")
+            exitText += str("== Best score: " + str(bestScore) + ", with attempt id " + str(bestAttempt) + "\n")
+            exitText += str("   and Features: " + str(bestFeatures))
+
+            msg = QMessageBox()
+            msg.setText(exitText)
+            msg.setStyleSheet("QLabel{min-width: 1200px;}")
+            msg.setWindowTitle("Classifier Training Score")
+            msg.exec_()
+
+            self.enableGui(True)
+
     def enableAcquisitionGui(self, myBool):
         # Acquisition part...
         for idx in range(self.layoutAcqOnline.count()):
@@ -1196,6 +1629,7 @@ class Dialog(QDialog):
         for idx in range(self.layoutExtractLabels.count()):
             self.layoutExtractLineEdits.itemAt(idx).widget().setEnabled(myBool)
         self.btn_runExtractionScenario.setEnabled(myBool)
+        self.btn_updateExtractParams.setEnabled(myBool)
         self.fileListWidget.setEnabled(myBool)
         # self.btn_browseOvScript.setEnabled(myBool)
         self.menuOptions.setEnabled(myBool)
@@ -1210,6 +1644,7 @@ class Dialog(QDialog):
         self.electrodePsd.setEnabled(myBool)
         self.freqTopo.setEnabled(myBool)
         self.colormapScale.setEnabled(myBool)
+        self.btn_autoFeat.setEnabled(myBool)
 
         self.btn_loadFilesForViz.setEnabled(myBool)
         if myBool and self.plotBtnsEnabled:
@@ -1222,15 +1657,18 @@ class Dialog(QDialog):
         self.btn_addPair.setEnabled(myBool)
         self.btn_removePair.setEnabled(myBool)
         self.btn_trainClassif.setEnabled(myBool)
+        self.btn_trainClassifCombination.setEnabled(myBool)
         for listOfFeatures in self.selectedFeats:
             for item in listOfFeatures:
                 item.setEnabled(myBool)
         self.trainingPartitions.setEnabled(myBool)
         self.fileListWidgetTrain.setEnabled(myBool)
         self.menuOptions.setEnabled(myBool)
+        self.btn_runClassif.setEnabled(myBool)
+        self.btn_selectFilesClassif.setEnabled(myBool)
+
         if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             self.enableSpeedUp.setEnabled(myBool)
-
 
     def enableGui(self, myBool):
         # Enable/Disable ALL PARTS of the GUI
@@ -1262,13 +1700,32 @@ class Dialog(QDialog):
         print(newDict)
         return newDict
 
-    def btnR2(self, features, title):
+    def btnR2(self, features, title, useSubselection):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
-            plot_stats(features.Rsigned,
-                       features.freqs_array,
-                       features.electrodes_final,
-                       features.fres, int(self.userFmin.text()), int(self.userFmax.text()),
-                       self.colormapScale.isChecked(), title)
+
+            if not useSubselection:
+                plot_stats(features.Rsigned,
+                           features.freqs_array,
+                           features.electrodes_final,
+                           features.fres, int(self.userFmin.text()), int(self.userFmax.text()),
+                           self.colormapScale.isChecked(), title)
+            else:
+                subR2 = []
+                subElectrodes = []
+                freqMin = int(self.autoFeatFreqRange.split(":")[0])
+                freqMax = int(self.autoFeatFreqRange.split(":")[1])
+                freqRange = np.arange(freqMin, freqMax+1, features.fres)
+                for chan in self.autoFeatChannelList:
+                    try:
+                        subR2.append(features.Rsigned[features.electrodes_final.index(chan), freqMin:(freqMax+1)])
+                    except ValueError:
+                        myMsgBox("Invalid electrode subselection or frequency range for auto. feature selection")
+                        return
+                    subElectrodes.append(chan)
+
+                subR2 = np.array(subR2)
+                plot_stats(subR2, freqRange, subElectrodes, features.fres, freqMin, freqMax,
+                           self.colormapScale.isChecked(), title)
 
     def btnW2(self, features, title):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
@@ -1296,6 +1753,23 @@ class Dialog(QDialog):
                        features.std_baseline_cond1, features.std_baseline_cond2,
                        features.electrodes_final,
                        fmin, fmax, tmin, tmax, class1, class2, title)
+
+    def btnTimeFreqConnect(self, features, title):
+        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
+            print("TimeFreq for sensor: " + self.electrodePsd.text())
+
+            tmin = float(self.parameterDict["Sessions"][self.currentSessionId]["ExtractionParams"]['StimulationDelay'])
+            tmax = float(self.parameterDict["Sessions"][self.currentSessionId]["ExtractionParams"]['StimulationEpoch'])
+            fmin = int(self.userFmin.text())
+            fmax = int(self.userFmax.text())
+            class1 = self.parameterDict["AcquisitionParams"]["Class1"]
+            class2 = self.parameterDict["AcquisitionParams"]["Class2"]
+
+            qt_plot_tf_connect(features.timefreq_cond1, features.timefreq_cond2,
+                               features.time_array, features.freqs_array,
+                               self.electrodePsd.text(), features.fres,
+                               features.electrodes_final,
+                               fmin, fmax, tmin, tmax, class1, class2, title)
 
     def btnMetric(self, features, title):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
@@ -1403,17 +1877,18 @@ class Dialog(QDialog):
                                     self.parameterDict["AcquisitionParams"]["Class1"],
                                     self.parameterDict["AcquisitionParams"]["Class2"], title)
 
-    def btnAddPair(self, selectedFeats, layout):
+    def btnAddPair(self, selectedFeats, layout, featText):
         if len(selectedFeats) == 0:
             # Remove "no feature" label
             item = layout.itemAt(3)
-            widget = item.widget()
-            widget.deleteLater()
+            if item:  # check if it exists. It may have been already deleted!
+                widget = item.widget()
+                widget.deleteLater()
+
+        if not featText:
         # default text
-        featText = "CP3;22"
-        if len(selectedFeats) >= 1:
-            # if a feature window already exists, copy its text
-            featText = selectedFeats[-1].text()
+            featText = "CP3;8"
+
         # add new qlineedit
         selectedFeats.append(QLineEdit())
         selectedFeats[-1].setText(featText)
@@ -1444,6 +1919,190 @@ class Dialog(QDialog):
         setKeyValue(self.workspaceFile, "ovDesignerPath", self.parameterDict["ovDesignerPath"])
         return
 
+    def toggleAdvanced(self):
+        # Toggles some options in the interface...
+
+        if self.advanced:
+            self.advanced = False
+        else:
+            self.advanced = True
+
+        self.labelRunClassif.setVisible(self.advanced)
+        self.btn_selectFilesClassif.setVisible(self.advanced)
+        self.btn_runClassif.setVisible(self.advanced)
+        self.fileListWidgetClassifRun.setVisible(self.advanced)
+
+        if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+            self.enableSpeedUp.setVisible(self.advanced)
+            self.speedUpLabel.setVisible(self.advanced)
+
+        return
+
+    def btnAutoFeat(self, results1, results2):
+
+        # Automatic feature selection : find best R² among
+        # predetermined list of channels and in range of frequencies
+
+        # Note: if dual mode, we assume the sampling freq,
+        # list of electrodes, etc. are the same for PSD & NS cases
+
+        if not results1 and not results2:
+            myMsgBox("What are you doing???")
+            return
+
+        results1.autoselected = None
+        results2.autoselected = None
+
+        # If Freq range &/or Channel list are empty, use full range
+        if self.autoFeatFreqRange == "":
+            if results1:
+                self.autoFeatFreqRange = "1:" + str(int(results1.samplingFreq/2+1))
+            else:
+                self.autoFeatFreqRange = "1:" + str(int(results2.samplingFreq/2+1))
+        if self.autoFeatChannelList == []:
+            if results1:
+                self.autoFeatChannelList = results1.electrodes_final
+            else:
+                self.autoFeatChannelList = results2.electrodes_final
+
+        print("AutoFeat: Sublist of channels: " + str(self.autoFeatChannelList))
+        print("AutoFeat: Frequency range: " + str(self.autoFeatFreqRange))
+
+        Index_electrode = []
+        for chan in self.autoFeatChannelList:
+            try:
+                idx = results1.electrodes_final.index(chan)
+            except ValueError:
+                myMsgBox("Electrode " + chan + " not in electrode list of selected files")
+                return
+            Index_electrode.append(idx)
+        print("Index_electrode:  " + str(Index_electrode))
+
+        # TODO : add check on frequencies...
+        freqMin = int(self.autoFeatFreqRange.split(":")[0])
+        freqMax = int(self.autoFeatFreqRange.split(":")[1])
+        if freqMax <= freqMin or freqMax > self.samplingFreq / 2 or freqMin < 0 or freqMax < 1 :
+            myMsgBox("Invalid frequency range for AutoFeat ( freqmin:freqmax )" )
+            return
+
+        for result in [results1, results2]:
+            if len(result.Rsigned) > 0:
+                result.autoselected = []
+                Rsigned_reduced = result.Rsigned[Index_electrode, freqMin:freqMax]
+                Max_per_electrode = Rsigned_reduced.max(1)
+                indices_max = list(reversed(np.argsort(Max_per_electrode)))[0:3]  # indices of 3 max values within the scope of Index_electrodes
+                indices_max_final = [Index_electrode[i] for i in indices_max]
+
+                for idx in indices_max_final:
+                    r2Vals = result.Rsigned[idx, freqMin:freqMax]
+                    idxfreqMax = 7 + np.argmax(r2Vals)
+                    result.autoselected.append((result.electrodes_final[idx], idxfreqMax))
+
+                print("Best feats: " + str(result.autoselected))
+                if len(result.autoselected) < 1:
+                    myMsgBox("Error in automatic selection of best features")
+                    # Todo: make more secure & explicit
+                    return
+
+        # Remove all pairs of features in columns
+        # TODO : refactor. A bit dirty...
+
+        if len(self.selectedFeats[0]) == 0:
+            # Remove "no feature" label
+            item = self.qvFeatureLayouts[0].itemAt(3)
+            widget = item.widget()
+            widget.deleteLater()
+
+        while len(self.selectedFeats[0]) > 0:
+            result = self.qvFeatureLayouts[0].getWidgetPosition(self.selectedFeats[0][-1])
+            self.qvFeatureLayouts[0].removeRow(result[0])
+            self.selectedFeats[0].pop()
+
+        # Same, in case with two feature/metric types...
+        if self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+            if len(self.selectedFeats[1]) == 0:
+                # Remove "no feature" label
+                item = self.qvFeatureLayouts[1].itemAt(3)
+                widget = item.widget()
+                widget.deleteLater()
+            while len(self.selectedFeats[1]) > 0:
+                result = self.qvFeatureLayouts[1].getWidgetPosition(self.selectedFeats[1][-1])
+                self.qvFeatureLayouts[1].removeRow(result[0])
+                self.selectedFeats[1].pop()
+            if len(self.selectedFeats[1]) == 0:
+                noFeatLabel1 = QLabel("No feature")
+                noFeatLabel1.setAlignment(QtCore.Qt.AlignCenter)
+                self.qvFeatureLayouts[1].addWidget(noFeatLabel1)
+
+
+        # get auto-selected features and add them to the interface
+        if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+            for featPair in results1.autoselected:
+                featText = str(featPair[0]) + ';' + str(featPair[1])
+                self.btnAddPair(self.selectedFeats[0], self.qvFeatureLayouts[0], featText)
+
+        # Special cases for pipelines 3&4 (dual features)
+        if self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[4] :
+            for featPair in results1.autoselected:
+                featText = str(featPair[0]) + ';' + str(featPair[1])
+                self.btnAddPair(self.selectedFeats[0], self.qvFeatureLayouts[0], featText)
+            for featPair in results2.autoselected:
+                featText = str(featPair[0]) + ';' + str(featPair[1])
+                self.btnAddPair(self.selectedFeats[1], self.qvFeatureLayouts[1], featText)
+
+    def autoFeatSetChannelSubselection(self):
+        # ----------
+        # Allow user to select a list of channels in which the "automatic selection of feature"
+        # can take place
+        # ----------
+        displayed = ";".join(self.autoFeatChannelList)
+        text, ok = QInputDialog.getText(self, 'Channel list for automatic feature selection', 'Enter a list of channels separated with \";\"', text=displayed)
+
+        if ok:
+            # Check if it's all alphanumeric, except for ";"...
+            for c in text:
+                if not c.isalnum():
+                    if c != ";":
+                        myMsgBox("Please respect formatting: channels as alphanumeric characters, separated with \";\"")
+                        return
+            if text == "":
+                self.autoFeatChannelList = []
+                return
+
+            self.autoFeatChannelList = text.split(";")
+
+        return
+
+    def autoFeatSetFreqRange(self):
+        # ----------
+        # Allow user to select a range of frequencies in which the "automatic selection of feature"
+        # can take place
+        # ----------
+        text, ok = QInputDialog.getText(self, 'Frequency range for automatic feature selection', 'Enter two numbers separated with \":\"', text=self.autoFeatFreqRange)
+        if ok:
+            # Check if it's all alphanumeric, except for ":"...
+            for c in text:
+                if not c.isalnum():
+                    if c != ":":
+                        myMsgBox("Please respect formatting: two numbers separated with \":\"")
+                        return
+
+            if text == "":
+                self.autoFeatFreqRange = ""
+                return
+
+            range = text.split(":")
+            if len(range) != 2:
+                myMsgBox("Please respect formatting: two numbers separated with \":\"")
+                return
+
+            self.autoFeatFreqRange = text
+
+        return
+
     def checkExistenceExtractFiles(self, file):
         extractFolder = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "extract")
         if not os.path.exists(extractFolder):
@@ -1452,7 +2111,8 @@ class Dialog(QDialog):
         class1 = self.parameterDict["AcquisitionParams"]["Class1"]
         class2 = self.parameterDict["AcquisitionParams"]["Class2"]
         if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
-            or self.parameterDict["pipelineType"] == settings.optionKeys[3] :
+            or self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+            or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
             # PSD
             metric = "SPECTRUM"
             extractFile1 = str(os.path.splitext(file)[0] + "-" + metric + "-" + class1 + ".csv")
@@ -1463,7 +2123,8 @@ class Dialog(QDialog):
                 return False
 
         if self.parameterDict["pipelineType"] == settings.optionKeys[2] \
-            or self.parameterDict["pipelineType"] == settings.optionKeys[3] :
+            or self.parameterDict["pipelineType"] == settings.optionKeys[3]\
+            or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
             # CONNECT
             metric = "CONNECT"
             extractFile1 = str(os.path.splitext(file)[0] + "-" + metric + "-" + class1 + ".csv")
@@ -1496,6 +2157,7 @@ class Dialog(QDialog):
             for attemptId in resultsDict.keys():
                 attempts.append(attemptId)
                 attemptItem = QTreeWidgetItem(self.lastTrainingResults)
+                attemptItem.setFlags(attemptItem.flags() | Qt.ItemIsSelectable)
                 attemptItem.setText(0, attemptId)
                 attemptItem.setText(1, resultsDict[attemptId]["Score"])
                 firstFeatWritten = False
@@ -1504,6 +2166,7 @@ class Dialog(QDialog):
                         featItem = QTreeWidgetItem(None)
                         tempString = str(metricType + " " + featPair)
                         featItem.setText(2, tempString)
+                        featItem.setFlags(featItem.flags() & ~Qt.ItemIsSelectable)
                         attemptItem.addChild(featItem)
                         # add first feat to parent row, then user will need to
                         # expand row to see more...
@@ -1516,10 +2179,229 @@ class Dialog(QDialog):
                 for file in resultsDict[attemptId]["SignalFiles"]:
                     fileItem = QTreeWidgetItem(None)
                     fileItem.setText(2, file)
+                    fileItem.setFlags(fileItem.flags() & ~Qt.ItemIsSelectable)
                     attemptItem.addChild(fileItem)
 
         # collapse all items
         self.lastTrainingResults.collapseAll()
+
+    def btnSelectFilesClassif(self):
+        # Open file browser to select files upon which we want to apply the selected classifier
+        # + update the indicative list
+        self.fileListWidgetClassifRun.clear()
+        directory = os.getcwd()
+        paths, dummy = QFileDialog.getOpenFileNames(self, "Signal files", str(directory))
+
+        for path in paths:
+            if not ".ov" in path:
+                myMsgBox("Warning:\n" + path + "\ndoesn't seem to be a valid signal file")
+            else:
+                item = QTreeWidgetItem(self.fileListWidgetClassifRun)
+                item.setText(0, os.path.basename(path) )
+                fullpath = QTreeWidgetItem(None)
+                fullpath.setText(0, path)
+                item.addChild(fullpath)
+
+    def getTrainingParamsFromSelectedAttempt(self):
+
+        selectedAttempt = self.lastTrainingResults.selectedItems()
+
+        if not selectedAttempt:
+            myMsgBox("Please select one training attemp in the list above")
+            return
+
+        baseNode = selectedAttempt[0]
+        classifIdx = baseNode.text(0)
+        nbChildren = baseNode.childCount()
+        pipelineTextToFind = ""
+        pipelineTextToFind2 = ""
+        listFeat = []
+        listFeat2 = []
+        sampFreq = None
+        electrodeList = None
+        paramsFound = False
+
+        # which metric str to look for in the column text
+        if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
+            pipelineTextToFind = settings.optionKeys[1]
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+            pipelineTextToFind = settings.optionKeys[2]
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+            pipelineTextToFind = settings.optionKeys[1]
+            pipelineTextToFind2 = settings.optionKeys[2]
+
+        # iterate over all sub-lines of selected line, in results list widget
+        for child in range(0, nbChildren):
+            textInfo = baseNode.child(child).text(2)  # relevant info in column 2. Might change later...
+
+            if pipelineTextToFind in textInfo:
+                textInfo = textInfo.removeprefix(str(pipelineTextToFind + " "))
+                listFeat.append(textInfo)
+
+            # special case: "Mixed" pipeline: 2 lists to extract
+            if self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                    or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+                if pipelineTextToFind2 in textInfo:
+                    textInfo = textInfo.removeprefix(str(pipelineTextToFind2 + " "))
+                    listFeat2.append(textInfo)
+
+            if not paramsFound:
+                if "-TRIALS.csv" in textInfo:
+                    sampFreq, electrodeList = extractMetadata(
+                        os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", textInfo))
+                    if sampFreq and electrodeList:
+                        paramsFound = True
+
+        return classifIdx, listFeat, listFeat2, sampFreq, electrodeList
+
+    def btnUseSelectedClassif(self):
+        # ----------
+        # Update "online" (sc3) scenario with "classifier-weights" file from selected
+        # training attempt in the list of attempts&results.
+        # ----------
+
+        # === 1st step : Get selected training attempt's ID and parameters (features)
+        classifIdx, listFeat, listFeat2, sampFreq, electrodeList = self.getTrainingParamsFromSelectedAttempt()
+
+        print("classifIdx : " + str(classifIdx))
+        print("listFeat : " + str(listFeat))
+        print("listFeat2 : " + str(listFeat2))
+        print("sampFreq : " + str(sampFreq))
+        print("electrodeList: " + str(electrodeList))
+
+        # === 2nd step : check if classifier-weights-X.xml exists
+        classifWeightsPath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train",
+                                          str("classifier-weights-" + str(classifIdx) + ".xml"))
+        if not os.path.exists(classifWeightsPath):
+            myMsgBox("ERROR: for selected classification results (" + str(
+                classifIdx) + "),\nweights file not found in workspace.")
+            return
+        # Reformat to openvibe's preference... C:/etc.
+        if platform.system() == 'Windows':
+            classifWeightsPath = classifWeightsPath.replace("\\", "/")
+
+        # === 3rd step : update sc3-online.xml with classifier-weights file and relevant features
+        trainingParamDict = self.parameterDict.copy()
+        shouldRun = False
+        isOnline = True
+        templateFolder = settings.optionsTemplatesDir[self.parameterDict["pipelineType"]]
+        # Instantiate the thread...
+        self.runClassThread = RunClassifier([], templateFolder,
+                                            self.workspaceFolder, self.ovScript,
+                                            classifWeightsPath,
+                                            listFeat, listFeat2,
+                                            trainingParamDict, sampFreq, electrodeList,
+                                            shouldRun, isOnline)
+
+        # Signal: Running work thread finished
+        self.runClassThread.over.connect(self.running_over)
+        # Launch the work thread
+        self.runClassThread.start()
+
+        self.runTimerStart = time.perf_counter()
+        self.progressBarRun = None
+
+        return
+
+    def btnRunClassif(self):
+        # ------
+        # Run the selected classifier on the selected files.
+        # ------
+
+        # - check if files have been selected (browse...)
+        # - get the selected classifier = line in the results list
+        #   => check if a line is selected, extract its index X and feature parameters
+        # - check if associated classifier-weights-X.xml exists
+        # - update template scenario with feature(s) + weight xml file
+        # - run the scenario and get score
+
+        # === 1st step: check if signal files have been selected by browsing (= not empty list)
+        if self.fileListWidgetClassifRun.topLevelItemCount() == 0:
+            myMsgBox("Please use the \"Browse\" button to select signal file(s).")
+            return
+
+        # create list of files...
+        self.classifFiles = []
+        for i in range(0, self.fileListWidgetClassifRun.topLevelItemCount()):
+            self.classifFiles.append(self.fileListWidgetClassifRun.topLevelItem(i).child(0).text(0))
+
+        # === 2nd step : get line idx (& parameters) in classification results list
+        classifIdx, listFeat, listFeat2, sampFreq, electrodeList = \
+            self.getTrainingParamsFromSelectedAttempt()
+
+        print("classifIdx : " + str(classifIdx))
+        print("listFeat : " + str(listFeat))
+        print("listFeat2 : " + str(listFeat2))
+
+        print("list of files: " + str(self.classifFiles))
+        print("sampFreq : " + str(sampFreq))
+        print("electrodeList: " + str(electrodeList))
+
+        # === 3rd step : check if classifier-weights-X.xml exists
+        classifWeightsPath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", str("classifier-weights-"+str(classifIdx)+".xml"))
+        if not os.path.exists(classifWeightsPath):
+            myMsgBox("ERROR: for selected classification results (" + str(classifIdx) + "),\nweights file not found in workspace.")
+            return
+        # Reformat to openvibe's preference... C:/etc.
+        if platform.system() == 'Windows':
+            classifWeightsPath = classifWeightsPath.replace("\\", "/")
+
+        # === 4th step : run scenario thread
+
+        self.enableExtractionGui(False)
+        self.enableTrainGui(False)
+        trainingParamDict = self.parameterDict.copy()
+
+        # create progress bar window...
+        self.progressBarRun = ProgressBar("Running classification", "File...", len(self.classifFiles))
+
+        # Instantiate the thread...
+        shouldRun = True
+        isOnline = False
+        templateFolder = settings.optionsTemplatesDir[self.parameterDict["pipelineType"]]
+        self.runClassThread = RunClassifier(self.classifFiles, templateFolder,
+                                                self.workspaceFolder, self.ovScript,
+                                                classifWeightsPath,
+                                                listFeat, listFeat2,
+                                                trainingParamDict, sampFreq, electrodeList,
+                                                shouldRun, isOnline)
+
+        # Signal: RunClassif work thread finished one step
+        # Increment progress bar + change its label
+        self.runClassThread.info.connect(self.progressBarRun.increment)
+        self.runClassThread.info2.connect(self.progressBarRun.changeLabel)
+        # Signal: RunClassif work thread finished
+        self.runClassThread.over.connect(self.running_over)
+        # Launch the work thread
+        self.runClassThread.start()
+
+        self.runTimerStart = time.perf_counter()
+
+        return
+
+    def running_over(self, success, resultsText):
+        # Running work thread is over, so we kill the progress bar,
+        # display a msg with results, and make the running Gui available again
+        self.runTimerEnd = time.perf_counter()
+        elapsed = self.runTimerEnd - self.runTimerStart
+        print("=== Running done in: ", str(elapsed))
+
+        if self.progressBarRun:
+            self.progressBarRun.finish()
+
+        if success:
+            textDisplayed = str(resultsText)
+            msg = QMessageBox()
+            msg.setText(textDisplayed)
+
+            msg.setStyleSheet("QLabel{min-width: 1200px;}")
+            msg.setWindowTitle("Classification Score")
+            msg.exec_()
+        else:
+            myMsgBox(resultsText)
+
+        self.enableGui(True)
 
 # ------------------------------------------------------
 # STATIC FUNCTIONS
@@ -1653,6 +2535,47 @@ def qt_plot_tf(timefreq_cond1, timefreq_cond2, time_array, freqs_array, electrod
         time_frequency_map(timefreq_cond2, time_array, freqs_array, Index_electrode, fmin, fmax, fres, 10, average_baseline_cond2, electrodes, std_baseline_cond2, vmin, vmax, tlength)
         plt.title(title+'(' + class2label + ') Sensor ' + electrodes[Index_electrode], fontdict=font)
         plt.show()
+
+def qt_plot_tf_connect(timefreq_cond1, timefreq_cond2, time_array, freqs_array, electrode, fres, electrodes, f_min_var, f_max_var, tmin, tmax, class1label, class2label, title):
+    font = {'family': 'serif',
+            'color':  'black',
+            'weight': 'normal',
+            'size': 14,
+            }
+    fmin = int(f_min_var/fres)
+    fmax = int(f_max_var/fres)
+
+    Test_existing = False
+    idx = 0
+    for i in range(len(electrodes)):
+        if electrodes[i] == electrode:
+            idx = i
+            Test_existing = True
+    if not Test_existing:
+        myMsgBox("No Electrode with this name found")
+    else:
+        tf = (timefreq_cond1.mean(0) - timefreq_cond2.mean(0)) / timefreq_cond1.mean(0)
+        tf = tf.transpose(0, 2, 1)
+
+    fig, ax = plt.subplots()
+    im = ax.imshow(tf[idx, fmin:fmax, :], cmap='jet', origin='lower', aspect='auto',
+                   vmin=- np.nanmax(abs(tf[idx, fmin:fmax, :])),
+                   vmax=np.nanmax(abs(tf[idx, fmin:fmax, :])), interpolation="hanning")
+
+    time_increments = (tmax-tmin)/np.shape(tf)[2]
+    time_series = np.around(np.arange(tmin, tmax, time_increments), 2)
+    freq_series = np.arange(f_min_var, f_max_var+1, int(f_max_var-f_min_var)/10)
+    ax.set_xticks(np.arange(0, np.shape(tf)[2], 1))
+    ax.set_xticklabels(time_series, rotation=90)
+    ax.set_yticks(np.arange(fmin, fmax+1, int(fmax-fmin)/10))
+    ax.set_yticklabels(freq_series)
+
+    ax.set_xlabel(' Time (s)', fontdict=font)
+    ax.set_ylabel('Frequency (Hz)', fontdict=font)
+    plt.title(title + ' (' + class1label + '/' + class2label + ') Sensor ' + electrodes[idx], fontdict=font)
+    cbar = fig.colorbar(im, ax=ax)
+    cbar.set_label('ERD/ERS', rotation=270, labelpad = 15)
+    plt.show()
 
 # Plot "connectivity spectrum" from a RAW connectivity matrix. UNUSED
 def qt_plot_connectSpectrum(connect1, connect2, chan1, chan2, electrodeList, fres, class1label, class2label, title):

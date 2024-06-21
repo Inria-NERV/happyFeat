@@ -7,7 +7,7 @@ def writeJson(file, newDict):
         json.dump(newDict, outfile, indent=4)
 
 def initializeNewWorkspace(jsonFile):
-    newDict = {"HappyFeatVersion": "0.0"}
+    newDict = {"HappyFeatVersion": "0.2.0"}
     writeJson(jsonFile, newDict)
     return
 

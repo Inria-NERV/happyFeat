@@ -72,15 +72,15 @@ def writeCompositeCsv(filename, rawData, class1Stim, class2Stim, channelList, tm
 
         timeIncrement = 1/fsamp
 
-        for fileId, rawData in enumerate(rawData):
-            nbElec = np.shape(rawData)[1] - 5
+        for fileId, raw in enumerate(rawData):
+            nbElec = np.shape(raw)[1] - 5
             # Process the data and reconstruct CSV file
             currentTime = 0
 
             # skipEpoch if no stimulation is found at the start
             # this can happen if stimulations are "sent twice" (weird openvibe bug...)
             skipEpoch = False
-            for row in rawData:
+            for row in raw:
                 # copy row data, then we'll modify stuff
                 dataToWrite = ["" for x in range(np.shape(row)[0])]
 
@@ -89,7 +89,9 @@ def writeCompositeCsv(filename, rawData, class1Stim, class2Stim, channelList, tm
                     timeOffset = round(timeOffset + 0.5, 8)  # arbitrary, to create a gap between trials
                     newEpoch = True
                     # check if there's something (not nan) in the last rows, where the stimulations should be
-                    if isinstance(row[-3], str):
+                    if isinstance(row[-3], str) \
+                            or isinstance(row[-3], int) \
+                            or isinstance(row[-3], float):
                         skipEpoch = False
                     # if not, entirely skip this epoch
                     else:
@@ -118,7 +120,10 @@ def writeCompositeCsv(filename, rawData, class1Stim, class2Stim, channelList, tm
                 # "stimulation based epoching", for reconstruction in OpenViBE
                 if newEpoch:
                     # get stimulation fields
-                    eventList = row[-3].split(":")
+                    if isinstance(row[-3], str):
+                        eventList = row[-3].split(":")
+                    else:
+                        eventList = str(row[-3])
                     currentEventStimCode = None
                     if class1StimCode in eventList:
                         currentEventStimCode = class1StimCode
@@ -253,12 +258,12 @@ def writeCompositeCsv_new(filename, header, rawData):
         lastTime = 0
         currentTime = 0
 
-        for fileId, rawData in enumerate(rawData):
-            nbChan = np.shape(rawData)[1] - 5
+        for fileId, raw in enumerate(rawData):
+            nbChan = np.shape(raw)[1] - 5
             # Process the data and reconstruct CSV file
             currentTime = 0
 
-            for row in rawData:
+            for row in raw:
                 # copy row data, then we'll modify stuff
                 dataToWrite = ["" for x in range(np.shape(row)[0])]
 

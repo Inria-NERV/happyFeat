@@ -22,7 +22,7 @@ The focus is put on ease of use, trial-and-error training of the classifier, and
 
 * Python 3.9 or more recent
 * Python packages : shutils / PySide2 / numpy / MNE / matplotlib / scipy / spectrum / statsmodel / pandas
-* OpenViBE Version 3.5.0: http://openvibe.inria.fr/downloads/
+* OpenViBE Version 3.6.0: http://openvibe.inria.fr/downloads/
 
 # Key Features
 
@@ -36,6 +36,7 @@ The focus is put on ease of use, trial-and-error training of the classifier, and
 * Power Spectrum (Burg method)
 * Functional Connectivity: Coherence-based Node Strength (Spectral Coherence, Imaginary part of Coherence)
 * Mixing Both PSD and Connectivity
+* Single-class classification
 
 ### Available classifiers:
 * LDA

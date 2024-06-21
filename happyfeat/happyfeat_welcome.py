@@ -38,12 +38,13 @@ class Dialog(QDialog):
         self.launchAcqGui = False
         self.launchMainGui = False
 
+        # TODO : check if version in config.json is the same as the software's !
         # TODO WARNING: this works with Windows only, find a way for linux
         self.userConfig = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json')
         print(self.userConfig)
         if not os.path.exists(self.userConfig):
             with open(self.userConfig, "a+") as newfile:
-                dict = {"HappyFeatVersion": "0.0"}
+                dict = {"HappyFeatVersion": "0.2.0"}
                 json.dump(dict, newfile, indent=4)
 
         with open(self.userConfig, "r+") as userCfg:
@@ -140,6 +141,13 @@ class Dialog(QDialog):
             workDict = json.load(wp)
             if workDict:
                 if "HappyFeatVersion" in workDict:
+                    if workDict["HappyFeatVersion"] != "0.2.0":
+                        textWarning = "Warning: Workspace was created using an older version of HappyFeat!"
+                        textWarning += "\nThis may result in unexpected behaviours. Do you want to continue?"
+                        retVal = myOkCancelBox(textWarning)
+                        if retVal == QMessageBox.Cancel:
+                            return
+
                     pathToCheck = os.path.join(self.workspacesFolder, os.path.splitext(chosenWorkspace)[0])
                     if os.path.exists(pathToCheck):
                         pathToCheck1 = os.path.join(pathToCheck, "signals")

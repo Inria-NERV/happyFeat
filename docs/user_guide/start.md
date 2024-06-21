@@ -1,7 +1,7 @@
 # Getting started
 
 !!! warning
-    As of today, ***HappyFeat*** requires [OpenViBE 3.5.0](http://openvibe.inria.fr/) to run. A standalone Python version, and support for other BCI softwares are in the works. 
+    As of today, ***HappyFeat*** requires [OpenViBE 3.6.0](http://openvibe.inria.fr/) to run. A standalone Python version, and support for other BCI softwares are in the works. 
 
 If you installed from PyPI, launch HappyFeat using this command:
 
@@ -12,7 +12,7 @@ If you installed from PyPI, launch HappyFeat using this command:
 If you cloned the repository from github, the application's entry point is the Python script *happyfeat_welcome.py*. Navigate to the cloned repo and type the following:
 
 ```shell
-    python happyfeat_welcome.py
+    python happyfeat/happyfeat_welcome.py
 ```
 
 A GUI is displayed, allowing to select a **[workspace](workspaces.md)**. You can browse for the location of your choice, choose from a list of existing **workspaces**, or create a new one.

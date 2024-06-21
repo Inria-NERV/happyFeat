@@ -96,13 +96,13 @@ def topo_plot(Rsquare, title, montageStr, customMontage, electrodes, freqMin, fr
 
     plot_topomap_data_viz(title, sizer, fake_evoked.info, sensors=False, names=montage.ch_names, show_names=True,
                           res=500, mask_params=dict(marker='', markerfacecolor='w', markeredgecolor='k', linewidth=0,
-                                                    markersize=0), contours=0, image_interp='gaussian', show=True,
+                                                    markersize=0), contours=0, image_interp='cubic', show=True,
                           extrapolate='head', cmap='jet', freq=freq, vmin=vmin, vmax=vmax, Stat_method=Stat_method)
 
 def plot_topomap_data_viz(title, data, pos, vmin=None, vmax=None, cmap=None, sensors=True,
                           res=64, axes=None, names=None, show_names=False, mask=None,
                           mask_params=None, outlines='head',
-                          contours=6, image_interp='bilinear', show=True,
+                          contours=6, image_interp='cubic', show=True,
                           onselect=None, extrapolate=_EXTRAPOLATE_DEFAULT,
                           sphere=None, border=_BORDER_DEFAULT,
                           ch_type='eeg', freq='10', Stat_method='R_square signed'):
@@ -189,7 +189,7 @@ def plot_topomap_data_viz(title, data, pos, vmin=None, vmax=None, cmap=None, sen
 
 def _plot_topomap_test(title, data, pos, vmin=None, vmax=None, cmap=None, sensors=True, res=64, axes=None, names=None,
                        show_names=False, mask=None, mask_params=None, outlines='head', contours=6,
-                       image_interp='bilinear', show=True, onselect=None, extrapolate=_EXTRAPOLATE_DEFAULT, sphere=None,
+                       image_interp='cubic', show=True, onselect=None, extrapolate=_EXTRAPOLATE_DEFAULT, sphere=None,
                        border=_BORDER_DEFAULT, ch_type='eeg', freq='10', Stat_method='R square signed'):
 
     data = np.asarray(data)
@@ -265,7 +265,7 @@ def _plot_topomap_test(title, data, pos, vmin=None, vmax=None, cmap=None, sensor
 
     # find mask limits
     extent, Xi, Yi, interp = topomap._setup_interp(
-        pos, res, extrapolate, sphere, outlines, border)
+        pos, res, image_interp, extrapolate, outlines, border)
     interp.set_values(data)
     Zi = interp.set_locations(Xi, Yi)()
 
@@ -733,7 +733,7 @@ def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, eac
     # Hplt.yticks(range(len(channel_array)),channel_array)
     # plt.show()
 
-def Reorder_plusplus(Rsquare, Wsquare, Wpvalues, electrodes_orig, powerLeft, powerRight, timefreqLeft, timefreqRight):
+def Reorder_plusplus(Rsquare, electrodes_orig, powerLeft, powerRight, timefreqLeft, timefreqRight):
     if len(electrodes_orig) == 74:
         # NETBCI...
         # electrodes_target = ['fp1', 'af7', 'af3', 'f7', 'f5', 'f3', 'f1', 'ft9', 'ft7', 'fc5', 'fc3', 'fc1',
@@ -781,8 +781,6 @@ def Reorder_plusplus(Rsquare, Wsquare, Wpvalues, electrodes_orig, powerLeft, pow
     print(index_elec)
 
     Rsquare_final = np.zeros([Rsquare.shape[0], Rsquare.shape[1]])
-    Wsquare_final = np.zeros([Wsquare.shape[0], Wsquare.shape[1]])
-    Wpvalues_final = np.zeros([Wpvalues.shape[0], Wpvalues.shape[1]])
     print(powerLeft.shape)
     powerLeft_final = np.zeros([powerLeft.shape[0], powerLeft.shape[1], powerLeft.shape[2]])
     powerRight_final = np.zeros([powerRight.shape[0], powerRight.shape[1], powerRight.shape[2]])
@@ -802,10 +800,8 @@ def Reorder_plusplus(Rsquare, Wsquare, Wpvalues, electrodes_orig, powerLeft, pow
         timefreqLeftfinal[:, l, :, :] = timefreqLeft[:, index_elec[l], :, :]
         timefreqRightfinal[:, l, :, :] = timefreqRight[:, index_elec[l], :, :]
         Rsquare_final[l, :] = Rsquare[index_elec[l], :]
-        Wsquare_final[l, :] = Wsquare[index_elec[l], :]
-        Wpvalues_final[l, :] = Wpvalues[index_elec[l], :]
 
-    return Rsquare_final, Wsquare_final, Wpvalues_final, electrode_final, powerLeft_final, powerRight_final, timefreqLeftfinal, timefreqRightfinal
+    return Rsquare_final, electrode_final, powerLeft_final, powerRight_final, timefreqLeftfinal, timefreqRightfinal
 
 def Reorder_custom(Rsquare, customPath, electrodes_orig, powerLeft, powerRight):
 
@@ -838,7 +834,7 @@ def Reorder_custom(Rsquare, customPath, electrodes_orig, powerLeft, powerRight):
 
     return Rsquare_final, electrode_final, powerLeft_final, powerRight_final
 
-def Reorder_custom_plus(Rsquare, Wsquare, Wpvalues, customPath, electrodes_orig, powerLeft, powerRight, timefreqLeft, timefreqRight):
+def Reorder_custom_plus(Rsquare, customPath, electrodes_orig, powerLeft, powerRight, timefreqLeft, timefreqRight):
 
     df = pd.read_csv(customPath)
     electrodes_target = df.name.to_list()
@@ -853,8 +849,6 @@ def Reorder_custom_plus(Rsquare, Wsquare, Wpvalues, customPath, electrodes_orig,
     print(index_elec)
 
     Rsquare_final = np.zeros([Rsquare.shape[0], Rsquare.shape[1]])
-    Wsquare_final = np.zeros([Wsquare.shape[0], Wsquare.shape[1]])
-    Wpvalues_final = np.zeros([Wpvalues.shape[0], Wpvalues.shape[1]])
     print(powerLeft.shape)
     powerLeft_final = np.zeros([powerLeft.shape[0], powerLeft.shape[1], powerLeft.shape[2]])
     powerRight_final = np.zeros([powerRight.shape[0], powerRight.shape[1], powerRight.shape[2]])
@@ -874,10 +868,8 @@ def Reorder_custom_plus(Rsquare, Wsquare, Wpvalues, customPath, electrodes_orig,
         timefreqLeftfinal[:, l, :, :] = timefreqLeft[:, index_elec[l], :, :]
         timefreqRightfinal[:, l, :, :] = timefreqRight[:, index_elec[l], :, :]
         Rsquare_final[l, :] = Rsquare[index_elec[l], :]
-        Wsquare_final[l, :] = Wsquare[index_elec[l], :]
-        Wpvalues_final[l, :] = Wpvalues[index_elec[l], :]
 
-    return Rsquare_final, Wsquare_final, Wpvalues_final, electrode_final, powerLeft_final, powerRight_final, timefreqLeftfinal, timefreqRightfinal
+    return Rsquare_final, electrode_final, powerLeft_final, powerRight_final, timefreqLeftfinal, timefreqRightfinal
 
 
 
@@ -952,8 +944,6 @@ def Reorder_Rsquare(Rsquare, electrodes_orig, powerLeft, powerRight):
         Rsquare_final[l, :] = Rsquare[index_elec[l], :]
 
     return Rsquare_final, electrode_final, powerLeft_final, powerRight_final
-
-
 
 def plot_Wsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, each_point, fmin, fmax):
     fig, ax = plt.subplots()
