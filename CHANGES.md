@@ -9,6 +9,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - [feature][experimental] Added "Advanced Mode" in the main GUI, enabling replaying signal files with a trained classifier (only for PSD and Connectivity pipelines)
 - [feature] ERD/ERS available for Connectivity pipeline
 - [dependencies] Changed from PyQt5 to PySide2
+- [dependencies] Imposed some versions (MNE, matplotlib) due to modified behaviors (or removed/refactored functionailites), to be corrected in later versions of HF.
 - [pipeline][experimental] One-class MI classification pipeline
 - [feature][bugfix] Mechanism for handling invalid (NaN) values after extraction. Trials containing NaN values are automatically discarded at the visualization step. Extracted files are still usable in the visualisation part (hence no more "empty display"), but with a warning for the user.
 - [test] Basic tests (& github action automation), more to come!
