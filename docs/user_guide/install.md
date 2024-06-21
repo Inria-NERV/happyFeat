@@ -29,7 +29,7 @@ To install the requirements, type:
 Everything from there on is managed directly from the cloned directory, most notably in the ```workspace``` folder and subfolders.
 
 !!! warning
-    As of today, ***HappyFeat*** requires [OpenViBE 3.5.0](http://openvibe.inria.fr/) to run. A standalone Python version, and support for other BCI softwares are in the works. 
+    As of today, ***HappyFeat*** requires [OpenViBE 3.6.0](http://openvibe.inria.fr/) to run. A standalone Python version, and support for other BCI softwares are in the works. 
 	
 !!! note
     Packaging with PyPI and installer .exe file for Windows coming soon...

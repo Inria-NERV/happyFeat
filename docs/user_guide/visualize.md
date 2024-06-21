@@ -38,5 +38,9 @@ Use the buttons to display the plots you need, and the parameter fields to adapt
     The R² map and R² topography are able to display an orderer list of channels and their locations thanks to the montage (standardized or custom) provided by the user when [setting up the experimental parameters](start.md). They both start by comparing the signals' metadata with the provided sensor list (in both custom and standard montages). Displayed channels are the ones present in both lists. Mismatching or missing channels will not be displayed!
 
 
+### Automatic feature selection
+
+See [dedicated page](autofeat.md).
+
 
 ## Next up... [Training the classifier](train.md)

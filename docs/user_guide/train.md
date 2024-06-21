@@ -12,6 +12,9 @@ First, select the relevant sensor/frequency pair(s):
   - You can remove the last field using `Remove Last Feat`
   - *Note: If you have setup your workspace to allow for using two metrics, you can choose to use training features for only one of the metrics or for both metrics* 
 
+!!! note
+	These features can be automatically entered using the ["AutoFeat" mechanism](autofeat.md). Note that you can still add/remove training features after using this mechanism.
+
 The number of k-fold partitions to use for the training step can be set. Trials used for training will be segmented using this number of partitions.
 
 The list of runs available for training is updated with runs which have undergone feature extraction in this *session* (see paragraph on *sessions* in [workspaces](workspaces.md))
@@ -27,3 +30,13 @@ This process can be run *as many times as needed*. Every time it is run, the sce
     The online scenario (`sc3-online.xml`) is updated with the features & weights from the **last** training attempt, not necessarily the best one! To make sure it contains the features/weights you want, you need to re-run a training attempt with those.
   
 For a given *session*, each training attempt is numbered, and the computed classifier weights can be found in `<happyfeat_install>/<currentWorkspace>/sessions/<sessionNb>/train/classifier-weights-<nb>.xml` 
+
+
+## Combination training
+
+See [dedicated page](combinationtraining.md).
+
+
+## Using a trained classifier
+
+See [dedicated page](onlinebci.md).
