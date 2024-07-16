@@ -1,7 +1,7 @@
 import yaml
 
 def modify_extraction_yaml(yaml_file, rate=None, keys=None, epoch_params=None, trim_samples=None,
-                         welch_rate=None, band_ranges=None, recorder_filename=None):
+                         welch_rate=None, band_ranges=None, recorder_filename=None,path=None):
     print("---Modifying " + yaml_file + " parameters")
 
     # Read the YAML file
@@ -40,6 +40,7 @@ def modify_extraction_yaml(yaml_file, rate=None, keys=None, epoch_params=None, t
                 params = node.get('params', {})
                 if node['id'] == 'Recorder' and recorder_filename is not None:
                     params['filename'] = recorder_filename
+                    params['path'] = path
     
     # Write the updated YAML back to the file
     with open(yaml_file, 'w') as file:

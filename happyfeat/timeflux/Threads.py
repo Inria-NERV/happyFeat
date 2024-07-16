@@ -8,15 +8,17 @@ from importlib import resources
 
 from PySide2 import QtCore
 from PySide2.QtCore import Signal
-
+from happyfeat.timeflux.modifyYamFile import modify_Edf_Reader_yaml, modify_extraction_yaml
 from happyfeat.lib.mergeRunsCsv import mergeRunsCsv, mergeRunsCsv_new
 from happyfeat.lib.extractMetaData import extractMetadata, generateMetadata
+
 from happyfeat.lib.modifyOpenvibeScen import *
 from happyfeat.lib.Visualization_Data import *
 from happyfeat.lib.featureExtractUtils import *
 from happyfeat.lib.utils import *
 
 from happyfeat.lib.bcipipeline_settings import *
+from happyfeat.timeflux.extractMetaData_Timeflux import *
 
 # ------------------------------------------------------
 # CLASSES FOR LONG-RUNNING OPERATIONS IN THREADS
@@ -63,17 +65,16 @@ class Acquisition(QtCore.QThread):
     def stopThread(self):
         self.stop = True
 
-class Extraction(QtCore.QThread):
+class Extraction_Timeflux(QtCore.QThread):
     info = Signal(bool)
     info2 = Signal(str)
     over = Signal(bool, str)
 
-    def __init__(self, ovScript, scenFile, signalFiles, signalFolder,
+    def __init__(self, scenFile, signalFiles, signalFolder,
                  parameterDict, currentSessionId, parent=None):
 
         super().__init__(parent)
         self.stop = False
-        self.ovScript = ovScript
         self.scenFile = scenFile
         self.signalFiles = signalFiles
         self.signalFolder = signalFolder
@@ -82,9 +83,6 @@ class Extraction(QtCore.QThread):
         self.extractDict = parameterDict["Sessions"][currentSessionId]["ExtractionParams"].copy()
 
     def run(self):
-        command = self.ovScript
-        if platform.system() == 'Windows':
-            command = command.replace("/", "\\")
 
         for signalFile in self.signalFiles:
             tstart = time.perf_counter()
@@ -96,13 +94,7 @@ class Extraction(QtCore.QThread):
             # Then extract sampling frequency and electrode list
             sampFreq = None
             electrodeList = None
-            metaFile = signalFile.replace(".ov", "-META.csv")
-
-            if metaFile in os.listdir(self.signalFolder):
-                sampFreq, electrodeList = extractMetadata(os.path.join(self.signalFolder, metaFile))
-            else:
-                generateMetadata(os.path.join(self.signalFolder, signalFile), self.ovScript)
-                sampFreq, electrodeList = extractMetadata(os.path.join(self.signalFolder, metaFile))
+            electrodeList,sampFreq = generateMetadata_timeflux(os.path.join(self.signalFolder,signalFile))
             # Check everything went ok...
             if not sampFreq:
                 errMsg = str("Error while loading metadata CSV file for session " + signalFile)
@@ -110,31 +102,38 @@ class Extraction(QtCore.QThread):
                 return
 
             ## MODIFY THE EXTRACTION SCENARIO with entered parameters
-            # /!\ after updating ARburg order and FFT size using sampfreq
-            self.extractDict["ChannelNames"] = ";".join(electrodeList)
-            # self.extractDict["AutoRegressiveOrder"] = str(
-            #     timeToSamples(float(self.extractDict["AutoRegressiveOrderTime"]), sampFreq))
-            # self.extractDict["PsdSize"] = str(freqResToPsdSize(float(self.extractDict["FreqRes"]), sampFreq))
-            # TODO : chouge change this about the rate of the graph 
-            #why do we update the extract parameters in thete and not in the parameters dict ? is it for the use later
-
+            self.extractDict["ChannelNames"] = electrodeList
+            self.extractDict["PsdSize"] =  sampFreq
+ 
 
 
             # Modify extraction scenario to use provided signal file, and rename outputs accordingly
-            filename = signalFile.removesuffix(".ov")
-            outputSpect1 = str(filename + "-SPECTRUM-" + self.parameterDict["AcquisitionParams"]["Class1"] + ".csv")
-            outputSpect2 = str(filename + "-SPECTRUM-" + self.parameterDict["AcquisitionParams"]["Class2"] + ".csv")
-            outputTrials = str(filename + "-TRIALS.csv")
-            outputBaseline = str(filename + "-BASELINE.csv")
+            filename = signalFile.removesuffix(".edf")
+            outputSpect = str(filename + "-SPECTRUM-" )
+            csv_file_path=os.path.join(os.path.split(self.signalFolder)[0],"sessions",self.currentSessionId,"extract")
+            reader_yaml_file_path=os.path.join(os.path.split(self.signalFolder)[0],"EDF_Reader_oneshot.yaml")
+            extraction_yaml_file_path=os.path.join(os.path.split(self.signalFolder)[0],self.scenFile)
+           
             # TODO : need to check what are these baselines for?
-            modifyExtractionIO(self.scenFile, signalFile,
-                               outputSpect1, outputSpect2,
-                               outputTrials, outputBaseline,
-                               self.currentSessionId)
+
+            # Example usage:
+            modify_Edf_Reader_yaml(reader_yaml_file_path,os.path.join(self.signalFolder,signalFile))
+            # Example usage:
+            modify_extraction_yaml(
+                extraction_yaml_file_path,
+                rate=1,
+                keys=self.extractDict["ChannelNames"],
+                epoch_params={'before': self.extractDict["StimulationDelay"], 'after': self.extractDict["StimulationEpoch"]},
+                trim_samples=self.extractDict["trim_samples"],
+                welch_rate=self.extractDict["PsdSize"],
+                band_ranges={'range_A': self.extractDict["range_A"], 'range_B':self.extractDict["range_B"]},
+                recorder_filename=outputSpect,
+                path=csv_file_path
+            )
 
             # Launch timeflux scenario !
-            p = subprocess.Popen([command, "--invisible", "--play-fast", self.scenFile],
-                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+            p = subprocess.Popen([ "Timeflux", "-d",  extraction_yaml_file_path],
+                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE) # add cwd if needed
 
             # Print console output, and detect end of process...
             while True:
