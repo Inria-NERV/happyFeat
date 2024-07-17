@@ -85,6 +85,7 @@ class Extraction_Timeflux(QtCore.QThread):
     def run(self):
 
         for signalFile in self.signalFiles:
+            print('YOLO')
             tstart = time.perf_counter()
 
             self.info2.emit(str("Extracting data for file " + signalFile + "..."))
@@ -132,7 +133,7 @@ class Extraction_Timeflux(QtCore.QThread):
             )
 
             # Launch timeflux scenario !
-            p = subprocess.Popen([ "Timeflux", "-d",  extraction_yaml_file_path],
+            p = subprocess.Popen([ "timeflux", "-d",  extraction_yaml_file_path],
                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE) # add cwd if needed
 
             # Print console output, and detect end of process...
