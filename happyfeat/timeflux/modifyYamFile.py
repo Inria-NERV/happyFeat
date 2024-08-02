@@ -142,3 +142,43 @@ def modify_Edf_Reader_yaml(yaml_file, new_filename):
         yaml.dump(data, file)
 
     return
+
+
+def update_filenames(yaml_file, new_filenames_A, new_filenames_B, new_selections):
+    """
+    Update the filenames for the 'data_reader_A' and 'data_reader_B' nodes,
+    and the selections for the 'select_A' and 'select_B' nodes in the graph.
+
+    Parameters:
+    - yaml_file: str
+        The path to the YAML file.
+    - new_filenames_A: list of str
+        The new filenames for the 'data_reader_A' node.
+    - new_filenames_B: list of str
+        The new filenames for the 'data_reader_B' node.
+    - new_selections_A: list of list
+        The new selections for the 'select_A' node.
+    - new_selections_B: list of list
+        The new selections for the 'select_B' node.
+    """
+    yaml = ruamel.yaml.YAML()
+
+    # Read the YAML file
+    with open(yaml_file, 'r') as file:
+        data = yaml.load(file)
+
+    # Update the parameters in the nodes
+    for graph in data.get('graphs', []):
+        for node in graph.get('nodes', []):
+            if node['id'] == 'data_reader_A':
+                node['params']['filenames'] = new_filenames_A
+            elif node['id'] == 'data_reader_B':
+                node['params']['filenames'] = new_filenames_B
+            elif node['id'] == 'select_A':
+                node['params']['selections'] = new_selections
+            elif node['id'] == 'select_B':
+                node['params']['selections'] = new_selections
+
+    # Write the updated data back to the YAML file
+    with open(yaml_file, 'w') as file:
+        yaml.dump(data, file)
