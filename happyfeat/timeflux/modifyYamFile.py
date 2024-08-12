@@ -74,7 +74,7 @@ def modify_extraction_yaml_new(yaml_file, filename=None, rate=None, keys=None, e
     # Update the rate if provided
     if rate is not None:
         for graph in data.get('graphs', []):
-            graph['rate'] = rate
+            graph['rate'] = float(rate)
     
     # Update nodes based on their IDs and provided parameters
     for graph in data.get('graphs', []):
@@ -87,21 +87,22 @@ def modify_extraction_yaml_new(yaml_file, filename=None, rate=None, keys=None, e
                     params['key'] = keys
                 
                 if node_id in ['epoching_A', 'epoching_B'] and epoch_params is not None:
-                    params['before'] = epoch_params.get('before', params.get('before'))
-                    params['after'] = epoch_params.get('after', params.get('after'))
+                    params['before'] = float(epoch_params.get('before', params.get('before')))
+                    params['after'] = float(epoch_params.get('after', params.get('after')))
                 
                 if node_id in ['trim_A', 'trim_B'] and trim_samples is not None:
-                    params['samples'] = trim_samples
+                    params['samples'] = int(trim_samples)
                 
                 if node_id in ['welch_psd_A', 'welch_psd_B'] and welch_rate is not None:
-                    params['rate'] = welch_rate
+                    params['rate'] = float(welch_rate)
                 if node_id in ['welch_psd_A', 'welch_psd_B'] and nfft is not None:
-                    params['nfft'] = nfft
+                    params['nfft'] = int(nfft)
                 
                 if node_id == 'Bands_A' and band_ranges is not None and 'range_A' in band_ranges:
                     params['bands'] = {'range_A': band_ranges['range_A']}
                 
                 if node_id == 'Bands_B' and band_ranges is not None and 'range_B' in band_ranges:
+
                     params['bands'] = {'range_B': band_ranges['range_B']}
                 
                 if node_id == 'edf_reader' and filename is not None:
@@ -144,7 +145,7 @@ def modify_Edf_Reader_yaml(yaml_file, new_filename):
     return
 
 
-def update_filenames(yaml_file, new_filenames_A, new_filenames_B, new_selections):
+def update_filenames(yaml_file, new_filenames_A, new_filenames_B, new_selections,path,attemptId,cv=None):
     """
     Update the filenames for the 'data_reader_A' and 'data_reader_B' nodes,
     and the selections for the 'select_A' and 'select_B' nodes in the graph.
@@ -178,6 +179,12 @@ def update_filenames(yaml_file, new_filenames_A, new_filenames_B, new_selections
                 node['params']['selections'] = new_selections
             elif node['id'] == 'select_B':
                 node['params']['selections'] = new_selections
+            elif node['id']=='ML_LDA':
+                node['params']['path']=path
+                node['params']['filename']=str(attemptId)
+            elif node['id']=='ML_LDA' and cv is not None:
+                node['params']['cv']= cv
+
 
     # Write the updated data back to the YAML file
     with open(yaml_file, 'w') as file:

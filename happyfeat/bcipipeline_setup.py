@@ -129,7 +129,7 @@ class Dialog(QDialog):
         self.show()
 
     def initAcqParams(self):
-
+        print('holaaaaaaaaaaaaaaaaaaaaaa')
         # PARAMETERS
         labelText = [None, None]
         label = [None, None]

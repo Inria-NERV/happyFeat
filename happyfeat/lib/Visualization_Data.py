@@ -678,8 +678,13 @@ def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, eac
     for i in range(len(freq)):
         if freq[i] == fmax:
             index_fmax = i
-    Rsquare_reshape = Rsquare[0:len(channel_array), index_fmin:index_fmax + 1]
+            
 
+
+    Rsquare_reshape = Rsquare[0:len(channel_array), index_fmin:index_fmax + 1]
+    print(f"Rsquare shape: {Rsquare_reshape.shape}")
+    print(f"Maximum value in Rsquare_reshape: {np.max(Rsquare_reshape)}")
+    print(f"Minimum value in Rsquare_reshape: {np.min(Rsquare_reshape)}")
     vmin = 0
     vmax = 1
     if colormapScale:

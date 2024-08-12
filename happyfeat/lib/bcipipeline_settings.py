@@ -33,6 +33,12 @@ templateScenFilenames = ["sc1-monitor-acq.xml",
                          "sc4-run-replay.xml",
                          "mi-stimulations.lua"]
 
+global templateScenFilenames_timeflux
+templateScenFilenames_timeflux = ["",
+                                "sc2_extract_one.yaml",
+                                "sc_2_train_offline_list_2.yaml"]
+
+
 global connectMetrics
 connectMetrics = [#"MagnitudeSquaredCoherence",
                   #"ImaginaryCoherence",
@@ -62,14 +68,19 @@ pipelineExtractSettings = {optionKeys[0]: None,
 
                            # POWER SPECTRUM
                            optionKeys[1]:
-                               {"StimulationEpoch": "3",
-                                "StimulationDelay": "1",
+                               {"StimulationEpoch": 3.5,
+                                "StimulationDelay": 0,
                                 "TimeWindowLength": "0.25",
                                 "TimeWindowShift": "0.161",
                                 # "AutoRegressiveOrder": "19",
                                 "AutoRegressiveOrderTime": "0.038",
                                 # "PsdSize": "500",
-                                "FreqRes": "1",
+                                "FreqRes": 500,
+                                "trim_samples": 1500,
+                                "nfft" : 1024,
+                                "range_A": [8,30],
+                                "range_B": [8,30],
+
                                 },
 
                            # CONNECTIVITY
@@ -143,5 +154,10 @@ paramIdText = {"TrialNb": "Nb Trials per class",
                "WelchWinLength": "Welch sliding window length (s)",
                "WelchWinOverlap": "Welch sliding window overlap (%)",
                "ConnectFftSize": "Connectivity: FFT Size",
-               "ChannelSubset": "Subset of sensors (sep. with \";\". Empty for all sensors)"
-               }
+               "ChannelSubset": "Subset of sensors (sep. with \";\". Empty for all sensors)",
+               "trim_samples" : "Number of point in a shunk data",
+               "nfft" : "Number for nfft",
+               "range_A": "range of frequency kept for the signal",
+               "range_B": "range of frequency kept for the signal"
+
+                                             }

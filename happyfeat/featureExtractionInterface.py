@@ -45,7 +45,7 @@ from happyfeat.lib.utils import *
 from happyfeat.lib.workspaceMgmt import *
 from happyfeat.lib.workThreads import *
 from happyfeat.lib.myProgressBar import ProgressBar, ProgressBarNoInfo
-
+from happyfeat.timeflux.Threads import *
 import happyfeat.lib.bcipipeline_settings as settings
 
 class Features:
@@ -235,6 +235,7 @@ class Dialog(QDialog):
         # Copy extraction parameters from workspace file.
         # create a new dict (extractParamsDict) with defaults params...
         self.extractParamsDict = self.getDefaultExtractionParameters()
+        print('here are the parameters',self.extractParamsDict)
         # ... then copy from existing params file
 
         # special case: if current session id does not exist, load the "last" one
@@ -740,7 +741,7 @@ class Dialog(QDialog):
         # ----------
         self.refreshSignalList(self.fileListWidget, self.workspaceFolder)
         self.refreshAvailableFilesForVizList(self.workspaceFolder, self.currentSessionId)
-        self.refreshAvailableTrainSignalList(self.workspaceFolder, self.currentSessionId)
+        self.refreshAvailableTrainSignalList_Timeflux(self.workspaceFolder, self.currentSessionId)
         return
 
     def refreshSignalList(self, listwidget, workingFolder):
@@ -752,7 +753,8 @@ class Dialog(QDialog):
         # first get a list of all files in workingfolder that match the condition
         filelist = []
         for filename in os.listdir(signalFolder):
-            if filename.endswith(".ov"):
+            # if filename.endswith(".ov"):
+            if filename.endswith(".edf"):
                 filelist.append(filename)
 
         # iterate over existing items in widget and delete those who don't exist anymore
@@ -832,23 +834,53 @@ class Dialog(QDialog):
 
         return
 
-    def refreshAvailableTrainSignalList(self, workspaceFolder, currentSessionId):
+    def refreshAvailableTrainSignalList_Timeflux(self, workspaceFolder, currentSessionId):
         # ----------
-        # Refresh available training files.
+        # Refresh available CSV spectrum files.
+        # Only mention current class (set in parameters), and check that both classes are present
         # ----------
+        suffix1 = None
+        suffix2 = None
+        if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
+            suffix1 = "-SPECTRUM"
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+            suffix1 = "-CONNECT"
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+            suffix1 = "-SPECTRUM"
+            suffix2 = "-CONNECT"
+        suffixFinal = suffix1
+        if suffix2:
+            suffixFinal += suffix2
 
-        workingFolder = os.path.join(workspaceFolder, "sessions", currentSessionId, "train")
+        workingFolder = os.path.join(workspaceFolder, "sessions", currentSessionId, "extract")
+        class1label = self.parameterDict["AcquisitionParams"]["Class1"]
+        class2label = self.parameterDict["AcquisitionParams"]["Class2"]
 
         # first get a list of all csv files in workingfolder that match the condition
-        availableTrainSigs = []
+        availableCsvs = []
         for filename in os.listdir(workingFolder):
-            if filename.endswith(str("-TRIALS.csv")):
-                availableTrainSigs.append(filename)
+            if filename.endswith(str(suffix1 + "-" + class1label + ".csv")):
+                basename = filename.removesuffix(str(suffix1 + "-" + class1label + ".csv"))
+                otherClass = str(basename + suffix1 + "-" + class2label + ".csv")
+                if otherClass in os.listdir(workingFolder):
+                    if not suffix2:
+                        # no need to check for additional files...
+                        availableCsvs.append(basename)
+                    else:
+                        # we need to check that files with suffix 2 are also present
+                        otherMetric1 = str(basename + suffix2 + "-" + class1label + ".csv")
+                        otherMetric2 = str(basename + suffix2 + "-" + class2label + ".csv")
+                        if otherMetric1 in os.listdir(workingFolder) and otherMetric2 in os.listdir(workingFolder):
+                            availableCsvs.append(basename)
 
+        suffixFinal = suffix1
+        if suffix2:
+            suffixFinal += suffix2
         # iterate over existing items in widget and delete those who don't exist anymore
         for x in range(self.fileListWidgetTrain.count() - 1, -1, -1):
             tempitem = self.fileListWidgetTrain.item(x).text()
-            if tempitem not in availableTrainSigs:
+            if tempitem.removesuffix(suffixFinal) not in availableCsvs:
                 self.fileListWidgetTrain.takeItem(x)
 
         # iterate over filelist and add new files to listwidget
@@ -856,11 +888,42 @@ class Dialog(QDialog):
         items = []
         for x in range(self.fileListWidgetTrain.count()):
             items.append(self.fileListWidgetTrain.item(x).text())
-        for filename in availableTrainSigs:
-            if filename not in items:
-                self.fileListWidgetTrain.addItem(filename)
+        for basename in availableCsvs:
+            basenameSuffix = str(basename+suffixFinal)
+            if basenameSuffix not in items:
+                self.fileListWidgetTrain.addItem(basenameSuffix)
 
         return
+
+    # def refreshAvailableTrainSignalList(self, workspaceFolder, currentSessionId):
+    #     # ----------
+    #     # Refresh available training files.
+    #     # ----------
+
+    #     workingFolder = os.path.join(workspaceFolder, "sessions", currentSessionId, "train")
+
+    #     # first get a list of all csv files in workingfolder that match the condition
+    #     availableTrainSigs = []
+    #     for filename in os.listdir(workingFolder):
+    #         if filename.endswith(str("-TRIALS.csv")):
+    #             availableTrainSigs.append(filename)
+
+    #     # iterate over existing items in widget and delete those who don't exist anymore
+    #     for x in range(self.fileListWidgetTrain.count() - 1, -1, -1):
+    #         tempitem = self.fileListWidgetTrain.item(x).text()
+    #         if tempitem not in availableTrainSigs:
+    #             self.fileListWidgetTrain.takeItem(x)
+
+    #     # iterate over filelist and add new files to listwidget
+    #     # for that, create temp list of items in listwidget
+    #     items = []
+    #     for x in range(self.fileListWidgetTrain.count()):
+    #         items.append(self.fileListWidgetTrain.item(x).text())
+    #     for filename in availableTrainSigs:
+    #         if filename not in items:
+    #             self.fileListWidgetTrain.addItem(filename)
+
+    #     return
 
     def updateExtractParameters(self):
         # ----------
@@ -976,7 +1039,7 @@ class Dialog(QDialog):
         for selectedItem in self.fileListWidget.selectedItems():
             signalFiles.append(selectedItem.text() )
         signalFolder = os.path.join(self.workspaceFolder, "signals")
-        scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames[1])
+        scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames_timeflux[1])
 
         # For each selected signal file, check if extraction has already been done
         # => in .hfw file, at current extract idx, entry exists
@@ -1023,7 +1086,7 @@ class Dialog(QDialog):
         self.filesRefreshTimer.stop()
 
         # Instantiate the thread...
-        self.extractThread = Extraction(self.ovScript, scenFile, signalFiles, signalFolder, self.parameterDict, self.currentSessionId)
+        self.extractThread = Extraction_Timeflux( scenFile, signalFiles, signalFolder, self.parameterDict, self.currentSessionId)
         # Signal: Extraction work thread finished one file of the selected list.
         # Refresh the viz&train file lists to make it available + increment progress bar
         self.extractThread.info.connect(self.progressBarExtract.increment)
@@ -1080,7 +1143,7 @@ class Dialog(QDialog):
         # Instantiate the thread...
         # TODO : refactor using automatic feature selection possibility
         if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
-            self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq)
+            self.loadFilesForVizThread = LoadFilesForVizPowSpectrum_Timeflux(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq)
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             self.loadFilesForVizThread = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features, self.samplingFreq)
         elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
@@ -1307,16 +1370,30 @@ class Dialog(QDialog):
         if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             if self.enableSpeedUp.isChecked():
                 enableSpeedUp = True
+        suffix = ""
+        if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
+           suffix = "-SPECTRUM"
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+            suffix = "-CONNECT"
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+            suffix = "-SPECTRUM-CONNECT"
 
+        trainFiles = []
+        for selectedItem in self.fileListWidgetTrain.selectedItems():
+            trainFiles.append(selectedItem.text().removesuffix(suffix))
+        print("features list",listFeats)
+
+        # Transforming the list
+        filter_list = [item.split(';') for item in listFeats]
+
+        # Convert the second element of each sublist to an integer
+        filter_list = [[ele[0], int(ele[1])] for ele in filter_list]
+        print(filter_list)
+
+        scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames_timeflux[2])
         templateFolder = settings.optionsTemplatesDir[trainingParamDict["pipelineType"]]
-        self.trainClassThread.append( TrainClassifier(self.trainingFiles,
-                                                    signalFolder, templateFolder,
-                                                    self.workspaceFolder,
-                                                    self.ovScript,
-                                                    trainingSize, listFeats,
-                                                    trainingParamDict, self.samplingFreq,
-                                                    self.currentAttempt, attemptId,
-                                                    enableSpeedUp) )
+        self.trainClassThread.append( TrainClassifier_Timeflux(scenFile,trainFiles,self.workspaceFolder,self.parameterDict,self.currentSessionId,filter_list,trainingSize,self.currentAttempt,attemptId) )
 
         # Signal: Training work thread finished one step
         # Increment progress bar + change its label
@@ -1329,7 +1406,7 @@ class Dialog(QDialog):
 
         self.trainTimerStart = time.perf_counter()
 
-    def training_over(self, success, attemptIdTemp, resultsText):
+    def training_over(self, success, resultsText):
         # Training work thread is over, so we kill the progress bar,
         # display a msg with results, and make the training Gui available again
         self.trainTimerEnd = time.perf_counter()
@@ -1714,7 +1791,9 @@ class Dialog(QDialog):
                 subElectrodes = []
                 freqMin = int(self.autoFeatFreqRange.split(":")[0])
                 freqMax = int(self.autoFeatFreqRange.split(":")[1])
-                freqRange = np.arange(freqMin, freqMax+1, features.fres)
+
+                # freqRange = np.arange(freqMin, freqMax+1, features.fres)
+                freqRange = np.arange(freqMin, freqMax+1)
                 for chan in self.autoFeatChannelList:
                     try:
                         subR2.append(features.Rsigned[features.electrodes_final.index(chan), freqMin:(freqMax+1)])
