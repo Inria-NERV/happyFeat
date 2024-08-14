@@ -34,8 +34,7 @@ templateScenFilenames = ["sc1-monitor-acq.xml",
                          "mi-stimulations.lua"]
 
 global templateScenFilenames_timeflux
-templateScenFilenames_timeflux = ["",
-                                "sc2_extract_one.yaml",
+templateScenFilenames_timeflux = ["sc2_extract_one.yaml",
                                 "sc_2_train_offline_list_2.yaml"]
 
 

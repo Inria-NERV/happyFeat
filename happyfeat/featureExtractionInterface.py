@@ -1039,7 +1039,7 @@ class Dialog(QDialog):
         for selectedItem in self.fileListWidget.selectedItems():
             signalFiles.append(selectedItem.text() )
         signalFolder = os.path.join(self.workspaceFolder, "signals")
-        scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames_timeflux[1])
+        scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames_timeflux[0])
 
         # For each selected signal file, check if extraction has already been done
         # => in .hfw file, at current extract idx, entry exists
@@ -1391,7 +1391,7 @@ class Dialog(QDialog):
         filter_list = [[ele[0], int(ele[1])] for ele in filter_list]
         print(filter_list)
 
-        scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames_timeflux[2])
+        scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames_timeflux[1])
         templateFolder = settings.optionsTemplatesDir[trainingParamDict["pipelineType"]]
         self.trainClassThread.append( TrainClassifier_Timeflux(scenFile,trainFiles,self.workspaceFolder,self.parameterDict,self.currentSessionId,filter_list,trainingSize,self.currentAttempt,attemptId) )
 
