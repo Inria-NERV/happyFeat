@@ -510,18 +510,30 @@ def plot_psd_r2(Power_class1, Power_class2, Rsquare, freqs, channel, channel_arr
     Selected_class2_STD = (STD_class2[index_fmin:index_fmax] / Power_class2.shape[0])
     Selected_class1_STD = (STD_class1[index_fmin:index_fmax] / Power_class2.shape[0])
 
-    plt.plot(freqs[index_fmin:index_fmax], Selected_class2, label=class2label, color='blue')
+    ax.plot(freqs[index_fmin:index_fmax], Selected_class2, label=class2label, color='blue')
 
-    plt.fill_between(freqs[index_fmin:index_fmax], Selected_class2 - Selected_class2_STD, Selected_class2 + Selected_class2_STD,
+    ax.fill_between(freqs[index_fmin:index_fmax], Selected_class2 - Selected_class2_STD, Selected_class2 + Selected_class2_STD,
                      color='blue', alpha=0.3)
-    plt.plot(freqs[index_fmin:index_fmax], Selected_class1, label=class1label, color='red')
-    plt.fill_between(freqs[index_fmin:index_fmax], Selected_class1 - Selected_class1_STD,
+    ax.plot(freqs[index_fmin:index_fmax], Selected_class1, label=class1label, color='red')
+    ax.fill_between(freqs[index_fmin:index_fmax], Selected_class1 - Selected_class1_STD,
                      Selected_class1 + Selected_class1_STD,
                      color='red', alpha=0.3)
 
     classes_max_value = max(max(Selected_class1), max(Selected_class2))
     selected_Rsquare = Rsquare[channel, index_fmin:index_fmax] * classes_max_value
-    plt.plot(freqs[index_fmin:index_fmax], selected_Rsquare, label="r2", color='black')
+    # ax.plot(freqs[index_fmin:index_fmax], selected_Rsquare, label="r2", color='black')
+
+    max_r2_index=np.unravel_index(Rsquare.argmax(), Rsquare.shape)
+    print(max_r2_index)
+    max_r2_value = Rsquare[max_r2_index]
+
+    corresponding_frequency = freqs[index_fmin + max_r2_index[1]]
+    corresponding_value_class1 = Selected_class1[max_r2_index[1]]
+    corresponding_value_class2 = Selected_class2[max_r2_index[1]]
+    print(f"At frequency {corresponding_frequency} Hz:")
+    print(f"  R^2 value: {max_r2_value}")
+    print(f"  {class1label} value: {corresponding_value_class1}")
+    print(f"  {class2label} value: {corresponding_value_class2}")
 
     sizing = round(len(freqs[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
     for i in freqs[index_fmin:(index_fmax + 1)]:

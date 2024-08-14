@@ -1413,7 +1413,6 @@ class Dialog(QDialog):
         elapsed = self.trainTimerEnd - self.trainTimerStart
         print("=== Training done in: ", str(elapsed))
         self.trainClassThread.clear()
-
         self.progressBarTrain.finish()
         if success:
             # Add training attempt in workspace file
@@ -1429,11 +1428,10 @@ class Dialog(QDialog):
                 addTrainingAttempt(self.workspaceFile, self.currentSessionId,
                                        self.currentAttempt["SignalFiles"], self.currentAttempt["CompositeFile"],
                                        self.currentAttempt["Features"], self.currentAttempt["Score"])
-
             self.updateTrainingAttemptsTree()
 
             textGoodbye = str("Classifier weights were written in:\n\t")
-            textGoodbye += self.workspaceFolder + str("/classifier-weights.xml\n")
+            textGoodbye += self.workspaceFolder + str("/fitted_model.pkl\n")
             textGoodbye += str("If those results are satisfying, you can now open in the OV Designer:\n\t") \
                            + self.workspaceFolder + str("/sc3-online.xml in the Designer")
 
@@ -1769,7 +1767,7 @@ class Dialog(QDialog):
 
     def getDefaultExtractionParameters(self):
         # ----------
-        # Get "extraction" parameters from the JSON parameters
+        # Get "extraction" parameters from the JSON parameterstimze
         # A bit artisanal, but we'll see if we keep that...
         # ----------
         pipelineKey = self.parameterDict['pipelineType']
@@ -1792,8 +1790,8 @@ class Dialog(QDialog):
                 freqMin = int(self.autoFeatFreqRange.split(":")[0])
                 freqMax = int(self.autoFeatFreqRange.split(":")[1])
 
-                # freqRange = np.arange(freqMin, freqMax+1, features.fres)
-                freqRange = np.arange(freqMin, freqMax+1)
+                freqRange = np.arange(freqMin, freqMax+1, features.fres)
+
                 for chan in self.autoFeatChannelList:
                     try:
                         subR2.append(features.Rsigned[features.electrodes_final.index(chan), freqMin:(freqMax+1)])
