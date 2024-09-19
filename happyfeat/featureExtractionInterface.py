@@ -1425,6 +1425,7 @@ class Dialog(QDialog):
         # Initialize structure for reporting results in workspace file...
         tempAttempt = {"SignalFiles": self.trainingFiles,
                        "CompositeFile": None, "Features": None, "Score": ""}
+        self.currentAttempt = [] 
         for comb in range(len(self.selectedFeats[0])):
             self.currentAttempt.append(tempAttempt.copy())
 
