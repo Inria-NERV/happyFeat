@@ -733,7 +733,7 @@ def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, eac
     # Hplt.yticks(range(len(channel_array)),channel_array)
     # plt.show()
 
-def Reorder_plusplus(Rsquare, electrodes_orig, powerLeft, powerRight, timefreqLeft, timefreqRight):
+def Reorder_plusplus(Rsquare, signTab, electrodes_orig, powerLeft, powerRight, timefreqLeft, timefreqRight):
     if len(electrodes_orig) == 74:
         # NETBCI...
         # electrodes_target = ['fp1', 'af7', 'af3', 'f7', 'f5', 'f3', 'f1', 'ft9', 'ft7', 'fc5', 'fc3', 'fc1',
@@ -782,6 +782,7 @@ def Reorder_plusplus(Rsquare, electrodes_orig, powerLeft, powerRight, timefreqLe
 
     Rsquare_final = np.zeros([Rsquare.shape[0], Rsquare.shape[1]])
     print(powerLeft.shape)
+    signTab_final = np.zeros([signTab.shape[0], signTab.shape[1]])
     powerLeft_final = np.zeros([powerLeft.shape[0], powerLeft.shape[1], powerLeft.shape[2]])
     powerRight_final = np.zeros([powerRight.shape[0], powerRight.shape[1], powerRight.shape[2]])
     timefreqLeftfinal = np.zeros(
@@ -800,8 +801,9 @@ def Reorder_plusplus(Rsquare, electrodes_orig, powerLeft, powerRight, timefreqLe
         timefreqLeftfinal[:, l, :, :] = timefreqLeft[:, index_elec[l], :, :]
         timefreqRightfinal[:, l, :, :] = timefreqRight[:, index_elec[l], :, :]
         Rsquare_final[l, :] = Rsquare[index_elec[l], :]
+        signTab_final[l, :] = signTab[index_elec[l], :]
 
-    return Rsquare_final, electrode_final, powerLeft_final, powerRight_final, timefreqLeftfinal, timefreqRightfinal
+    return Rsquare_final, signTab_final, electrode_final, powerLeft_final, powerRight_final, timefreqLeftfinal, timefreqRightfinal
 
 def Reorder_custom(Rsquare, customPath, electrodes_orig, powerLeft, powerRight):
 
@@ -834,7 +836,7 @@ def Reorder_custom(Rsquare, customPath, electrodes_orig, powerLeft, powerRight):
 
     return Rsquare_final, electrode_final, powerLeft_final, powerRight_final
 
-def Reorder_custom_plus(Rsquare, customPath, electrodes_orig, powerLeft, powerRight, timefreqLeft, timefreqRight):
+def Reorder_custom_plus(Rsquare, signTab, customPath, electrodes_orig, powerLeft, powerRight, timefreqLeft, timefreqRight):
 
     df = pd.read_csv(customPath)
     electrodes_target = df.name.to_list()
@@ -850,6 +852,7 @@ def Reorder_custom_plus(Rsquare, customPath, electrodes_orig, powerLeft, powerRi
 
     Rsquare_final = np.zeros([Rsquare.shape[0], Rsquare.shape[1]])
     print(powerLeft.shape)
+    signTab_final = np.zeros([signTab.shape[0], signTab.shape[1]])
     powerLeft_final = np.zeros([powerLeft.shape[0], powerLeft.shape[1], powerLeft.shape[2]])
     powerRight_final = np.zeros([powerRight.shape[0], powerRight.shape[1], powerRight.shape[2]])
     timefreqLeftfinal = np.zeros(
@@ -868,8 +871,9 @@ def Reorder_custom_plus(Rsquare, customPath, electrodes_orig, powerLeft, powerRi
         timefreqLeftfinal[:, l, :, :] = timefreqLeft[:, index_elec[l], :, :]
         timefreqRightfinal[:, l, :, :] = timefreqRight[:, index_elec[l], :, :]
         Rsquare_final[l, :] = Rsquare[index_elec[l], :]
+        signTab_final[l, :] = signTab[index_elec[l], :]
 
-    return Rsquare_final, electrode_final, powerLeft_final, powerRight_final, timefreqLeftfinal, timefreqRightfinal
+    return Rsquare_final, signTab_final, electrode_final, powerLeft_final, powerRight_final, timefreqLeftfinal, timefreqRightfinal
 
 
 

@@ -49,7 +49,8 @@ from happyfeat.lib.myProgressBar import ProgressBar, ProgressBarNoInfo
 import happyfeat.lib.bcipipeline_settings as settings
 
 class Features:
-    Rsigned = []
+    Rsquare = []
+    Rsign_tab = []
     Wsigned = []
     electrodes_orig = []
     electrodes_final = []
@@ -371,6 +372,11 @@ class Dialog(QDialog):
         self.colormapScale.setTristate(False)
         self.colormapScale.setChecked(True)
         self.formLayoutViz.addRow('Scale Colormap (R²map and Topography)', self.colormapScale)
+        # Param : checkbox for considering Class2-Class1 sign for AutoFeat
+        self.autofeatUseSign = QCheckBox()
+        self.autofeatUseSign.setTristate(False)
+        self.autofeatUseSign.setChecked(False)
+        self.formLayoutViz.addRow('AutoFeat: consider the sign (Class2-Class1)', self.autofeatUseSign)
 
         self.layoutViz.addLayout(self.formLayoutViz)
 
@@ -1645,6 +1651,7 @@ class Dialog(QDialog):
         self.electrodePsd.setEnabled(myBool)
         self.freqTopo.setEnabled(myBool)
         self.colormapScale.setEnabled(myBool)
+        self.autofeatUseSign.setEnabled(myBool)
         self.btn_autoFeat.setEnabled(myBool)
 
         self.btn_loadFilesForViz.setEnabled(myBool)
@@ -1705,7 +1712,7 @@ class Dialog(QDialog):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
 
             if not useSubselection:
-                plot_stats(features.Rsigned,
+                plot_stats(features.Rsquare,
                            features.freqs_array,
                            features.electrodes_final,
                            features.fres, int(self.userFmin.text()), int(self.userFmax.text()),
@@ -1718,7 +1725,7 @@ class Dialog(QDialog):
                 freqRange = np.arange(freqMin, freqMax+1, features.fres)
                 for chan in self.autoFeatChannelList:
                     try:
-                        subR2.append(features.Rsigned[features.electrodes_final.index(chan), freqMin:(freqMax+1)])
+                        subR2.append(features.Rsquare[features.electrodes_final.index(chan), freqMin:(freqMax+1)])
                     except ValueError:
                         myMsgBox("Invalid electrode subselection or frequency range for auto. feature selection")
                         return
@@ -1785,7 +1792,7 @@ class Dialog(QDialog):
             #               self.electrodePsd.text(),
             #               features.fres, fmin, fmax, class1, class2, metricLabel)
             qt_plot_metric2(features.power_cond1, features.power_cond2,
-                            features.Rsigned,
+                            features.Rsquare,
                             features.freqs_array, features.electrodes_final,
                             self.electrodePsd.text(),
                             features.fres, fmin, fmax, class1, class2, metricLabel, title)
@@ -1801,7 +1808,7 @@ class Dialog(QDialog):
             #            self.electrodePsd.text(),
             #            features.fres, fmin, fmax, class1, class2)
             qt_plot_psd_r2(features.power_cond1, features.power_cond2,
-                           features.Rsigned,
+                           features.Rsquare,
                             features.freqs_array, features.electrodes_final,
                             self.electrodePsd.text(),
                             features.fres, fmin, fmax, class1, class2, title)
@@ -1815,7 +1822,7 @@ class Dialog(QDialog):
             print("Freq Topo: " + self.freqTopo.text())
             error = False
             freqMax = -1
-            qt_plot_topo(features.Rsigned, self.sensorMontage, self.customMontagePath, features.electrodes_final,
+            qt_plot_topo(features.Rsquare, self.sensorMontage, self.customMontagePath, features.electrodes_final,
                          int(self.freqTopo.text()), freqMax, features.fres, self.samplingFreq,
                          self.colormapScale.isChecked(), title)
         elif ":" in self.freqTopo.text() \
@@ -1826,7 +1833,7 @@ class Dialog(QDialog):
                         freqMax = int(self.freqTopo.text().split(":")[1])
                         if 0 < freqMin < freqMax < (self.samplingFreq / 2):
                             error = False
-                            qt_plot_topo(features.Rsigned, self.sensorMontage, self.customMontagePath, features.electrodes_final,
+                            qt_plot_topo(features.Rsquare, self.sensorMontage, self.customMontagePath, features.electrodes_final,
                                          freqMin, freqMax, features.fres, self.samplingFreq,
                                          self.colormapScale.isChecked(), title)
 
@@ -1954,6 +1961,7 @@ class Dialog(QDialog):
         results1.autoselected = None
         results2.autoselected = None
 
+        # Get Freq and Channel range from the interface
         # If Freq range &/or Channel list are empty, use full range
         if self.autoFeatFreqRange == "":
             if results1:
@@ -1969,6 +1977,8 @@ class Dialog(QDialog):
         print("AutoFeat: Sublist of channels: " + str(self.autoFeatChannelList))
         print("AutoFeat: Frequency range: " + str(self.autoFeatFreqRange))
 
+        # Get indices corresponding to the selected channel names
+        # TODO : allow for case-insensitive selection (e.g. FCz == Fcz)
         Index_electrode = []
         for chan in self.autoFeatChannelList:
             try:
@@ -1979,23 +1989,32 @@ class Dialog(QDialog):
             Index_electrode.append(idx)
         print("Index_electrode:  " + str(Index_electrode))
 
-        # TODO : add check on frequencies...
+        # Check if frequencies are correct...
         freqMin = int(self.autoFeatFreqRange.split(":")[0])
         freqMax = int(self.autoFeatFreqRange.split(":")[1])
         if freqMax <= freqMin or freqMax > self.samplingFreq / 2 or freqMin < 0 or freqMax < 1 :
             myMsgBox("Invalid frequency range for AutoFeat ( freqmin:freqmax )" )
             return
 
+        # Loop and find best features in the R² sub-map
         for result in [results1, results2]:
-            if len(result.Rsigned) > 0:
+            if len(result.Rsquare) > 0:
                 result.autoselected = []
-                Rsigned_reduced = result.Rsigned[Index_electrode, freqMin:freqMax]
-                Max_per_electrode = Rsigned_reduced.max(1)
+                Rsquare_reduced = result.Rsquare[Index_electrode, freqMin:freqMax]
+                # if "Use the sign of Class2-class1" is checked
+                # we apply the sign map to Rsquare
+                # ==> R² values corresponding to Class1 < Class2 will be negative and won't count
+                # for the search of max values
+                if self.autofeatUseSign.isChecked():
+                    Rsign_reduced = result.Rsign_tab[Index_electrode, freqMin:freqMax]
+                    Rsquare_reduced = Rsquare_reduced * Rsign_reduced
+
+                Max_per_electrode = Rsquare_reduced.max(1)
                 indices_max = list(reversed(np.argsort(Max_per_electrode)))[0:3]  # indices of 3 max values within the scope of Index_electrodes
                 indices_max_final = [Index_electrode[i] for i in indices_max]
 
                 for idx in indices_max_final:
-                    r2Vals = result.Rsigned[idx, freqMin:freqMax]
+                    r2Vals = result.Rsquare[idx, freqMin:freqMax]
                     idxfreqMax = freqMin + np.argmax(r2Vals)
                     result.autoselected.append((result.electrodes_final[idx], idxfreqMax))
 
@@ -2425,9 +2444,9 @@ def checkFreqsMinMax(fmin, fmax, fs):
 
     return ok
 
-def plot_stats(Rsigned, freqs_array, electrodes, fres, fmin, fmax, colormapScale, title):
+def plot_stats(Rsquare, freqs_array, electrodes, fres, fmin, fmax, colormapScale, title):
     smoothing = False
-    plot_Rsquare_calcul_welch(Rsigned, np.array(electrodes)[:], freqs_array, smoothing, fres, 10, fmin, fmax, colormapScale, title)
+    plot_Rsquare_calcul_welch(Rsquare, np.array(electrodes)[:], freqs_array, smoothing, fres, 10, fmin, fmax, colormapScale, title)
     plt.show()
 
 def qt_plot_psd(power_cond1, power_cond2, freqs_array, electrodesList, electrodeToDisp, fres, fmin, fmax, class1label, class2label, title):
@@ -2496,8 +2515,8 @@ def qt_plot_metric2(power_cond1, power_cond2, rsquare, freqs_array, electrodesLi
 
 # Plot "Brain topography", using either Power Spectrum (in same pipeline)
 # or Node Strength (or similar metric) (in Connectivity pipeline)
-def qt_plot_topo(Rsigned, montage, customMontage, electrodes, freqMin, freqMax, fres, fs, scaleColormap, title):
-    topo_plot(Rsigned, title, montage, customMontage, electrodes, round(freqMin/fres), round(freqMax/fres),
+def qt_plot_topo(Rsquare, montage, customMontage, electrodes, freqMin, freqMax, fres, fs, scaleColormap, title):
+    topo_plot(Rsquare, title, montage, customMontage, electrodes, round(freqMin/fres), round(freqMax/fres),
               fres, fs, scaleColormap, 'Signed R square')
     plt.show()
 

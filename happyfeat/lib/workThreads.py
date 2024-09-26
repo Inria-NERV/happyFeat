@@ -390,19 +390,19 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         # Statistical Analysis
         freqs_array = np.arange(0, n_bins, fres)
 
-        Rsigned = Compute_Rsquare_Map(power_cond2_final[:, :, :(n_bins - 1)],
-                                      power_cond1_final[:, :, :(n_bins - 1)])
+        Rsquare, signTab = Compute_Rsquare_Map(power_cond1_final[:, :, :(n_bins - 1)],
+                                               power_cond2_final[:, :, :(n_bins - 1)])
 
         # Reordering for R map and topography...
         if self.parameterDict["sensorMontage"] == "standard_1020" \
             or self.parameterDict["sensorMontage"] == "biosemi64":
-            Rsigned_2, electrodes_final, power_cond1_2, power_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
-                = Reorder_plusplus(Rsigned, electrodeList, power_cond1_final, power_cond2_final,
+            Rsquare_2, signTab_2, electrodes_final, power_cond1_2, power_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
+                = Reorder_plusplus(Rsquare, signTab, electrodeList, power_cond1_final, power_cond2_final,
                                    timefreq_cond1_final, timefreq_cond2_final)
         elif self.parameterDict["sensorMontage"] == "custom" \
             and self.parameterDict["customMontagePath"] != "":
-            Rsigned_2, electrodes_final, power_cond1_2, power_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
-                = Reorder_custom_plus(Rsigned, self.parameterDict["customMontagePath"], electrodeList, power_cond1_final, power_cond2_final,
+            Rsquare_2, signTab_2, electrodes_final, power_cond1_2, power_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
+                = Reorder_custom_plus(Rsquare, signTab, self.parameterDict["customMontagePath"], electrodeList, power_cond1_final, power_cond2_final,
                                    timefreq_cond1_final, timefreq_cond2_final)
 
         # Fill result structure...
@@ -416,7 +416,8 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         self.Features.freqs_array = freqs_array
         self.Features.fres = fres
         self.Features.electrodes_final = electrodes_final
-        self.Features.Rsigned = Rsigned_2
+        self.Features.Rsquare = Rsquare_2
+        self.Features.Rsign_tab = signTab_2
 
         if self.useBaselineFiles:
             self.Features.average_baseline_cond1 = np.mean(power_cond1_baseline_final, axis=0)
@@ -614,19 +615,19 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
 
         # Statistical Analysis...
         freqs_array = np.arange(0, n_bins, fres)
-        Rsigned = Compute_Rsquare_Map(connect_cond2_final[:, :, :(n_bins - 1)],
-                                      connect_cond1_final[:, :, :(n_bins - 1)])
+        Rsquare, signTab = Compute_Rsquare_Map(connect_cond1_final[:, :, :(n_bins - 1)],
+                                               connect_cond2_final[:, :, :(n_bins - 1)])
 
         # Reordering for R map and topography...
         if self.parameterDict["sensorMontage"] == "standard_1020" \
                 or self.parameterDict["sensorMontage"] == "biosemi64":
-            Rsigned_2, electrodes_final, connect_cond1_2, connect_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
-                = Reorder_plusplus(Rsigned, electrodeList, connect_cond1_final, connect_cond2_final,
+            Rsquare_2, signTab_2, electrodes_final, connect_cond1_2, connect_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
+                = Reorder_plusplus(Rsquare, signTab, electrodeList, connect_cond1_final, connect_cond2_final,
                                    timefreq_cond1_final, timefreq_cond2_final)
         elif self.parameterDict["sensorMontage"] == "custom" \
                 and self.parameterDict["customMontagePath"] != "":
-            Rsigned_2, electrodes_final, connect_cond1_2, connect_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
-                = Reorder_custom_plus(Rsigned, self.parameterDict["customMontagePath"],
+            Rsquare_2, signTab_2, electrodes_final, connect_cond1_2, connect_cond2_2, timefreq_cond1_2, timefreq_cond2_2 \
+                = Reorder_custom_plus(Rsquare, signTab, self.parameterDict["customMontagePath"],
                                       electrodeList, connect_cond1_final, connect_cond2_final,
                                       timefreq_cond1_final, timefreq_cond2_final)
 
@@ -641,7 +642,8 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         self.Features.samplingFreq = sampFreq
         self.Features.freqs_array = freqs_array
 
-        self.Features.Rsigned = Rsigned_2
+        self.Features.Rsquare = Rsquare_2
+        self.Features.Rsign_tab = signTab_2
 
         self.stop = True
         self.over.emit(True, "", validFiles)
