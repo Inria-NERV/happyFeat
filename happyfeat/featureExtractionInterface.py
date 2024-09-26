@@ -1996,7 +1996,7 @@ class Dialog(QDialog):
 
                 for idx in indices_max_final:
                     r2Vals = result.Rsigned[idx, freqMin:freqMax]
-                    idxfreqMax = 7 + np.argmax(r2Vals)
+                    idxfreqMax = freqMin + np.argmax(r2Vals)
                     result.autoselected.append((result.electrodes_final[idx], idxfreqMax))
 
                 print("Best feats: " + str(result.autoselected))
