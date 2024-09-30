@@ -931,6 +931,9 @@ class Dialog(QDialog):
             self.refreshLists()
             self.updateTrainingAttemptsTree()
 
+            # Manually set Visualization part "off", to force user to reload a run
+            self.enablePlotBtns(False)
+
         return changed, alreadyExists, newId
 
     def runAcquisitionScenario(self):
@@ -1976,7 +1979,7 @@ class Dialog(QDialog):
 
         print("AutoFeat: Sublist of channels: " + str(self.autoFeatChannelList))
         print("AutoFeat: Frequency range: " + str(self.autoFeatFreqRange))
-
+        
         # Get indices corresponding to the selected channel names
         # TODO : allow for case-insensitive selection (e.g. FCz == Fcz)
         Index_electrode = []
@@ -2516,7 +2519,7 @@ def qt_plot_metric2(power_cond1, power_cond2, rsquare, freqs_array, electrodesLi
 # Plot "Brain topography", using either Power Spectrum (in same pipeline)
 # or Node Strength (or similar metric) (in Connectivity pipeline)
 def qt_plot_topo(Rsquare, montage, customMontage, electrodes, freqMin, freqMax, fres, fs, scaleColormap, title):
-    topo_plot(Rsquare, title, montage, customMontage, electrodes, round(freqMin/fres), round(freqMax/fres),
+    topo_plot(Rsquare, title, montage, customMontage, electrodes, freqMin, freqMax,
               fres, fs, scaleColormap, 'Signed R square')
     plt.show()
 

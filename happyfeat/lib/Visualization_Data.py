@@ -81,13 +81,13 @@ def topo_plot(Rsquare, title, montageStr, customMontage, electrodes, freqMin, fr
         for i in range(n_channels):
             for j in range(len(electrodes)):
                 if montage.ch_names[i] == electrodes[j]:
-                    sizer[i] = Rsquare[:, freqMin][j]
+                    sizer[i] = Rsquare[:, round(freqMin/fres)][j]
     else:
         freq = str(freqMin) + ":" + str(freqMax)
         for i in range(n_channels):
             for j in range(len(electrodes)):
                 if montage.ch_names[i] == electrodes[j]:
-                    sizer[i] = Rsquare[:, freqMin:freqMax][j].mean()
+                    sizer[i] = Rsquare[:, round(freqMin/fres):round(freqMax/fres)][j].mean()
 
     vmin = None
     vmax = 1
