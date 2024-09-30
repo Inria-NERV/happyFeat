@@ -682,6 +682,7 @@ class TrainClassifier(QtCore.QThread):
         self.parameterDict = parameterDict.copy()
         self.currentSessionId = self.parameterDict["currentSessionId"]
         self.extractDict = parameterDict["Sessions"][self.parameterDict["currentSessionId"]]["ExtractionParams"].copy()
+        self.freqRes = float(self.extractDict["FreqRes"])
         self.samplingFreq = sampFreq
         self.exitText = ""
 
@@ -727,6 +728,7 @@ class TrainClassifier(QtCore.QThread):
         else:
             print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
 
+        # Get the features selected for training, and check if their values are correct
         selectedFeats = None
         selectedFeats2 = None
         if not self.usingDualFeatures:
@@ -743,6 +745,16 @@ class TrainClassifier(QtCore.QThread):
             if not selectedFeats2:
                 self.over.emit(False, self.attemptId, errMsg)
                 return
+
+        # if freqRes != 1, modify the frequency indices of all features
+        if self.freqRes != 1.0:
+            if selectedFeats:
+                for feat in selectedFeats:
+                    feat[1] = str( int(float(feat[1]) /self.freqRes))
+
+            if selectedFeats2:
+                for feat in selectedFeats2:
+                    feat[1] = str( int(float(feat[1]) /self.freqRes))
 
         epochCount = [0, 0]
         stimEpochLength = float(self.extractDict["StimulationEpoch"])
@@ -898,8 +910,11 @@ class TrainClassifier(QtCore.QThread):
                 textFeats += str("\nFeature(s) ")
                 textFeats += str("(" + self.parameterDict["pipelineType"] + "):\n")
                 for i in range(len(selectedFeats)):
+                    actualFreq = selectedFeats[i][1]
+                    if self.freqRes != 1.0:
+                        actualFreq = str( float(selectedFeats[i][1]) * self.freqRes )
                     textFeats += str(
-                        "\t" + "Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+                        "\t" + "Channel " + str(selectedFeats[i][0]) + " at " + str(actualFreq) + " Hz\n")
 
                 textDisplay = textFeats
                 textDisplay += str("\n" + classifierOutputStr)
@@ -965,16 +980,26 @@ class TrainClassifier(QtCore.QThread):
                     textFeats += str("\nFeature(s) ")
                     textFeats += str("(" + self.parameterDict["pipelineType"]+"):\n")
                     for i in range(len(selectedFeats)):
-                        textFeats += str("\t"+"Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+                        actualFreq = selectedFeats[i][1]
+                        if self.freqRes != 1.0:
+                            actualFreq = str( float(selectedFeats[i][1]) * self.freqRes )
+                        textFeats += str("\t" + "Channel " + str(selectedFeats[i][0]) + " at " + str(actualFreq) + " Hz\n")
+
+
                 else:
                     textFeats += str("\nFeature(s) for PowSpectrum:\n")
                     for i in range(len(selectedFeats)):
-                        textFeats += str(
-                            "\t" + "Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+                        actualFreq = selectedFeats[i][1]
+                        if self.freqRes != 1.0:
+                            actualFreq = str( float(selectedFeats[i][1]) * self.freqRes )
+                        textFeats += str("\t" + "Channel " + str(selectedFeats[i][0]) + " at " + str(actualFreq) + " Hz\n")
+
                     textFeats += str("Feature(s) for Connectivity:\n")
                     for i in range(len(selectedFeats2)):
-                        textFeats += str(
-                            "\t" + "Channel " + str(selectedFeats2[i][0]) + " at " + str(selectedFeats2[i][1]) + " Hz\n")
+                        actualFreq = selectedFeats2[i][1]
+                        if self.freqRes != 1.0:
+                            actualFreq = str( float(selectedFeats2[i][1]) * self.freqRes )
+                        textFeats += str("\t" + "Channel " + str(selectedFeats2[i][0]) + " at " + str(actualFreq) + " Hz\n")
 
                 textDisplay = textFeats
                 textDisplay += str("\n" + classifierOutputStr)
