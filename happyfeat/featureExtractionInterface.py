@@ -1725,17 +1725,18 @@ class Dialog(QDialog):
                 subElectrodes = []
                 freqMin = int(self.autoFeatFreqRange.split(":")[0])
                 freqMax = int(self.autoFeatFreqRange.split(":")[1])
-                freqRange = np.arange(freqMin, freqMax+1, features.fres)
+                # freqRange = np.arange(round(freqMin/features.fres), round(freqMax/features.fres)+1, features.fres)
                 for chan in self.autoFeatChannelList:
                     try:
-                        subR2.append(features.Rsquare[features.electrodes_final.index(chan), freqMin:(freqMax+1)])
+                        # subR2.append(features.Rsquare[features.electrodes_final.index(chan), freqMin:(freqMax+1)])
+                        subR2.append(features.Rsquare[features.electrodes_final.index(chan), :])
                     except ValueError:
                         myMsgBox("Invalid electrode subselection or frequency range for auto. feature selection")
                         return
                     subElectrodes.append(chan)
 
                 subR2 = np.array(subR2)
-                plot_stats(subR2, freqRange, subElectrodes, features.fres, freqMin, freqMax,
+                plot_stats(subR2, features.freqs_array, subElectrodes, features.fres, freqMin, freqMax,
                            self.colormapScale.isChecked(), title)
 
     def btnW2(self, features, title):
@@ -1963,6 +1964,12 @@ class Dialog(QDialog):
 
         results1.autoselected = None
         results2.autoselected = None
+        freqsArray = None
+
+        if results1:
+            freqsArray = results1.freqs_array
+        elif results2:
+            freqsArray = results2.freqs_array
 
         # Get Freq and Channel range from the interface
         # If Freq range &/or Channel list are empty, use full range
@@ -1979,7 +1986,8 @@ class Dialog(QDialog):
 
         print("AutoFeat: Sublist of channels: " + str(self.autoFeatChannelList))
         print("AutoFeat: Frequency range: " + str(self.autoFeatFreqRange))
-        
+        print("AutoFeat: Frequency resolution: " + str(results1.fres))
+
         # Get indices corresponding to the selected channel names
         # TODO : allow for case-insensitive selection (e.g. FCz == Fcz)
         Index_electrode = []
@@ -1999,17 +2007,21 @@ class Dialog(QDialog):
             myMsgBox("Invalid frequency range for AutoFeat ( freqmin:freqmax )" )
             return
 
+        # find closest indices in the frequencies list, corresponding to fmin and fmax
+        valueFreqmin, idxFreqmin = find_nearest(freqsArray, freqMin)
+        valueFreqmax, idxFreqmax = find_nearest(freqsArray, freqMax)
+
         # Loop and find best features in the R² sub-map
         for result in [results1, results2]:
             if len(result.Rsquare) > 0:
                 result.autoselected = []
-                Rsquare_reduced = result.Rsquare[Index_electrode, freqMin:freqMax]
+                Rsquare_reduced = result.Rsquare[Index_electrode, idxFreqmin:idxFreqmax]
                 # if "Use the sign of Class2-class1" is checked
                 # we apply the sign map to Rsquare
                 # ==> R² values corresponding to Class1 < Class2 will be negative and won't count
                 # for the search of max values
                 if self.autofeatUseSign.isChecked():
-                    Rsign_reduced = result.Rsign_tab[Index_electrode, freqMin:freqMax]
+                    Rsign_reduced = result.Rsign_tab[Index_electrode, idxFreqmin:idxFreqmax]
                     Rsquare_reduced = Rsquare_reduced * Rsign_reduced
 
                 Max_per_electrode = Rsquare_reduced.max(1)
@@ -2017,9 +2029,10 @@ class Dialog(QDialog):
                 indices_max_final = [Index_electrode[i] for i in indices_max]
 
                 for idx in indices_max_final:
-                    r2Vals = result.Rsquare[idx, freqMin:freqMax]
-                    idxfreqMax = freqMin + np.argmax(r2Vals)
-                    result.autoselected.append((result.electrodes_final[idx], idxfreqMax))
+                    r2Vals = result.Rsquare[idx, idxFreqmin:idxFreqmax]
+                    idxMaxValue = idxFreqmin + np.argmax(r2Vals)
+                    # The selected frequency is in "index" mode, we need to translate it to a human-readable format
+                    result.autoselected.append((result.electrodes_final[idx], int(freqsArray[idxMaxValue])))
 
                 print("Best feats: " + str(result.autoselected))
                 if len(result.autoselected) < 1:
@@ -2030,34 +2043,49 @@ class Dialog(QDialog):
         # Remove all pairs of features in columns
         # TODO : refactor. A bit dirty...
 
-        if len(self.selectedFeats[0]) == 0:
+        if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             # Remove "no feature" label
-            item = self.qvFeatureLayouts[0].itemAt(3)
-            widget = item.widget()
-            widget.deleteLater()
-
-        while len(self.selectedFeats[0]) > 0:
-            result = self.qvFeatureLayouts[0].getWidgetPosition(self.selectedFeats[0][-1])
-            self.qvFeatureLayouts[0].removeRow(result[0])
-            self.selectedFeats[0].pop()
+            if len(self.selectedFeats[0]) == 0:
+                item = self.qvFeatureLayouts[0].itemAt(2)
+                if item:
+                    widget = item.widget()
+                    if widget.text() == "No feature":
+                        widget.deleteLater()
+            # Remove all existing features
+            while len(self.selectedFeats[0]) > 0:
+                result = self.qvFeatureLayouts[0].getWidgetPosition(self.selectedFeats[0][-1])
+                self.qvFeatureLayouts[0].removeRow(result[0])
+                self.selectedFeats[0].pop()
 
         # Same, in case with two feature/metric types...
         if self.parameterDict["pipelineType"] == settings.optionKeys[3] \
                 or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+            # Remove "no feature" label
+            if len(self.selectedFeats[0]) == 0:
+                item = self.qvFeatureLayouts[0].itemAt(3)
+                if item:
+                    widget = item.widget()
+                    if widget.text() == "No feature":
+                        widget.deleteLater()
+            # Remove all existing features
+            while len(self.selectedFeats[0]) > 0:
+                result = self.qvFeatureLayouts[0].getWidgetPosition(self.selectedFeats[0][-1])
+                self.qvFeatureLayouts[0].removeRow(result[0])
+                self.selectedFeats[0].pop()
+
+            # Remove "no feature" label in second column
             if len(self.selectedFeats[1]) == 0:
-                # Remove "no feature" label
                 item = self.qvFeatureLayouts[1].itemAt(3)
-                widget = item.widget()
-                widget.deleteLater()
+                if item:
+                    widget = item.widget()
+                    if widget.text() == "No feature":
+                        widget.deleteLater()
+            # Remove all features in second column
             while len(self.selectedFeats[1]) > 0:
                 result = self.qvFeatureLayouts[1].getWidgetPosition(self.selectedFeats[1][-1])
                 self.qvFeatureLayouts[1].removeRow(result[0])
                 self.selectedFeats[1].pop()
-            if len(self.selectedFeats[1]) == 0:
-                noFeatLabel1 = QLabel("No feature")
-                noFeatLabel1.setAlignment(QtCore.Qt.AlignCenter)
-                self.qvFeatureLayouts[1].addWidget(noFeatLabel1)
-
 
         # get auto-selected features and add them to the interface
         if self.parameterDict["pipelineType"] == settings.optionKeys[1] \

@@ -1,9 +1,15 @@
 from itertools import chain, combinations
+import numpy as np
 from PySide2.QtWidgets import QMessageBox
 
 def myPowerset(iterable):
     s = list(iterable)
     return chain.from_iterable(combinations(s, r) for r in range(1, len(s)+1))
+
+def find_nearest(array, value):
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return array[idx], idx
 
 def myMsgBox(text):
     msg = QMessageBox()

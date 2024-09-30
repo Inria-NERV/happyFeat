@@ -4,6 +4,8 @@ from matplotlib.widgets import RectangleSelector
 from matplotlib import cm
 from mne.defaults import _EXTRAPOLATE_DEFAULT, _BORDER_DEFAULT
 
+from happyfeat.lib.utils import find_nearest
+
 import mne
 from mne.io.meas_info import Info
 from mne.viz import topomap
@@ -663,6 +665,7 @@ def plot_metric2(Power_class1, Power_class2, Rsquare, freqs, channel, channel_ar
     plt.legend()
     # plt.show()
 
+
 def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, each_point, fmin, fmax, colormapScale, title):
     fig, ax = plt.subplots()
     font = {'family': 'serif',
@@ -671,13 +674,9 @@ def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, eac
             'size': 14}
     frequence = []
 
-    for i in range(len(freq)):
-        if freq[i] == fmin:
-            index_fmin = i
+    nearest_fmin, index_fmin = find_nearest(freq, fmin)
+    nearest_fmax, index_fmax = find_nearest(freq, fmax)
 
-    for i in range(len(freq)):
-        if freq[i] == fmax:
-            index_fmax = i
     Rsquare_reshape = Rsquare[0:len(channel_array), index_fmin:index_fmax + 1]
 
     vmin = 0
@@ -958,13 +957,9 @@ def plot_Wsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, eac
             }
     frequence = []
 
-    for i in range(len(freq)):
-        if freq[i] == fmin:
-            index_fmin = i
+    nearest_fmin, index_fmin = find_nearest(freq, fmin)
+    nearest_fmax, index_fmax = find_nearest(freq, fmax)
 
-    for i in range(len(freq)):
-        if freq[i] == fmax:
-            index_fmax = i
     Rsquare_reshape = Rsquare[0:len(channel_array), index_fmin:index_fmax + 1]
 
     if np.amin(Rsquare_reshape) < 0:
