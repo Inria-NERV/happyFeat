@@ -87,7 +87,6 @@ class SelectFrequency(Node):
 
             # Transpose the data to have dimensions (time, space)
             combined_data = combined_data.transpose('time', 'space')
-
             self.o.data = combined_data
             self.o.meta = self.i.meta
         else:

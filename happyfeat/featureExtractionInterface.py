@@ -586,7 +586,7 @@ class Dialog(QDialog):
         # Param for training
         self.trainingParamsLayout = QFormLayout()
         self.trainingPartitions = QLineEdit()
-        self.trainingPartitions.setText(str(10))
+        self.trainingPartitions.setText(str(3))
         partitionsText = "Number of k-fold for classification"
         self.trainingParamsLayout.addRow(partitionsText, self.trainingPartitions)
 
@@ -1287,6 +1287,7 @@ class Dialog(QDialog):
             myMsgBox("Nb of k-fold should be a positive number")
             return
 
+
         # create list of files...
         self.trainingFiles = []
         for selectedItem in self.fileListWidgetTrain.selectedItems():
@@ -1393,7 +1394,9 @@ class Dialog(QDialog):
 
         scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames_timeflux[1])
         templateFolder = settings.optionsTemplatesDir[trainingParamDict["pipelineType"]]
-        self.trainClassThread.append( TrainClassifier_Timeflux(scenFile,trainFiles,self.workspaceFolder,self.parameterDict,self.currentSessionId,filter_list,trainingSize,self.currentAttempt,attemptId) )
+        model_file_path=os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train",
+                                          str("classifier-weights-" + str(attemptId) + ".pkl"))
+        self.trainClassThread.append( TrainClassifier_Timeflux(scenFile,trainFiles,self.workspaceFolder,self.parameterDict,self.currentSessionId,filter_list,trainingSize,self.currentAttempt,model_file_path) )
 
         # Signal: Training work thread finished one step
         # Increment progress bar + change its label
@@ -1416,18 +1419,22 @@ class Dialog(QDialog):
         self.progressBarTrain.finish()
         if success:
             # Add training attempt in workspace file
+            print("=== Checking if attempt already done...")
             alreadyDone, attemptId, dummy = \
                 checkIfTrainingAlreadyDone(self.workspaceFile, self.currentSessionId,
                                            self.currentAttempt["SignalFiles"],
                                            self.currentAttempt["Features"])
             if alreadyDone:
+                print("=== replaceTrainingAttempt...")
                 replaceTrainingAttempt(self.workspaceFile, self.currentSessionId, attemptId,
                                        self.currentAttempt["SignalFiles"], self.currentAttempt["CompositeFile"],
                                        self.currentAttempt["Features"], self.currentAttempt["Score"])
             else:
+                print("=== addTrainingAttempt...")
                 addTrainingAttempt(self.workspaceFile, self.currentSessionId,
                                        self.currentAttempt["SignalFiles"], self.currentAttempt["CompositeFile"],
                                        self.currentAttempt["Features"], self.currentAttempt["Score"])
+            print("=== updateTrainingAttemptsTree...")
             self.updateTrainingAttemptsTree()
 
             textGoodbye = str("Classifier weights were written in:\n\t")
@@ -2026,7 +2033,7 @@ class Dialog(QDialog):
         if not results1 and not results2:
             myMsgBox("What are you doing???")
             return
-
+      
         results1.autoselected = None
         results2.autoselected = None
 
@@ -2064,6 +2071,9 @@ class Dialog(QDialog):
 
         for result in [results1, results2]:
             if len(result.Rsigned) > 0:
+                        # Create frequency_bins array
+                num_bins = result.Rsigned.shape[1]  # Number of frequency bins
+                frequency_bins = np.linspace(0, self.samplingFreq / 2, num_bins) 
                 result.autoselected = []
                 Rsigned_reduced = result.Rsigned[Index_electrode, freqMin:freqMax]
                 Max_per_electrode = Rsigned_reduced.max(1)
@@ -2072,10 +2082,12 @@ class Dialog(QDialog):
 
                 for idx in indices_max_final:
                     r2Vals = result.Rsigned[idx, freqMin:freqMax]
-                    idxfreqMax = 7 + np.argmax(r2Vals)
-                    result.autoselected.append((result.electrodes_final[idx], idxfreqMax))
+                    idxfreqMax = freqMin + np.argmax(r2Vals)
+                    actual_freq = frequency_bins[freqMin + np.argmax(r2Vals)] 
+                    result.autoselected.append((result.electrodes_final[idx], actual_freq,idxfreqMax))
 
                 print("Best feats: " + str(result.autoselected))
+
                 if len(result.autoselected) < 1:
                     myMsgBox("Error in automatic selection of best features")
                     # Todo: make more secure & explicit
@@ -2282,7 +2294,6 @@ class Dialog(QDialog):
     def getTrainingParamsFromSelectedAttempt(self):
 
         selectedAttempt = self.lastTrainingResults.selectedItems()
-
         if not selectedAttempt:
             myMsgBox("Please select one training attemp in the list above")
             return
@@ -2349,27 +2360,21 @@ class Dialog(QDialog):
 
         # === 2nd step : check if classifier-weights-X.xml exists
         classifWeightsPath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train",
-                                          str("classifier-weights-" + str(classifIdx) + ".xml"))
+                                          str("classifier-weights-" + str(classifIdx) + ".pkl"))
+        print("classifier path",classifWeightsPath)
         if not os.path.exists(classifWeightsPath):
             myMsgBox("ERROR: for selected classification results (" + str(
                 classifIdx) + "),\nweights file not found in workspace.")
             return
-        # Reformat to openvibe's preference... C:/etc.
-        if platform.system() == 'Windows':
-            classifWeightsPath = classifWeightsPath.replace("\\", "/")
 
         # === 3rd step : update sc3-online.xml with classifier-weights file and relevant features
-        trainingParamDict = self.parameterDict.copy()
-        shouldRun = False
-        isOnline = True
         templateFolder = settings.optionsTemplatesDir[self.parameterDict["pipelineType"]]
+        scenfile= os.path.join(self.workspaceFolder, settings.templateScenFilenames_timeflux[2])
         # Instantiate the thread...
-        self.runClassThread = RunClassifier([], templateFolder,
-                                            self.workspaceFolder, self.ovScript,
-                                            classifWeightsPath,
-                                            listFeat, listFeat2,
-                                            trainingParamDict, sampFreq, electrodeList,
-                                            shouldRun, isOnline)
+        self.runClassThread = UseClassifier_Timeflux(scenfile, 
+                                            self.workspaceFolder, self.parameterDict,self.currentSessionId,
+                                            listFeat, classifWeightsPath)
+
 
         # Signal: Running work thread finished
         self.runClassThread.over.connect(self.running_over)

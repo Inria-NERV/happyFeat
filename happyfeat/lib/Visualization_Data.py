@@ -78,6 +78,7 @@ def topo_plot(Rsquare, title, montageStr, customMontage, electrodes, freqMin, fr
 
     if not useRange:
         freq = str(freqMin)
+        print("freq in here is ",freqMin)
         for i in range(n_channels):
             for j in range(len(electrodes)):
                 if montage.ch_names[i] == electrodes[j]:
@@ -521,7 +522,7 @@ def plot_psd_r2(Power_class1, Power_class2, Rsquare, freqs, channel, channel_arr
 
     classes_max_value = max(max(Selected_class1), max(Selected_class2))
     selected_Rsquare = Rsquare[channel, index_fmin:index_fmax] * classes_max_value
-    # ax.plot(freqs[index_fmin:index_fmax], selected_Rsquare, label="r2", color='black')
+    ax.plot(freqs[index_fmin:index_fmax], selected_Rsquare, label="r2", color='black')
 
     max_r2_index=np.unravel_index(Rsquare.argmax(), Rsquare.shape)
     print(max_r2_index)
@@ -780,6 +781,7 @@ def Reorder_plusplus(Rsquare, electrodes_orig, powerLeft, powerRight, timefreqLe
                              'Fz', 'FCz', 'Cz', 'Pz', 'Oz', 'Fp2', 'F8', 'F4', 'FC6', 'FC2', 'T8', 'C4', 'CP6', 'CP2',
                              'P8', 'P4', 'PO10', 'O2']
     index_elec = []
+    electrode_array_final = []
     if len(electrodes_orig) == 74:
         # NETBCI...
         index_elec = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
@@ -789,13 +791,16 @@ def Reorder_plusplus(Rsquare, electrodes_orig, powerLeft, powerRight, timefreqLe
                       62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73]
 
     else:
+
         for k in range(len(electrodes_target)):
             for i in range(len(electrodes_orig)):
                 if electrodes_orig[i].casefold() == electrodes_target[k].casefold():
                     index_elec.append(i)
+                    electrode_array_final.append(electrodes_orig[i])
                     break
 
     print(index_elec)
+    print(electrode_array_final)
 
     Rsquare_final = np.zeros([Rsquare.shape[0], Rsquare.shape[1]])
     print(powerLeft.shape)

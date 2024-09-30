@@ -78,9 +78,10 @@ class ReadFromCSV(Node):
                     n_samples = len(time)
                     n_freq = len(freq)
                     n_space = len(space)
-
+                    # print("csv brut data",data.shape)
                     # Reshape data
-                    reshaped_data = data.reshape((n_samples, n_freq, n_space))
+                    ### Attention ! Critical reshape situation the reshape should be in coherence with the csv file header structure and the timelfux port data array structure 
+                    reshaped_data = data.reshape((n_samples,  n_space,n_freq)).transpose(0,2,1)
                     self.data.append(reshaped_data)
 
                 # Check for consistency in sampling frequency

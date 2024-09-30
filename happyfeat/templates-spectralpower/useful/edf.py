@@ -304,7 +304,7 @@ class Replay(Node):
             if self._resync:
                 data['time'] = data['time'] + self._offset
                 events['time'] = events['time'] + self._offset
-
+            print("the meta",events.set_index('time'))
             # Update port
             getattr(self, source["name"]).data = data.set_index('time')
             getattr(self, source["name"]).meta = source["meta"]

@@ -82,7 +82,6 @@ class SaveToCSV(Node):
                     else:
                         mode = 'a'
                         header = False
-
                     port.data.to_csv(file_path, mode=mode, header=header, index=False)
                     self._file_handles[file_path] = True
                 if port.meta:

@@ -28,6 +28,9 @@ class Events(Node):
         self.t = 0
         self.pending_stimulations = []  # Store pending stimulations
         self._initialize_sequence()
+        timestamp = datetime.now(timezone.utc)
+        self._run_experiment(timestamp)
+        print('hello')
 
 
         
@@ -59,24 +62,28 @@ class Events(Node):
             new_timestamp = self._convert_to_utc(stimulation[1])
             if new_timestamp <= current_time:
                 to_send.append(stimulation)
-        # Send due stimulations and remove from pending list
+
         for stimulation in to_send:
+            if self.first_class in stimulation:
+                print('Checking if the first class is detected',stimulation)
+            if self.second_class in stimulation:
+                print('Checking if the second class is detected',stimulation)               
             code, timestamp, name = stimulation
-            #here it is just because I need to make ity at the same time as the online one 
             timestamp = pd.Timestamp(timestamp)+timedelta(hours=2)
             port_name = f"o_{name}"
             if hasattr(self, port_name):
                 port = getattr(self, port_name)
                 data = pd.DataFrame([[code, code]], index=[timestamp], columns=["label", "data"])
                 port.data = data
+
             else:
                 raise AttributeError(f"Port {port_name} does not exist")
             self.pending_stimulations.remove(stimulation)
 
+
     def update(self):
+
         self._process_pending_stimulations()
-        timestamp = datetime.now(timezone.utc)
-        self._run_experiment(timestamp)
 
     def _run_experiment(self,timestamp):
         self.t = timestamp
@@ -89,7 +96,7 @@ class Events(Node):
         self.t += timedelta(seconds=self.baseline_duration)
         self._send_stimulation("OVTK_StimulationId_BaselineStop", self.t, "baseline_stop")
         self._send_stimulation("OVTK_StimulationId_Beep", self.t, "beep")
-
+        print('self.sequence',self.sequence)
         # Trial management
         for i in range(self.number_of_trials * 2):
             self._send_stimulation("OVTK_GDF_Start_Of_Trial", self.t, "start_of_trial")
@@ -110,3 +117,6 @@ class Events(Node):
         self._send_stimulation("OVTK_StimulationId_Train", self.t, "train")
         self.t += timedelta(seconds=1)
         self._send_stimulation("OVTK_StimulationId_ExperimentStop", self.t, "experiment_stop")
+
+        
+        

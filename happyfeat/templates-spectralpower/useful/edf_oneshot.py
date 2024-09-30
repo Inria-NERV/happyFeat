@@ -30,7 +30,7 @@ import os
 import sys
 import logging
 from timeflux.core.exceptions import WorkerInterrupt, WorkerLoadError
-
+from scipy.signal import welch
 class Replay(Node):
 
     def __init__(self, filename):
@@ -41,9 +41,24 @@ class Replay(Node):
         self.filename = self._find_path(filename)
         # Start timing the data loading process
         start_time = time.time()
-        
         try:
             self.data = mne.io.read_raw_edf(self.filename, preload=True)
+            # Define the new channel names
+            new_channel_names = ['Fp1','Fz','F3','F7','FT9','FC5','FC1','C3','T7','FCz','CP5','CP1','Pz',
+                                 'P3','P7','O1','Oz','O2','P4','P8','Fpz','CP6','CP2','Cz','C4','T8',
+                                 'FT10','FC6','FC2','F4','F8','Fp2','AF7','AF3','AFz','F1','F5','FT7',
+                                 'FC3','C1','C5','TP7','CP3','P1','P5','PO7','PO3','POz','PO4','PO8',
+                                 'P6','P2','CPz','CP4','TP8','C6','C2','FC4','FT8','F6','AF8','AF4',
+                                 'F2','Iz']
+            # Rename the channels
+            current_channel_names = self.data.ch_names
+            print("the current channel names",current_channel_names)
+
+            # if len(new_channel_names) != len(current_channel_names):
+            #     raise ValueError("Number of new channel names must match the number of existing channels.")
+
+            # rename_dict = dict(zip(current_channel_names, new_channel_names))
+            # self.data.rename_channels(rename_dict)
         except IOError as e:
             raise WorkerInterrupt(e)
 
@@ -56,6 +71,17 @@ class Replay(Node):
         self.events, self.event_id = mne.events_from_annotations(self.data)
         self.events_df = self._create_events_df()
         self.counter=0
+        # Epoch_compute_MI_2_2 = self.select_Event('OVTK_GDF_Left',self.data,self.events,self.event_id,1,4,64)
+        # Epoch_compute_Rest_2_2 = self.select_Event('OVTK_GDF_Right',self.data,self.events,self.event_id,1,4,64)
+        # var_MI=Epoch_compute_MI_2_2.get_data()[:,7,:]
+        # var_REST=Epoch_compute_Rest_2_2.get_data()[:,7,:]
+        # print("get data epoch",Epoch_compute_MI_2_2.get_data().shape)
+        # f_MI, Pxx_MI = welch(x=var_MI, fs=500, nfft=1024, axis=1)
+        # f_REST, Pxx_REST = welch(x=var_REST, fs=500, nfft=1024, axis=1)
+        # print("pxx_mi ",Pxx_MI.shape)
+        # np.save('welchrest.npy',Pxx_REST[:,24])
+        # np.save('welchmi.npy',Pxx_MI[:,24])
+
 
     def update(self):
         self.counter+=1
@@ -101,11 +127,11 @@ class Replay(Node):
         event_times = self._samples_to_datetime(self.events[:, 0], start_time, sfreq)
         
         # Filter events
-        filtered_events = [(event_time, event_id) for event_time, event_id in zip(event_times, self.events[:, 2]) if event_id in [5, 6]]
+        filtered_events = [(event_time, event_id) for event_time, event_id in zip(event_times, self.events[:, 2]) if event_id in [5, 6,7]]
         
         # Separate the filtered events into lists
         event_times_filtered, event_ids_filtered = zip(*filtered_events)
-        
+
         # Create labels and data based on filtered event IDs
         labels = [f"{list(self.event_id.keys())[list(self.event_id.values()).index(event_id)]}" for event_id in event_ids_filtered]
         data = [f"{list(self.event_id.keys())[list(self.event_id.values()).index(event_id)]}" for event_id in event_ids_filtered]
@@ -124,3 +150,10 @@ class Replay(Node):
 
     def terminate(self):
         self.data.close()
+
+
+    def select_Event(self,event_name,RAW_data,events_from_annot,event_id,t_min,t_max,number_electrodes):
+
+        epochs_training = mne.Epochs(RAW_data, events_from_annot, event_id,tmin=t_min, tmax=t_max,preload=True,event_repeated='merge',baseline = None,picks = np.arange(0,number_electrodes))
+        #epochs_training = mne.Epochs(RAW_data, events_from_annot, event_id,tmin = t_min, tmax=t_max,preload=True,event_repeated='merge')
+        return epochs_training[event_name]

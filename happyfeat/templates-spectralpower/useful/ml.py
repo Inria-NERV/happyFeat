@@ -215,7 +215,7 @@ class Pipeline(Node):
             self._receive()
             if self._X is not None:
                 args = [self._X]
-
+                print('args',args)
                 if self.mode.startswith("fit"):
                     args.append(self._y)  
                 self._run_preprocessing()

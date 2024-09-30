@@ -1,5 +1,5 @@
 from timeflux.core.node import Node
-
+import numpy as np
 
 class ToDataFrame(Node):
     """Convert XArray to DataFrame.
@@ -21,11 +21,12 @@ class ToDataFrame(Node):
         self._index_dim = index_dim
         self._indexes = None
         self._indexes_to_unstack = None
-
+        self.indx=0
     def _set_indexes(self, data):
         self._indexes_to_unstack = [index for index in list(data.indexes.keys()) if index != self._index_dim]
 
     def update(self):
+        self.indx=+1
         if not self.i.ready():
             return
 
@@ -33,7 +34,6 @@ class ToDataFrame(Node):
 
         if self._indexes_to_unstack is None:
             self._set_indexes(self.i.data)
-
         self.o.data = self.i.data.to_dataframe("data").unstack(self._indexes_to_unstack)
         self.o.data.columns = self.o.data.columns.droplevel(level=0)
 

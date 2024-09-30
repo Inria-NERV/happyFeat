@@ -9,7 +9,7 @@ from importlib import resources
 
 from PySide2 import QtCore
 from PySide2.QtCore import Signal
-from happyfeat.timeflux.modifyYamFile import modify_Edf_Reader_yaml,modify_extraction_yaml_new,update_filenames
+from happyfeat.timeflux.modifyYamFile import modify_extraction_yaml_new,update_filenames,update_online_scenario
 from happyfeat.lib.mergeRunsCsv import mergeRunsCsv, mergeRunsCsv_new
 from happyfeat.lib.extractMetaData import extractMetadata, generateMetadata
 
@@ -75,7 +75,8 @@ class Extraction_Timeflux(QtCore.QThread):
             csv_file_path=os.path.join(os.path.split(self.signalFolder)[0],"sessions",self.currentSessionId,"extract")
             reader_yaml_file_path=os.path.join(os.path.split(self.signalFolder)[0],"EDF_Reader_oneshot.yaml")
             extraction_yaml_file_path=os.path.join(os.path.split(self.signalFolder)[0],self.scenFile)
-
+            print("param is",self.extractDict["StimulationEpoch"])
+            # modify yaml file
             modify_extraction_yaml_new(
                 extraction_yaml_file_path,
                 filename=os.path.join(self.signalFolder,signalFile),
@@ -164,7 +165,7 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
         idxFile = 0
 
         self.useBaselineFiles = self.parameterDict["pipelineType"] == optionKeys[1]
-
+        # load files per class
         validFiles = []
         for selectedFilesForViz in self.analysisFiles:
             idxFile += 1
@@ -283,7 +284,7 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
             power_cond2, timefreq_cond2 = \
                 Extract_CSV_Data_Timeflux(self.dataNp2[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
 
-
+  
             if power_cond1_final is None:
                 power_cond1_final = power_cond1
                 power_cond2_final = power_cond2
@@ -326,6 +327,8 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
         Rsigned = Compute_Rsquare_Map(power_cond2_final[:, :, :(n_bins - 1)],
                                       power_cond1_final[:, :, :(n_bins - 1)])
 
+
+        print(electrodeList)
         # Reordering for R map and topography...
         if self.parameterDict["sensorMontage"] == "standard_1020" \
             or self.parameterDict["sensorMontage"] == "biosemi64":
@@ -370,7 +373,7 @@ class TrainClassifier_Timeflux(QtCore.QThread):
     over = Signal(bool, str)
 
     def __init__(self, scenFile, signalFiles, workspaceFolder,
-                 parameterDict, currentSessionId,filter_list,cv,currentAttempt,attemptId, parent=None):
+                 parameterDict, currentSessionId,filter_list,cv,currentAttempt,model_path, parent=None):
 
         super().__init__(parent)
         self.stop = False
@@ -382,14 +385,14 @@ class TrainClassifier_Timeflux(QtCore.QThread):
         self.extractDict = parameterDict["Sessions"][currentSessionId]["ExtractionParams"].copy()
         self.filter_list=filter_list
         self.cv=cv
-        self.attemptId=attemptId
+        self.model_path=model_path
         self.currentAttempt=currentAttempt
     def run(self):
 
         list_class_1=[]
         list_class_2=[]
 
-        # cretae the list of file names
+        # create the list of file names
         for selectedFilesForViz in self.signalFiles:
             pipelineLabel = "SPECTRUM"
             class1label = self.parameterDict["AcquisitionParams"]["Class1"]
@@ -411,10 +414,8 @@ class TrainClassifier_Timeflux(QtCore.QThread):
             list_class_1,
             list_class_2,
             self.filter_list,
-            self.workspaceFolder,
+            self.model_path,
             self.cv,
-            self.attemptId
-
 
         )
 
@@ -435,6 +436,10 @@ class TrainClassifier_Timeflux(QtCore.QThread):
                     self.over.emit(False, output.decode('utf-8').strip())
                 if "accuracy" in str(output):
                     classification_scores= str(output)
+                if "specificity" in str(output):
+                    specificity_scores= str(output)
+                if "sensitivity" in str(output):
+                    sensitivity_scores= str(output)
                 if "Terminated" in str(output):
                     p.kill()
                     break
@@ -443,6 +448,8 @@ class TrainClassifier_Timeflux(QtCore.QThread):
         #Accuracy
         # Split the string by spaces and get the last element, which is the number
         number_str = classification_scores.split()[-1]
+        number_sens= specificity_scores.split()[-1]
+        number_spe= sensitivity_scores.split()[-1]
         # Extract the float number using regex
         match = re.search(r"[-+]?\d*\.\d+|\d+", number_str)
         if match:
@@ -451,6 +458,24 @@ class TrainClassifier_Timeflux(QtCore.QThread):
         else:
             print("No number found")
         number= round(number, 3)
+        # Extract the sensitivity
+        match_sens = re.search(r"[-+]?\d*\.\d+|\d+", number_sens)
+        if match_sens:
+            number_sens = float(match_sens.group(0))
+            number_sens = round(number_sens, 3)
+            print(f"Sensitivity score: {number_sens}")
+        else:
+            print("No sensitivity score found")
+
+        # Extract the specificity
+        match_spe = re.search(r"[-+]?\d*\.\d+|\d+", number_spe)
+        if match_spe:
+            number_spe = float(match_spe.group(0))
+            number_spe = round(number_spe, 3)
+            print(f"Specificity score: {number_spe}")
+        else:
+            print("No specificity score found")
+
         self.currentAttempt["Score"]=number
         # PREPARE GOODBYE MESSAGE...
         textFeats = str("")
@@ -464,8 +489,9 @@ class TrainClassifier_Timeflux(QtCore.QThread):
                 "\t" + "Channel " + str(self.filter_list[i][0]) + " at " + str(self.filter_list[i][1]) + " Hz\n")
 
         textDisplay = textFeats
-        textDisplay += str("\n" + "Classification score is :   " + str(number))
-
+        textDisplay += str("\n" + "Classification accuracy is :   " + str(number))
+        textDisplay += str("\n" + "Classification specificity is :   " + str(number_spe))
+        textDisplay += str("\n" + "Classification sensitivity is :   " + str(number_sens))
 
 
         self.info.emit(True)    # send "info" signal to increment progressbar
@@ -477,3 +503,66 @@ class TrainClassifier_Timeflux(QtCore.QThread):
     def stopThread(self):
         self.stop = True
 
+class UseClassifier_Timeflux(QtCore.QThread):
+    info = Signal(bool)
+    info2 = Signal(str)
+    over = Signal(bool, str)
+
+    def __init__(self, scenFile, workspaceFolder,
+                 parameterDict, currentSessionId,filter_list,model_file_path, parent=None):
+
+        super().__init__(parent)
+        self.stop = False
+        self.scenFile = scenFile
+        self.workspaceFolder = workspaceFolder
+        self.parameterDict = parameterDict.copy()
+        self.currentSessionId = currentSessionId
+        self.extractDict = parameterDict["Sessions"][currentSessionId]["ExtractionParams"].copy()
+        self.filter_list=filter_list
+        self.model_file_path=model_file_path
+    def run(self):
+
+
+        
+        # Find the path for the scenario yaml file
+        classify_yaml_file_path=os.path.join(self.workspaceFolder,self.scenFile)
+        print("the path we are checkinh",classify_yaml_file_path)
+
+        # Change parameters for the yaml File
+        update_online_scenario(
+            classify_yaml_file_path,
+            rate=1,
+            keys=self.filter_list,
+            epoch_params={'before': self.extractDict["StimulationDelay"], 'after': self.extractDict["StimulationEpoch"]},
+            trim_samples=self.extractDict["trim_samples"],
+            welch_rate=self.extractDict["PsdSize"],
+            path=self.model_file_path,
+            nfft=self.extractDict["nfft"]
+        )
+
+
+        # Launch timeflux scenario !
+        p = subprocess.Popen([ "timeflux", "-d", str(classify_yaml_file_path)],
+                                stdin=subprocess.PIPE, stdout=subprocess.PIPE) # add cwd if needed
+
+
+
+        # Print console output, and detect Errors and end of process...
+        while True:
+            output = p.stdout.readline()
+            if p.poll() is not None:
+                break
+            if output:
+                print(str(output))
+                if "Terminated" in str(output):
+                    p.kill()
+                    break
+        
+        self.info.emit(True)    # send "info" signal to increment progressbar
+        tstop = time.perf_counter()
+
+        self.stop = True
+        self.over.emit(True)
+
+    def stopThread(self):
+        self.stop = True
