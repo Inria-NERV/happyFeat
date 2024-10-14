@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "happyfeat"
-version = "0.2.0"
+version = "0.2.1"
 authors = [
   { name="Inria NERV", email="adesbois@inria.fr" },
 ]
-description = "ex. package for HappyFeat"
+description = "Package for HappyFeat"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = "==3.9"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: BSD License",
