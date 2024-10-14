@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "happyfeat"
-version = "0.2.1"
+version = "0.2.1.1"
 authors = [
   { name="Inria NERV", email="adesbois@inria.fr" },
 ]
