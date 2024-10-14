@@ -2,6 +2,13 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## 0.2.1
+- [feature] AutoFeat: added option to only consider R2 cases satisfying [class2-class1 > 0] (available via a checkbox in the "visualization" part of the GUI)
+- [bugfix] reviewed/fixed how frequencies are propagated in the app (bugs appeared when using fres != 0): topomap, training, autofeat
+- [bugfix] GUI fixes (greyed out areas, feature options in the "Train" part)
+- [bugfix] SC3 scenario templates fixes
+- [bugfix] Fixed potential crashes
+
 ## 0.2.0
 - [feature] AutoFeat: Automatic training feature selection mechanism, with option to define a subselection of channels and frequencies for this selection.
 - [feature] "Combination training" mechanism.
