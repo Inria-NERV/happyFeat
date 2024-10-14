@@ -44,7 +44,7 @@ class Dialog(QDialog):
         print(self.userConfig)
         if not os.path.exists(self.userConfig):
             with open(self.userConfig, "a+") as newfile:
-                dict = {"HappyFeatVersion": "0.2.0"}
+                dict = {"HappyFeatVersion": "0.2.1"}
                 json.dump(dict, newfile, indent=4)
 
         with open(self.userConfig, "r+") as userCfg:
@@ -141,7 +141,7 @@ class Dialog(QDialog):
             workDict = json.load(wp)
             if workDict:
                 if "HappyFeatVersion" in workDict:
-                    if workDict["HappyFeatVersion"] != "0.2.0":
+                    if workDict["HappyFeatVersion"] != "0.2.1":
                         textWarning = "Warning: Workspace was created using an older version of HappyFeat!"
                         textWarning += "\nThis may result in unexpected behaviours. Do you want to continue?"
                         retVal = myOkCancelBox(textWarning)
