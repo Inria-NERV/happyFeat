@@ -2,8 +2,13 @@
 
 **HappyFeat** is available on [PyPI](https://pypi.org/project/happyfeat/) and [GitHub](https://github.com/Inria-NERV/happyFeat).
 
-!!! tip
-    Using a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/) is recommended!
+!!! warning
+    Using a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/) (e.g. *venv*) is **highly** recommended! 
+	
+!!! warning
+	As of version 0.2.1, HappyFeat works with **Python 3.9**. 
+	
+	Using different versions may results in crashed or unhandled errors.
     
 ## Official version
 
