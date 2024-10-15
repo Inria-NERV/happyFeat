@@ -329,9 +329,10 @@ class Dialog(QDialog):
 
         src_dir=path = os.path.join(os.path.dirname(__file__), self.templateFolder, 'useful')
         dst_dir = os.path.join(self.workspaceFolder  ,'useful')
-        copytree(src_dir, dst_dir)        
+        copytree(src_dir, dst_dir)
 
-        for filename in settings.templateScenFilenames_timeflux:
+        # for filename in settings.templateScenFilenames_timeflux:  ## TIMEFLUX
+        for filename in settings.templateScenFilenames:
             with resources.path(str(__name__.split('.')[0] + '.' + self.templateFolder), filename) as srcFile:
 
                 destFile = os.path.join(self.workspaceFolder, filename)

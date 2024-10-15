@@ -7,3 +7,4 @@ statsmodels>=0.13.1
 scipy>=1.7.1
 spectrum>=0.8.0
 matplotlib==3.8.4
+ruamel.yaml==0.18.6

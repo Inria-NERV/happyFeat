@@ -1075,7 +1075,7 @@ class Dialog(QDialog):
             signalFiles.append(selectedItem.text() )
         signalFolder = os.path.join(self.workspaceFolder, "signals")
         scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames[1])
-	# scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames_timeflux[0]) # TIMEFLUX
+	    # scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames_timeflux[0]) # TIMEFLUX
 
         # For each selected signal file, check if extraction has already been done
         # => in .hfw file, at current extract idx, entry exists
@@ -1123,7 +1123,7 @@ class Dialog(QDialog):
 
         # Instantiate the thread...
         self.extractThread = Extraction(self.ovScript, scenFile, signalFiles, signalFolder, self.parameterDict, self.currentSessionId)
-	# self.extractThread = Extraction_Timeflux( scenFile, signalFiles, signalFolder, self.parameterDict, self.currentSessionId) # TIMEFLUX
+	    # self.extractThread = Extraction_Timeflux( scenFile, signalFiles, signalFolder, self.parameterDict, self.currentSessionId) # TIMEFLUX
         # Signal: Extraction work thread finished one file of the selected list.
         # Refresh the viz&train file lists to make it available + increment progress bar
         self.extractThread.info.connect(self.progressBarExtract.increment)
@@ -1408,8 +1408,8 @@ class Dialog(QDialog):
         if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             if self.enableSpeedUp.isChecked():
                 enableSpeedUp = True
-	### TIMEFLUX
-	if 0:
+        ### TIMEFLUX
+        if 0:
             suffix = ""
             if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
                suffix = "-SPECTRUM"
@@ -1433,10 +1433,12 @@ class Dialog(QDialog):
 
             scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames_timeflux[1])
         templateFolder = settings.optionsTemplatesDir[trainingParamDict["pipelineType"]]
-	### TIMEFLUX
+
+	    ### TIMEFLUX
         # model_file_path=os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train",
         #                                   str("classifier-weights-" + str(attemptId) + ".pkl"))
-        self.trainClassThread.append( TrainClassifier_Timeflux(scenFile,trainFiles,self.workspaceFolder,self.parameterDict,self.currentSessionId,filter_list,trainingSize,self.currentAttempt,model_file_path) )
+        # self.trainClassThread.append( TrainClassifier_Timeflux(scenFile,trainFiles,self.workspaceFolder,self.parameterDict,self.currentSessionId,filter_list,trainingSize,self.currentAttempt,model_file_path) )
+
         self.trainClassThread.append( TrainClassifier(self.trainingFiles,
                                                     signalFolder, templateFolder,
                                                     self.workspaceFolder,
@@ -1488,7 +1490,7 @@ class Dialog(QDialog):
 
             textGoodbye = str("Classifier weights were written in:\n\t")
             textGoodbye += self.workspaceFolder + str("/classifier-weights.xml\n")
-		# textGoodbye += self.workspaceFolder + str("/fitted_model.pkl\n") # TIMEFLUX
+		    # textGoodbye += self.workspaceFolder + str("/fitted_model.pkl\n") # TIMEFLUX
             textGoodbye += str("If those results are satisfying, you can now open in the OV Designer:\n\t") \
                            + self.workspaceFolder + str("/sc3-online.xml in the Designer")
 
@@ -2165,17 +2167,16 @@ class Dialog(QDialog):
 
         # Remove all pairs of features in columns
         # TODO : refactor. A bit dirty...
-
         if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
                 or self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             # Remove "no feature" label
-        if len(self.selectedFeats[0]) == 0:
+            if len(self.selectedFeats[0]) == 0:
                 item = self.qvFeatureLayouts[0].itemAt(2)
                 if item:
-            widget = item.widget()
+                    widget = item.widget()
                     if widget.text() == "No feature":
-            widget.deleteLater()
-            # Remove all existing features
+                        widget.deleteLater()
+        # Remove all existing features
         while len(self.selectedFeats[0]) > 0:
             result = self.qvFeatureLayouts[0].getWidgetPosition(self.selectedFeats[0][-1])
             self.qvFeatureLayouts[0].removeRow(result[0])
@@ -2199,18 +2200,16 @@ class Dialog(QDialog):
 
             # Remove "no feature" label in second column
             if len(self.selectedFeats[1]) == 0:
-
                 item = self.qvFeatureLayouts[1].itemAt(3)
                 if item:
-                widget = item.widget()
+                    widget = item.widget()
                     if widget.text() == "No feature":
-                widget.deleteLater()
+                        widget.deleteLater()
             # Remove all features in second column
             while len(self.selectedFeats[1]) > 0:
                 result = self.qvFeatureLayouts[1].getWidgetPosition(self.selectedFeats[1][-1])
                 self.qvFeatureLayouts[1].removeRow(result[0])
                 self.selectedFeats[1].pop()
-
 
         # get auto-selected features and add them to the interface
         if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
@@ -2449,8 +2448,9 @@ class Dialog(QDialog):
         # === 2nd step : check if classifier-weights-X.xml exists
         classifWeightsPath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train",
                                           str("classifier-weights-" + str(classifIdx) + ".xml"))
-	# classifWeightsPath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train",
-	#                                          str("classifier-weights-" + str(classifIdx) + ".pkl")) # TIMEFLUX
+        # classifWeightsPath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train",
+        #                                          str("classifier-weights-" + str(classifIdx) + ".pkl")) # TIMEFLUX
+
         if not os.path.exists(classifWeightsPath):
             myMsgBox("ERROR: for selected classification results (" + str(
                 classifIdx) + "),\nweights file not found in workspace.")
@@ -2464,7 +2464,8 @@ class Dialog(QDialog):
         shouldRun = False
         isOnline = True
         templateFolder = settings.optionsTemplatesDir[self.parameterDict["pipelineType"]]
-	# scenfile= os.path.join(self.workspaceFolder, settings.templateScenFilenames_timeflux[2])	# TIMEFLUX
+	    # scenfile= os.path.join(self.workspaceFolder, settings.templateScenFilenames_timeflux[2])	# TIMEFLUX
+
         # Instantiate the thread...
         self.runClassThread = RunClassifier([], templateFolder,
                                             self.workspaceFolder, self.ovScript,
@@ -2473,8 +2474,8 @@ class Dialog(QDialog):
                                             trainingParamDict, sampFreq, electrodeList,
                                             shouldRun, isOnline)
 
-	### TIMEFLUX
-	# self.runClassThread = UseClassifier_Timeflux(scenfile, 
+        ### TIMEFLUX
+        # self.runClassThread = UseClassifier_Timeflux(scenfile,
         #                                    self.workspaceFolder, self.parameterDict,self.currentSessionId,
         #                                    listFeat, classifWeightsPath)
 
