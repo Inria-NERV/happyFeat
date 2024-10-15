@@ -15,3 +15,5 @@ workspace/*.hfw
 site/
 build/
 dist/
+
+happyfeat/config.json
