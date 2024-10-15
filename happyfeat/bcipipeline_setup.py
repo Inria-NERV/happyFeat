@@ -3,7 +3,7 @@ import os
 import mne
 import subprocess
 from multiprocessing import Process
-from shutil import copyfile
+from shutil import copyfile , copytree
 import json
 from threading import Thread
 import pandas as pd
@@ -129,7 +129,7 @@ class Dialog(QDialog):
         self.show()
 
     def initAcqParams(self):
-
+        print('holaaaaaaaaaaaaaaaaaaaaaa')
         # PARAMETERS
         labelText = [None, None]
         label = [None, None]
@@ -326,8 +326,14 @@ class Dialog(QDialog):
         #   SC3 (ONLINE)
         #   SC2-SPEEDUP-FIRSTSTEP (TRAIN+, 1)
         #   SC2-SPEEDUP-FINALIZE  (TRAIN+, 2)
-        for filename in settings.templateScenFilenames:
+
+        src_dir=path = os.path.join(os.path.dirname(__file__), self.templateFolder, 'useful')
+        dst_dir = os.path.join(self.workspaceFolder  ,'useful')
+        copytree(src_dir, dst_dir)        
+
+        for filename in settings.templateScenFilenames_timeflux:
             with resources.path(str(__name__.split('.')[0] + '.' + self.templateFolder), filename) as srcFile:
+
                 destFile = os.path.join(self.workspaceFolder, filename)
                 if os.path.exists(srcFile):
                     print("---Copying file " + str(srcFile) + " to " + str(destFile))
@@ -336,9 +342,9 @@ class Dialog(QDialog):
                         modifyScenarioGeneralSettings(destFile, self.parameterDict)
 
         # SPECIAL CASES :
-        #   SC1 & SC3 : "GRAZ" BOX SETTINGS
-        modifyAcqScenario(os.path.join(self.workspaceFolder, settings.templateScenFilenames[0]), self.parameterDict)
-        modifyAcqScenario(os.path.join(self.workspaceFolder, settings.templateScenFilenames[3]), self.parameterDict)
+        # #   SC1 & SC3 : "GRAZ" BOX SETTINGS
+        # modifyAcqScenario(os.path.join(self.workspaceFolder, settings.templateScenFilenames[0]), self.parameterDict)
+        # modifyAcqScenario(os.path.join(self.workspaceFolder, settings.templateScenFilenames[3]), self.parameterDict)
 
         if launch:
             self.launchTrue = True

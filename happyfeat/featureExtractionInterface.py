@@ -45,7 +45,7 @@ from happyfeat.lib.utils import *
 from happyfeat.lib.workspaceMgmt import *
 from happyfeat.lib.workThreads import *
 from happyfeat.lib.myProgressBar import ProgressBar, ProgressBarNoInfo
-
+from happyfeat.timeflux.Threads import *
 import happyfeat.lib.bcipipeline_settings as settings
 
 class Features:
@@ -747,6 +747,7 @@ class Dialog(QDialog):
         self.refreshSignalList(self.fileListWidget, self.workspaceFolder)
         self.refreshAvailableFilesForVizList(self.workspaceFolder, self.currentSessionId)
         self.refreshAvailableTrainSignalList(self.workspaceFolder, self.currentSessionId)
+        # self.refreshAvailableTrainSignalList_Timeflux(self.workspaceFolder, self.currentSessionId)
         return
 
     def refreshSignalList(self, listwidget, workingFolder):
@@ -758,6 +759,7 @@ class Dialog(QDialog):
         # first get a list of all files in workingfolder that match the condition
         filelist = []
         for filename in os.listdir(signalFolder):
+            # if filename.endswith(".edf"):    # TIMEFLUX
             if filename.endswith(".ov"):
                 filelist.append(filename)
 
@@ -837,7 +839,6 @@ class Dialog(QDialog):
                 self.availableFilesForVizList.addItem(basenameSuffix)
 
         return
-
     def refreshAvailableTrainSignalList(self, workspaceFolder, currentSessionId):
         # ----------
         # Refresh available training files.
@@ -866,7 +867,96 @@ class Dialog(QDialog):
             if filename not in items:
                 self.fileListWidgetTrain.addItem(filename)
 
+    def refreshAvailableTrainSignalList_Timeflux(self, workspaceFolder, currentSessionId):
+        # ----------
+        # Refresh available CSV spectrum files.
+        # Only mention current class (set in parameters), and check that both classes are present
+        # ----------
+        suffix1 = None
+        suffix2 = None
+        if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
+            suffix1 = "-SPECTRUM"
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+            suffix1 = "-CONNECT"
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+            suffix1 = "-SPECTRUM"
+            suffix2 = "-CONNECT"
+        suffixFinal = suffix1
+        if suffix2:
+            suffixFinal += suffix2
+
+        workingFolder = os.path.join(workspaceFolder, "sessions", currentSessionId, "extract")
+        class1label = self.parameterDict["AcquisitionParams"]["Class1"]
+        class2label = self.parameterDict["AcquisitionParams"]["Class2"]
+
+        # first get a list of all csv files in workingfolder that match the condition
+        availableCsvs = []
+        for filename in os.listdir(workingFolder):
+            if filename.endswith(str(suffix1 + "-" + class1label + ".csv")):
+                basename = filename.removesuffix(str(suffix1 + "-" + class1label + ".csv"))
+                otherClass = str(basename + suffix1 + "-" + class2label + ".csv")
+                if otherClass in os.listdir(workingFolder):
+                    if not suffix2:
+                        # no need to check for additional files...
+                        availableCsvs.append(basename)
+                    else:
+                        # we need to check that files with suffix 2 are also present
+                        otherMetric1 = str(basename + suffix2 + "-" + class1label + ".csv")
+                        otherMetric2 = str(basename + suffix2 + "-" + class2label + ".csv")
+                        if otherMetric1 in os.listdir(workingFolder) and otherMetric2 in os.listdir(workingFolder):
+                            availableCsvs.append(basename)
+
+        suffixFinal = suffix1
+        if suffix2:
+            suffixFinal += suffix2
+        # iterate over existing items in widget and delete those who don't exist anymore
+        for x in range(self.fileListWidgetTrain.count() - 1, -1, -1):
+            tempitem = self.fileListWidgetTrain.item(x).text()
+            if tempitem.removesuffix(suffixFinal) not in availableCsvs:
+                self.fileListWidgetTrain.takeItem(x)
+
+        # iterate over filelist and add new files to listwidget
+        # for that, create temp list of items in listwidget
+        items = []
+        for x in range(self.fileListWidgetTrain.count()):
+            items.append(self.fileListWidgetTrain.item(x).text())
+        for basename in availableCsvs:
+            basenameSuffix = str(basename+suffixFinal)
+            if basenameSuffix not in items:
+                self.fileListWidgetTrain.addItem(basenameSuffix)
+
         return
+
+    # def refreshAvailableTrainSignalList(self, workspaceFolder, currentSessionId):
+    #     # ----------
+    #     # Refresh available training files.
+    #     # ----------
+
+    #     workingFolder = os.path.join(workspaceFolder, "sessions", currentSessionId, "train")
+
+    #     # first get a list of all csv files in workingfolder that match the condition
+    #     availableTrainSigs = []
+    #     for filename in os.listdir(workingFolder):
+    #         if filename.endswith(str("-TRIALS.csv")):
+    #             availableTrainSigs.append(filename)
+
+    #     # iterate over existing items in widget and delete those who don't exist anymore
+    #     for x in range(self.fileListWidgetTrain.count() - 1, -1, -1):
+    #         tempitem = self.fileListWidgetTrain.item(x).text()
+    #         if tempitem not in availableTrainSigs:
+    #             self.fileListWidgetTrain.takeItem(x)
+
+    #     # iterate over filelist and add new files to listwidget
+    #     # for that, create temp list of items in listwidget
+    #     items = []
+    #     for x in range(self.fileListWidgetTrain.count()):
+    #         items.append(self.fileListWidgetTrain.item(x).text())
+    #     for filename in availableTrainSigs:
+    #         if filename not in items:
+    #             self.fileListWidgetTrain.addItem(filename)
+
+    #     return
 
     def updateExtractParameters(self):
         # ----------
@@ -930,8 +1020,7 @@ class Dialog(QDialog):
             # Manually refresh lists
             self.refreshLists()
             self.updateTrainingAttemptsTree()
-
-            # Manually set Visualization part "off", to force user to reload a run
+	    # Manually set Visualization part "off", to force user to reload a run
             self.enablePlotBtns(False)
 
         return changed, alreadyExists, newId
@@ -986,6 +1075,7 @@ class Dialog(QDialog):
             signalFiles.append(selectedItem.text() )
         signalFolder = os.path.join(self.workspaceFolder, "signals")
         scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames[1])
+	# scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames_timeflux[0]) # TIMEFLUX
 
         # For each selected signal file, check if extraction has already been done
         # => in .hfw file, at current extract idx, entry exists
@@ -1033,6 +1123,7 @@ class Dialog(QDialog):
 
         # Instantiate the thread...
         self.extractThread = Extraction(self.ovScript, scenFile, signalFiles, signalFolder, self.parameterDict, self.currentSessionId)
+	# self.extractThread = Extraction_Timeflux( scenFile, signalFiles, signalFolder, self.parameterDict, self.currentSessionId) # TIMEFLUX
         # Signal: Extraction work thread finished one file of the selected list.
         # Refresh the viz&train file lists to make it available + increment progress bar
         self.extractThread.info.connect(self.progressBarExtract.increment)
@@ -1090,6 +1181,7 @@ class Dialog(QDialog):
         # TODO : refactor using automatic feature selection possibility
         if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
             self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq)
+            # self.loadFilesForVizThread = LoadFilesForVizPowSpectrum_Timeflux(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq) # TIMEFLUX
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             self.loadFilesForVizThread = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features, self.samplingFreq)
         elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
@@ -1316,8 +1408,35 @@ class Dialog(QDialog):
         if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             if self.enableSpeedUp.isChecked():
                 enableSpeedUp = True
+	### TIMEFLUX
+	if 0:
+            suffix = ""
+            if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
+               suffix = "-SPECTRUM"
+            elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+                suffix = "-CONNECT"
+            elif self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                     or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+                suffix = "-SPECTRUM-CONNECT"
 
+            trainFiles = []
+            for selectedItem in self.fileListWidgetTrain.selectedItems():
+                trainFiles.append(selectedItem.text().removesuffix(suffix))
+            print("features list",listFeats)
+
+            # Transforming the list
+            filter_list = [item.split(';') for item in listFeats]
+
+            # Convert the second element of each sublist to an integer
+            filter_list = [[ele[0], int(ele[1])] for ele in filter_list]
+            print(filter_list)
+
+            scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames_timeflux[1])
         templateFolder = settings.optionsTemplatesDir[trainingParamDict["pipelineType"]]
+	### TIMEFLUX
+        # model_file_path=os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train",
+        #                                   str("classifier-weights-" + str(attemptId) + ".pkl"))
+        self.trainClassThread.append( TrainClassifier_Timeflux(scenFile,trainFiles,self.workspaceFolder,self.parameterDict,self.currentSessionId,filter_list,trainingSize,self.currentAttempt,model_file_path) )
         self.trainClassThread.append( TrainClassifier(self.trainingFiles,
                                                     signalFolder, templateFolder,
                                                     self.workspaceFolder,
@@ -1349,23 +1468,27 @@ class Dialog(QDialog):
         self.progressBarTrain.finish()
         if success:
             # Add training attempt in workspace file
+            print("=== Checking if attempt already done...")
             alreadyDone, attemptId, dummy = \
                 checkIfTrainingAlreadyDone(self.workspaceFile, self.currentSessionId,
                                            self.currentAttempt["SignalFiles"],
                                            self.currentAttempt["Features"])
             if alreadyDone:
+                print("=== replaceTrainingAttempt...")
                 replaceTrainingAttempt(self.workspaceFile, self.currentSessionId, attemptId,
                                        self.currentAttempt["SignalFiles"], self.currentAttempt["CompositeFile"],
                                        self.currentAttempt["Features"], self.currentAttempt["Score"])
             else:
+                print("=== addTrainingAttempt...")
                 addTrainingAttempt(self.workspaceFile, self.currentSessionId,
                                        self.currentAttempt["SignalFiles"], self.currentAttempt["CompositeFile"],
                                        self.currentAttempt["Features"], self.currentAttempt["Score"])
-
+            print("=== updateTrainingAttemptsTree...")
             self.updateTrainingAttemptsTree()
 
             textGoodbye = str("Classifier weights were written in:\n\t")
             textGoodbye += self.workspaceFolder + str("/classifier-weights.xml\n")
+		# textGoodbye += self.workspaceFolder + str("/fitted_model.pkl\n") # TIMEFLUX
             textGoodbye += str("If those results are satisfying, you can now open in the OV Designer:\n\t") \
                            + self.workspaceFolder + str("/sc3-online.xml in the Designer")
 
@@ -2046,17 +2169,17 @@ class Dialog(QDialog):
         if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
                 or self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             # Remove "no feature" label
-            if len(self.selectedFeats[0]) == 0:
+        if len(self.selectedFeats[0]) == 0:
                 item = self.qvFeatureLayouts[0].itemAt(2)
                 if item:
-                    widget = item.widget()
+            widget = item.widget()
                     if widget.text() == "No feature":
-                        widget.deleteLater()
+            widget.deleteLater()
             # Remove all existing features
-            while len(self.selectedFeats[0]) > 0:
-                result = self.qvFeatureLayouts[0].getWidgetPosition(self.selectedFeats[0][-1])
-                self.qvFeatureLayouts[0].removeRow(result[0])
-                self.selectedFeats[0].pop()
+        while len(self.selectedFeats[0]) > 0:
+            result = self.qvFeatureLayouts[0].getWidgetPosition(self.selectedFeats[0][-1])
+            self.qvFeatureLayouts[0].removeRow(result[0])
+            self.selectedFeats[0].pop()
 
         # Same, in case with two feature/metric types...
         if self.parameterDict["pipelineType"] == settings.optionKeys[3] \
@@ -2076,16 +2199,18 @@ class Dialog(QDialog):
 
             # Remove "no feature" label in second column
             if len(self.selectedFeats[1]) == 0:
+
                 item = self.qvFeatureLayouts[1].itemAt(3)
                 if item:
-                    widget = item.widget()
+                widget = item.widget()
                     if widget.text() == "No feature":
-                        widget.deleteLater()
+                widget.deleteLater()
             # Remove all features in second column
             while len(self.selectedFeats[1]) > 0:
                 result = self.qvFeatureLayouts[1].getWidgetPosition(self.selectedFeats[1][-1])
                 self.qvFeatureLayouts[1].removeRow(result[0])
                 self.selectedFeats[1].pop()
+
 
         # get auto-selected features and add them to the interface
         if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
@@ -2324,6 +2449,8 @@ class Dialog(QDialog):
         # === 2nd step : check if classifier-weights-X.xml exists
         classifWeightsPath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train",
                                           str("classifier-weights-" + str(classifIdx) + ".xml"))
+	# classifWeightsPath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train",
+	#                                          str("classifier-weights-" + str(classifIdx) + ".pkl")) # TIMEFLUX
         if not os.path.exists(classifWeightsPath):
             myMsgBox("ERROR: for selected classification results (" + str(
                 classifIdx) + "),\nweights file not found in workspace.")
@@ -2337,6 +2464,7 @@ class Dialog(QDialog):
         shouldRun = False
         isOnline = True
         templateFolder = settings.optionsTemplatesDir[self.parameterDict["pipelineType"]]
+	# scenfile= os.path.join(self.workspaceFolder, settings.templateScenFilenames_timeflux[2])	# TIMEFLUX
         # Instantiate the thread...
         self.runClassThread = RunClassifier([], templateFolder,
                                             self.workspaceFolder, self.ovScript,
@@ -2344,6 +2472,12 @@ class Dialog(QDialog):
                                             listFeat, listFeat2,
                                             trainingParamDict, sampFreq, electrodeList,
                                             shouldRun, isOnline)
+
+	### TIMEFLUX
+	# self.runClassThread = UseClassifier_Timeflux(scenfile, 
+        #                                    self.workspaceFolder, self.parameterDict,self.currentSessionId,
+        #                                    listFeat, classifWeightsPath)
+
 
         # Signal: Running work thread finished
         self.runClassThread.over.connect(self.running_over)

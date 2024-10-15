@@ -33,6 +33,12 @@ templateScenFilenames = ["sc1-monitor-acq.xml",
                          "sc4-run-replay.xml",
                          "mi-stimulations.lua"]
 
+global templateScenFilenames_timeflux
+templateScenFilenames_timeflux = ["sc2_extract_one.yaml",
+                                "sc_2_train_offline_list_2.yaml",
+                                "sc3_predict_events_selection.yaml"]
+
+
 global connectMetrics
 connectMetrics = [#"MagnitudeSquaredCoherence",
                   #"ImaginaryCoherence",
@@ -62,14 +68,19 @@ pipelineExtractSettings = {optionKeys[0]: None,
 
                            # POWER SPECTRUM
                            optionKeys[1]:
-                               {"StimulationEpoch": "3",
-                                "StimulationDelay": "1",
-                                "TimeWindowLength": "0.25",
-                                "TimeWindowShift": "0.161",
+                               {"StimulationEpoch": 3.5,
+                                "StimulationDelay": 0,
+                                # "TimeWindowLength": "0.25",
+                                # "TimeWindowShift": "0.161",
                                 # "AutoRegressiveOrder": "19",
-                                "AutoRegressiveOrderTime": "0.038",
-                                # "PsdSize": "500",
-                                "FreqRes": "1",
+                                # "AutoRegressiveOrderTime": "0.038",
+                                "PsdSize": "500",
+                                "FreqRes": 1,
+                                "trim_samples": 1500,
+                                "nfft" : 1024,
+                                # "range_A": [8,30],
+                                # "range_B": [8,30],
+
                                 },
 
                            # CONNECTIVITY
@@ -126,12 +137,12 @@ paramIdText = {"TrialNb": "Nb Trials per class",
                "EndTrialMin": "Inter-trial interval min (s)",
                "EndTrialMax": "Inter-trial interval max (s)",
                "StimulationEpoch": "Epoch of Interest (EOI) (s)",
-               "StimulationDelay": "EOI offset (s)",
+               "StimulationDelay": "Length before onset, (S)",
                "TimeWindowLength": "Sliding Window (PSD) (s)",
                "TimeWindowShift": "Window Shift (PSD) (s)",
                "AutoRegressiveOrder": "AR Burg Order (samples)",
                "AutoRegressiveOrderTime": "Auto-regressive estim. length (s)",
-               "PsdSize": "FFT Size",
+               "PsdSize": "rate",
                "FreqRes": "Frequency resolution (ratio)",
                "ConnectivityMetric": "Connectivity Estimator",
                "ConnectivityLength": "Sliding Window (Connect.) (s)",
@@ -143,5 +154,10 @@ paramIdText = {"TrialNb": "Nb Trials per class",
                "WelchWinLength": "Welch sliding window length (s)",
                "WelchWinOverlap": "Welch sliding window overlap (%)",
                "ConnectFftSize": "Connectivity: FFT Size",
-               "ChannelSubset": "Subset of sensors (sep. with \";\". Empty for all sensors)"
-               }
+               "ChannelSubset": "Subset of sensors (sep. with \";\". Empty for all sensors)",
+               "trim_samples" : "Length after onset in samples",
+               "nfft" : "Number for nfft",
+               "range_A": "range of frequency kept for the signal",
+               "range_B": "range of frequency kept for the signal"
+
+                                             }
