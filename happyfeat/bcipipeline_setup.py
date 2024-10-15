@@ -3,7 +3,7 @@ import os
 import mne
 import subprocess
 from multiprocessing import Process
-from shutil import copyfile , copytree
+from shutil import copyfile, copytree
 import json
 from threading import Thread
 import pandas as pd
@@ -73,54 +73,65 @@ class Dialog(QDialog):
         self.montageLayoutIdx = None
         self.customMontageLayoutIdx = None
 
-        # Start listing the widgets, we'll add them to the layout at the end
-        label = str("=== Protocol Selection ===")
-        self.label = QLabel(label)
-        self.label.setFont(QFont("system-ui", 12))
-        self.label.setAlignment(QtCore.Qt.AlignCenter)
+        # (Start listing the widgets, we'll add them to the layout at the end)
+
+        # === BCI PLATFORM / PROCESSING ENGINE
+        labelPlatformText = str("=== BCI Platform Selection ===")
+        self.labelPlatform = QLabel(labelPlatformText)
+        self.labelPlatform.setFont(QFont("system-ui", 12))
+        self.labelPlatform.setAlignment(QtCore.Qt.AlignCenter)
+
+        self.platformComboBox = QComboBox(self)
+        self.platformComboBox.addItem("", 0)
+        for idx, key in enumerate(settings.availablePlatforms):
+            self.platformComboBox.addItem(key)
+
+        self.platformComboBox.currentIndexChanged.connect(self.platformComboBoxChanged)
+
+        self.vBoxLayoutPlatform = QVBoxLayout()
+        self.vBoxLayoutPlatform.setAlignment(QtCore.Qt.AlignTop)
+
+        # === PROTOCOL
+        labelProtocol = str("=== Protocol Selection ===")
+        self.labelProtocol = QLabel(labelProtocol)
+        self.labelProtocol.setFont(QFont("system-ui", 12))
+        self.labelProtocol.setAlignment(QtCore.Qt.AlignCenter)
 
         self.scenarioComboBox = QComboBox(self)
         for idx, key in enumerate(settings.optionKeys):
             self.scenarioComboBox.addItem(settings.optionsComboText[key], idx)
         # self.scenarioComboBox.currentIndexChanged.connect(self.scenarioComboBoxChanged)
 
-        # COLUMN OF PARAMETERS
-        self.vBoxLayout = QVBoxLayout()
-        self.vBoxLayout.setAlignment(QtCore.Qt.AlignTop)
+        # === ACQ PARAMETERS
+        labelAcqText = str("=== Acquisition and Stimulation ===")
+        self.labelAcq = QLabel(labelAcqText)
+        self.labelAcq.setAlignment(QtCore.Qt.AlignCenter)
+        self.labelAcq.setFont(QFont("system-ui", 12))
 
-        # ACQ PARAMETERS
+        # COLUMN OF PARAMETERS
+        self.vBoxLayoutAcqParams = QVBoxLayout()
+        self.vBoxLayoutAcqParams.setAlignment(QtCore.Qt.AlignTop)
         self.paramWidgets = []
         self.initAcqParams()
 
-        # OpenViBE designer executable...
-        labelOv = QLabel()
-        labelOvtxt = str("OpenViBE designer script (openvibe-designer.cmd or .exe or .sh)")
-        labelOvtxt = str(labelOvtxt + "\n(in your OpenViBE installation folder)")
-        labelOv.setText(labelOvtxt)
-        labelOv.setAlignment(QtCore.Qt.AlignCenter)
-        self.vBoxLayout.addWidget(labelOv)
-
-        self.btn_browseOV = QPushButton("Browse...")
-        self.btn_browseOV.clicked.connect(lambda: self.browseForDesigner())
-        self.designerWidget = QWidget()
-        layout_h = QHBoxLayout(self.designerWidget)
-        self.designerTextBox = QLineEdit()
-        self.designerTextBox.setText(self.ovScript)
-        self.designerTextBox.setEnabled(False)
-        layout_h.addWidget(self.designerTextBox)
-        layout_h.addWidget(self.btn_browseOV)
-        self.vBoxLayout.addWidget(self.designerWidget)
-
-        # Generate button
-        self.btn_generateLaunch = QPushButton("Generate scenarios, launch HappyFeat")
+        # === "GENERATE" button
+        self.labelGenerate = QLabel(str("=== Scenario generation ==="))
+        self.labelGenerate.setAlignment(QtCore.Qt.AlignCenter)
+        self.labelGenerate.setFont(QFont("system-ui", 12))
+        self.btn_generateLaunch = QPushButton("Generate and launch HappyFeat")
         self.btn_generateLaunch.clicked.connect(lambda: self.generate(True))
         # self.btn_generate = QPushButton("Generate scenarios, let me handle things!")
         # self.btn_generate.clicked.connect(lambda: self.generate(False))
 
         # Add all widgets to the general layout...
-        self.dlgLayout.addWidget(self.label)
+        self.dlgLayout.addWidget(self.labelPlatform)
+        self.dlgLayout.addWidget(self.platformComboBox)
+        self.dlgLayout.addLayout(self.vBoxLayoutPlatform)
+        self.dlgLayout.addWidget(self.labelProtocol)
         self.dlgLayout.addWidget(self.scenarioComboBox)
-        self.dlgLayout.addLayout(self.vBoxLayout)
+        self.dlgLayout.addWidget(self.labelAcq)
+        self.dlgLayout.addLayout(self.vBoxLayoutAcqParams)
+        self.dlgLayout.addWidget(self.labelGenerate)
         self.dlgLayout.addWidget(self.btn_generateLaunch)
         # self.dlgLayout.addWidget(self.btn_generate)
 
@@ -129,17 +140,6 @@ class Dialog(QDialog):
         self.show()
 
     def initAcqParams(self):
-        # PARAMETERS
-        labelText = [None, None]
-        label = [None, None]
-        labelText[0] = str("=== ")
-        labelText[0] = str(labelText[0] + "Acquisition and Stimulation")
-        labelText[0] = str(labelText[0] + " ===")
-        label[0] = QLabel(labelText[0])
-        label[0].setAlignment(QtCore.Qt.AlignCenter)
-        label[0].setFont(QFont("system-ui", 12))
-        self.vBoxLayout.addWidget(label[0])
-
         # PARAMETER ALWAYS PRESENT : ELECTRODES MONTAGE
         # Drop-down menu with montages available in MNE
         # + Custom option (will open a file selection in the future... TODO)
@@ -166,7 +166,7 @@ class Dialog(QDialog):
         self.layoutMontageSelectionH.addLayout(self.layoutMontageV2)
         self.layoutMontages.addLayout(self.layoutMontageSelectionH)
 
-        self.vBoxLayout.addLayout(self.layoutMontages)
+        self.vBoxLayoutAcqParams.addLayout(self.layoutMontages)
 
         # OTHER PARAMETERS
 
@@ -186,7 +186,7 @@ class Dialog(QDialog):
             self.parameterTextList.append(param)
             formLayout.addRow(settingLabel, self.paramWidgets[-1])
 
-        self.vBoxLayout.addLayout(formLayout)
+        self.vBoxLayoutAcqParams.addLayout(formLayout)
 
         return
 
@@ -214,6 +214,50 @@ class Dialog(QDialog):
 
         return
 
+    def platformComboBoxChanged(self, ix):
+        # First clear all items from layout
+        for i in reversed(range(self.vBoxLayoutPlatform.count())):
+            widgetToRemove = self.vBoxLayoutPlatform.itemAt(i).widget()
+            self.vBoxLayoutPlatform.removeWidget(widgetToRemove)
+            widgetToRemove.setParent(None)
+
+        if ix == 0:  # no platform selected
+            labelNone = QLabel()
+            labelNoneTxt = str("Please select a platform in the drop-down menu")
+            labelNone.setText(labelNoneTxt)
+            labelNone.setAlignment(QtCore.Qt.AlignCenter)
+            self.vBoxLayoutPlatform.addWidget(labelNone)
+
+        elif ix == 1:  # openvibe
+            labelOv = QLabel()
+            labelOvtxt = str("This workspace will be set up with OpenViBE as a processing engine")
+            labelOvtxt = str(labelOvtxt + "\n\nBrowse for OpenViBE designer (openvibe-designer.cmd or .exe or .sh)")
+            labelOvtxt = str(labelOvtxt + "\n(in your OpenViBE installation folder)")
+            labelOv.setText(labelOvtxt)
+            labelOv.setAlignment(QtCore.Qt.AlignCenter)
+            self.vBoxLayoutPlatform.addWidget(labelOv)
+
+            self.btn_browseOV = QPushButton("Browse...")
+            self.btn_browseOV.clicked.connect(lambda: self.browseForDesigner())
+            self.designerWidget = QWidget()
+            layout_h = QHBoxLayout(self.designerWidget)
+            self.designerTextBox = QLineEdit()
+            self.designerTextBox.setText(self.ovScript)
+            self.designerTextBox.setEnabled(False)
+            layout_h.addWidget(self.designerTextBox)
+            layout_h.addWidget(self.btn_browseOV)
+            self.vBoxLayoutPlatform.addWidget(self.designerWidget)
+
+        elif ix == 2:  # timeflux
+            labelTf = QLabel()
+            labelTfTxt = str("This workspace will be set up with Timeflux as a processing engine")
+            labelTf.setText(labelTfTxt)
+            labelTf.setAlignment(QtCore.Qt.AlignCenter)
+
+            self.vBoxLayoutPlatform.addWidget(labelTf)
+
+        return
+
     def browseForDesigner(self):
         directory = os.getcwd()
         self.ovScript, dummy = QFileDialog.getOpenFileName(self, "OpenViBE designer script", str(directory))
@@ -224,6 +268,15 @@ class Dialog(QDialog):
             self.ovScript = None
 
         return
+
+    def checkTimefluxInstall(self):
+        try:
+            import timeflux
+        except ImportError as e:
+            myMsgBox("WARNING: Timeflux is NOT installed!!")
+            return False
+
+        return True
 
     def browseForMontage(self):
         directory = os.getcwd()
@@ -247,16 +300,110 @@ class Dialog(QDialog):
         return True
 
     def generate(self, launch):
+        ixPlatform = self.platformComboBox.currentIndex()
+        if ixPlatform == 0:
+            myMsgBox("Please select a protocol...")
+        elif ixPlatform == 1:
+            self.generateOpenvibe(launch)
+        elif ixPlatform == 2:
+            self.generateTimeflux(launch)
 
-        if self.ovScript == "" or not self.ovScript:
+        return
+    def generateTimeflux(self, launch):
+
+        if self.checkTimefluxInstall():
+            print("Generating workspace using Timeflux...")
+
+            ix = self.scenarioComboBox.currentIndex()
+            # WARNING For now, only standard PSD is available
+            if ix != 1:
+                myMsgBox("For now, only standard PSD is available with Timeflux")
+                return
+
+            pipelineKey = settings.optionKeys[ix]
+            self.parameterDict["pipelineType"] = pipelineKey
+            self.templateFolder = settings.optionsTemplatesDir[pipelineKey]
+            print(str("TEMPLATE FOLDER : " + self.templateFolder))
+
+            ####
+            # FIRST STEP : CREATE PARAMETER DICTIONARY
+            ###
+
+            self.parameterDict["bciPlatform"] = settings.availablePlatforms[1]
+
+            if self.montageComboBox.currentIndex() == 0:  # custom
+                if self.customMontagePath is None:
+                    myMsgBox("Please provide a valid file for the custom montage")
+                    return
+
+            # Montage : default values...
+            self.parameterDict["sensorMontage"] = self.montageComboBox.currentText()
+            self.parameterDict["customMontagePath"] = ''
+            if self.montageComboBox.currentIndex() == 0:
+                self.parameterDict["sensorMontage"] = "custom"
+                self.parameterDict["customMontagePath"] = self.customMontagePath
+
+            self.parameterDict["Sessions"] = {}
+
+            # Acquisition parameters, set in this GUI...
+            self.parameterDict["AcquisitionParams"] = {}
+            for i in range(len(self.paramWidgets)):
+                param = self.parameterTextList[i]
+                if param in self.parameterDict:
+                    # TODO : remove duplication... (done to make params.json and workspace file coexist)
+                    self.parameterDict["AcquisitionParams"][param] = self.paramWidgets[i].text()
+                    self.parameterDict[param] = self.paramWidgets[i].text()
+
+            # Write default parameters for selected pipeline
+            extractParamDict = settings.pipelineExtractSettings[self.parameterDict["pipelineType"]].copy()
+
+            self.parameterDict["currentSessionId"] = "1"
+            print(self.parameterDict)
+
+            # WRITE WORKSPACE FILE
+            if not self.workspace:
+                # TODO !! manage error
+                myMsgBox("Missing workspace file!!")
+            else:
+                workspaceMgmt.setKeyValue(self.workspace, "pipelineType", self.parameterDict["pipelineType"])
+                workspaceMgmt.setKeyValue(self.workspace, "sensorMontage", self.parameterDict["sensorMontage"])
+                workspaceMgmt.setKeyValue(self.workspace, "customMontagePath", self.parameterDict["customMontagePath"])
+                workspaceMgmt.setKeyValue(self.workspace, "AcquisitionParams", self.parameterDict["AcquisitionParams"])
+                workspaceMgmt.setKeyValue(self.workspace, "currentSessionId", self.parameterDict["currentSessionId"])
+                workspaceMgmt.newSession(self.workspace, self.parameterDict, "1", extractParamDict)
+
+            # GENERATE (list of files in settings.templateScenFilenames)
+            #   SC2 (FEATURE EXT)
+            #   SC2 (TRAIN OFFLINE)
+            #   SC3 (PREDICT / ONLINE)
+
+            src_dir = os.path.join(os.path.dirname(__file__), self.templateFolder, 'useful')
+            dst_dir = os.path.join(self.workspaceFolder, 'useful')
+            copytree(src_dir, dst_dir)
+            for filename in settings.templateScenFilenames_timeflux:
+                with resources.path(str(__name__.split('.')[0] + '.' + self.templateFolder), filename) as srcFile:
+                    destFile = os.path.join(self.workspaceFolder, filename)
+                    if os.path.exists(srcFile):
+                        print("---Copying file " + str(srcFile) + " to " + str(destFile))
+                        copyfile(srcFile, destFile)
+
+            if launch:
+                self.launchTrue = True
+
+            # Exit with success
+            self.accept()
+
+        return
+
+    def generateOpenvibe(self, launch):
+
+        if self.ovScript == "" or not self.ovScript or not os.path.exists(self.ovScript):
             myMsgBox("Please enter a correct path for the OpenViBE designer")
             return
 
-        ix = self.scenarioComboBox.currentIndex()
-        if ix == 0:
-            myMsgBox("Please select a protocol...")
-            return
+        print("Generating workspace using OpenViBE...")
 
+        ix = self.scenarioComboBox.currentIndex()
         pipelineKey = settings.optionKeys[ix]
 
         self.templateFolder = settings.optionsTemplatesDir[pipelineKey]
@@ -267,6 +414,8 @@ class Dialog(QDialog):
         ####
         # FIRST STEP : CREATE PARAMETER DICTIONARY
         ###
+
+        self.parameterDict["bciPlatform"] = settings.availablePlatforms[0]
 
         # OpenViBE Path...
         if self.ovScript is None:
@@ -326,11 +475,11 @@ class Dialog(QDialog):
         #   SC2-SPEEDUP-FIRSTSTEP (TRAIN+, 1)
         #   SC2-SPEEDUP-FINALIZE  (TRAIN+, 2)
 
-        src_dir=path = os.path.join(os.path.dirname(__file__), self.templateFolder, 'useful')
-        dst_dir = os.path.join(self.workspaceFolder  ,'useful')
-        copytree(src_dir, dst_dir)
-
+        # src_dir = os.path.join(os.path.dirname(__file__), self.templateFolder, 'useful')
+        # dst_dir = os.path.join(self.workspaceFolder, 'useful')
+        # copytree(src_dir, dst_dir)
         # for filename in settings.templateScenFilenames_timeflux:  ## TIMEFLUX
+
         for filename in settings.templateScenFilenames:
             with resources.path(str(__name__.split('.')[0] + '.' + self.templateFolder), filename) as srcFile:
 
@@ -343,8 +492,8 @@ class Dialog(QDialog):
 
         # SPECIAL CASES :
         # #   SC1 & SC3 : "GRAZ" BOX SETTINGS
-        # modifyAcqScenario(os.path.join(self.workspaceFolder, settings.templateScenFilenames[0]), self.parameterDict)
-        # modifyAcqScenario(os.path.join(self.workspaceFolder, settings.templateScenFilenames[3]), self.parameterDict)
+        modifyAcqScenario(os.path.join(self.workspaceFolder, settings.templateScenFilenames[0]), self.parameterDict)
+        modifyAcqScenario(os.path.join(self.workspaceFolder, settings.templateScenFilenames[3]), self.parameterDict)
 
         if launch:
             self.launchTrue = True
@@ -361,19 +510,6 @@ class Dialog(QDialog):
     def setWorkspace(self, workspace):
         self.workspace = workspace
         return
-
-def featureExtractionThread(workspace):
-    p = subprocess.Popen(["python", "2-featureExtractionInterface.py", fullWorkspacePath],
-                         stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-    while True:
-        output = p.stdout.readline()
-        if p.poll() is not None:
-            break
-        if output:
-            print(str(output))
-            if "Process finished with exit code" in str(output):
-                break
-    return
 
 def launchOpenvibe(command, acqScen):
     p = subprocess.Popen([command, "--open", acqScen],

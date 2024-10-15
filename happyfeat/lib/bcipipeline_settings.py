@@ -2,6 +2,10 @@
 # Contains all settings / parameters / useful info
 # that the other scripts can use
 
+global availablePlatforms
+availablePlatforms = ["openvibe",
+                      "timeflux"]
+
 global optionKeys
 optionKeys = ["",
               "PowSpectrumGraz",
@@ -35,8 +39,8 @@ templateScenFilenames = ["sc1-monitor-acq.xml",
 
 global templateScenFilenames_timeflux
 templateScenFilenames_timeflux = ["sc2_extract_one.yaml",
-                                "sc_2_train_offline_list_2.yaml",
-                                "sc3_predict_events_selection.yaml"]
+                                  "sc_2_train_offline_list_2.yaml",
+                                  "sc3_predict_events_selection.yaml"]
 
 
 global connectMetrics
