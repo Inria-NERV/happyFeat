@@ -26,7 +26,6 @@ def generateMetadata_timeflux(ovFile):
     # valid_path = find_path(ovFile)
     # Get the sampling frequency
     
-    
     # Read the EDF file
     data = mne.io.read_raw_edf(ovFile, preload=True)
     rate = data.info['sfreq']
@@ -34,7 +33,6 @@ def generateMetadata_timeflux(ovFile):
     data = data.to_data_frame(time_format='datetime')
     
     return list(data.columns)[1:], rate
-
 
 
 if __name__ == '__main__':

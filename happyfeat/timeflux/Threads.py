@@ -56,7 +56,7 @@ class Extraction_Timeflux(QtCore.QThread):
             # Then extract sampling frequency and electrode list
             sampFreq = None
             electrodeList = None
-            electrodeList,sampFreq = generateMetadata_timeflux(os.path.join(self.signalFolder,signalFile))
+            electrodeList, sampFreq = generateMetadata_timeflux(os.path.join(self.signalFolder, signalFile))
             # Check everything went ok...
             if not sampFreq:
                 errMsg = str("Error while loading metadata CSV file for session " + signalFile)
@@ -65,16 +65,14 @@ class Extraction_Timeflux(QtCore.QThread):
 
             ## MODIFY THE EXTRACTION SCENARIO with entered parameters
             self.extractDict["ChannelNames"] = electrodeList
-            self.extractDict["PsdSize"] =  sampFreq
-
-
+            self.extractDict["PsdSize"] = sampFreq
 
             # Modify extraction scenario to use provided signal file, and rename outputs accordingly
             filename = signalFile.removesuffix(".edf")
-            outputSpect = str(filename + "-SPECTRUM" )
-            csv_file_path=os.path.join(os.path.split(self.signalFolder)[0],"sessions",self.currentSessionId,"extract")
-            reader_yaml_file_path=os.path.join(os.path.split(self.signalFolder)[0],"EDF_Reader_oneshot.yaml")
-            extraction_yaml_file_path=os.path.join(os.path.split(self.signalFolder)[0],self.scenFile)
+            outputSpect = str(filename + "-SPECTRUM")
+            csv_file_path = os.path.join(os.path.split(self.signalFolder)[0], "sessions", self.currentSessionId, "extract")
+            reader_yaml_file_path = os.path.join(os.path.split(self.signalFolder)[0], "EDF_Reader_oneshot.yaml")
+            extraction_yaml_file_path = os.path.join(os.path.split(self.signalFolder)[0], self.scenFile)
             print("param is",self.extractDict["StimulationEpoch"])
             # modify yaml file
             modify_extraction_yaml_new(
@@ -92,7 +90,7 @@ class Extraction_Timeflux(QtCore.QThread):
 
             # Launch timeflux scenario !
             p = subprocess.Popen([ "timeflux", "-d", str(extraction_yaml_file_path)],
-                        stdin=subprocess.PIPE, stdout=subprocess.PIPE) # add cwd if needed
+                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE)  # add cwd if needed
 
             # Print console output, and detect end of process...
             while True:
@@ -155,8 +153,6 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
         self.dataNp1 = []
         self.dataNp2 = []
 
-
-
     def run(self):
 
         listSampFreq = []
@@ -179,8 +175,6 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
             self.info2.emit(str("Loading " + pipelineLabel + " Data for file " + str(idxFile) + " : " + selectedFilesForViz))
             [header1, data1] = load_csv_np(path1)
             [header2, data2] = load_csv_np(path2)
-
-
 
             # Sampling frequency
             # Infos in the columns header of the CSVs in format "Time:32x251:500"
@@ -297,7 +291,6 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
                 timefreq_cond1_final = np.concatenate((timefreq_cond1_final, timefreq_cond1))
                 timefreq_cond2_final = np.concatenate((timefreq_cond2_final, timefreq_cond2))
 
-
         self.info2.emit("Computing statistics")
 
         print(np.shape(power_cond1_final))
@@ -364,16 +357,14 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
     def stopThread(self):
         self.stop = True
 
-
-
-
 class TrainClassifier_Timeflux(QtCore.QThread):
     info = Signal(bool)
     info2 = Signal(str)
     over = Signal(bool, str)
 
     def __init__(self, scenFile, signalFiles, workspaceFolder,
-                 parameterDict, currentSessionId,filter_list,cv,currentAttempt,model_path, parent=None):
+                 parameterDict, currentSessionId, filter_list,
+                 cv, currentAttempt, model_path, parent=None):
 
         super().__init__(parent)
         self.stop = False
@@ -387,10 +378,11 @@ class TrainClassifier_Timeflux(QtCore.QThread):
         self.cv=cv
         self.model_path=model_path
         self.currentAttempt=currentAttempt
+
     def run(self):
 
-        list_class_1=[]
-        list_class_2=[]
+        list_class_1 = []
+        list_class_2 = []
 
         # create the list of file names
         for selectedFilesForViz in self.signalFiles:
@@ -407,7 +399,7 @@ class TrainClassifier_Timeflux(QtCore.QThread):
         print(list_class_2)
         
         # Find the path for the scenario yaml file
-        train_yaml_file_path=os.path.join(self.workspaceFolder,self.scenFile)
+        train_yaml_file_path = os.path.join(self.workspaceFolder, self.scenFile)
         # Change parameters for the yaml File
         update_filenames(
             train_yaml_file_path,
@@ -421,9 +413,7 @@ class TrainClassifier_Timeflux(QtCore.QThread):
 
         # Launch timeflux scenario !
         p = subprocess.Popen([ "timeflux", "-d", str(train_yaml_file_path)],
-                                stdin=subprocess.PIPE, stdout=subprocess.PIPE) # add cwd if needed
-
-
+                                stdin=subprocess.PIPE, stdout=subprocess.PIPE)  # add cwd if needed
 
         # Print console output, and detect Errors and end of process...
         while True:
@@ -445,11 +435,11 @@ class TrainClassifier_Timeflux(QtCore.QThread):
                     break
         
         # Write the message at the end of training
-        #Accuracy
+        # Accuracy
         # Split the string by spaces and get the last element, which is the number
         number_str = classification_scores.split()[-1]
-        number_sens= specificity_scores.split()[-1]
-        number_spe= sensitivity_scores.split()[-1]
+        number_sens = specificity_scores.split()[-1]
+        number_spe = sensitivity_scores.split()[-1]
         # Extract the float number using regex
         match = re.search(r"[-+]?\d*\.\d+|\d+", number_str)
         if match:
@@ -457,7 +447,7 @@ class TrainClassifier_Timeflux(QtCore.QThread):
             print(number)
         else:
             print("No number found")
-        number= round(number, 3)
+        number = round(number, 3)
         # Extract the sensitivity
         match_sens = re.search(r"[-+]?\d*\.\d+|\d+", number_sens)
         if match_sens:
@@ -509,7 +499,8 @@ class UseClassifier_Timeflux(QtCore.QThread):
     over = Signal(bool, str)
 
     def __init__(self, scenFile, workspaceFolder,
-                 parameterDict, currentSessionId,filter_list,model_file_path, parent=None):
+                 parameterDict, currentSessionId,
+                 filter_list, model_file_path, parent=None):
 
         super().__init__(parent)
         self.stop = False
@@ -518,12 +509,11 @@ class UseClassifier_Timeflux(QtCore.QThread):
         self.parameterDict = parameterDict.copy()
         self.currentSessionId = currentSessionId
         self.extractDict = parameterDict["Sessions"][currentSessionId]["ExtractionParams"].copy()
-        self.filter_list=filter_list
-        self.model_file_path=model_file_path
+        self.filter_list = filter_list
+        self.model_file_path = model_file_path
+
     def run(self):
 
-
-        
         # Find the path for the scenario yaml file
         classify_yaml_file_path=os.path.join(self.workspaceFolder,self.scenFile)
         print("the path we are checkinh",classify_yaml_file_path)
@@ -543,9 +533,7 @@ class UseClassifier_Timeflux(QtCore.QThread):
 
         # Launch timeflux scenario !
         p = subprocess.Popen([ "timeflux", "-d", str(classify_yaml_file_path)],
-                                stdin=subprocess.PIPE, stdout=subprocess.PIPE) # add cwd if needed
-
-
+                                stdin=subprocess.PIPE, stdout=subprocess.PIPE)  # add cwd if needed
 
         # Print console output, and detect Errors and end of process...
         while True:
