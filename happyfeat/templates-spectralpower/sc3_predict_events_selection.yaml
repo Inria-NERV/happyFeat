@@ -1,0 +1,264 @@
+## This file is an online scnario excution from a replay of an edf file
+
+import:
+
+  - EDF_Reader.yaml
+ 
+
+graphs:
+
+  - id: broker
+    nodes:
+    - id: broker
+      module: timeflux.nodes.zmq
+      class: Broker
+
+
+  - id: analysing
+    nodes:
+    # Subscribe to signal
+    # ----------
+    - id: sub
+      module: timeflux.nodes.zmq
+      class: Sub
+      params:
+        topics: [ events_fit, raw_fit,events ]
+
+    # Stimulations + Temporal features 
+    # --------------------------------
+
+    ## stimulation A
+    - id: events
+      module: useful.events
+      class: Events
+
+    
+    - id: epoching_A
+      module: timeflux.nodes.epoch
+      class: Epoch
+      # Set your epoching parameters here
+      params:
+          before: 0
+          after: 3.5 # was 1.5 initiaally  
+          event_trigger: 'OVTK_GDF_Left'
+
+    - id: trim_A
+      module: timeflux.nodes.epoch
+      class: Trim
+      params:
+        # assumes 500 Hz sample rate and trim to 3 seconds
+        samples: 1500
+
+
+    - id: display_epoching_A
+      module: timeflux.nodes.debug
+      class: Display
+      params:
+        meta: True
+
+    - id: welch_psd_A
+      module: timeflux_dsp.nodes.spectral
+      class: Welch
+      params:
+        rate: 500 
+        nfft: 512
+
+    - id: select_A
+      module: useful.query_selection
+      class: SelectFrequency
+      params:
+        selections:
+          - [CP3, 8]
+          - [CP1, 10]
+
+    - id: PublisherWelch_A
+      module: timeflux.nodes.zmq
+      class: Pub
+      params:
+        topic: PSD_A
+
+    # stimulation B
+
+      
+    - id: epoching_B
+      module: timeflux.nodes.epoch
+      class: Epoch
+      # Set your epoching parameters here
+      params:
+          before: 0  
+          after: 3.5  
+          event_trigger:  'OVTK_GDF_Right'
+
+    - id: trim_B
+      module: timeflux.nodes.epoch
+      class: Trim
+      params:
+        # assumes 500 Hz sample rate and trim to 3 seconds
+        samples: 1500
+
+    - id: display_epoching_B
+      module: timeflux.nodes.debug
+      class: Display
+
+    - id: welch_psd_B
+      module: timeflux_dsp.nodes.spectral
+      class: Welch
+      params:
+        rate: 500 
+        nfft: 512
+
+    - id: select_B
+      module: useful.query_selection
+      class: SelectFrequency
+      params:
+        selections:
+          - [CP3, 8]
+          - [CP1, 10]
+        
+
+    - id: PublisherWelch_B
+      module: timeflux.nodes.zmq
+      class: Pub
+      params:
+        topic: PSD_B
+    # ML node
+    # -------------
+    - id: fit_predict
+      module: useful.ml
+      class: Pipeline
+      params:
+        mode: fit_predict
+        meta_label: [epoch, context ]
+        steps:
+          - module: useful.estimater
+            class: EEGFeatures
+          - module: useful.sc3_lda_node
+            class: Prefitted_LDA
+            args:
+              path: "C:\\Users\\wafa.skhiri\\Development\\dev\\fitted_model.pkl"
+
+
+
+      # for debug purpose
+      # -----------------
+    - id: display
+      module: timeflux.nodes.debug
+      class: Display
+
+
+
+    edges:
+
+
+
+    - source: events:epochs
+      target: display_epoching_B 
+
+    - source: sub:raw_fit
+      target: epoching_A   
+    - source: events:epochs
+      target: epoching_A:events
+    - source: epoching_A:*
+      target: trim_A
+    - source: trim_A:0
+      target: welch_psd_A
+    - source: welch_psd_A
+      target: select_A
+    - source: welch_psd_A
+      target: PublisherWelch_A
+
+    - source: sub:raw_fit
+      target: epoching_B
+    - source: events:epochs
+      target: epoching_B:events
+    - source: epoching_B:*
+      target: trim_B
+    - source: trim_B:0
+      target: welch_psd_B
+    - source: welch_psd_B
+      target: select_B
+    - source: welch_psd_B
+      target: PublisherWelch_B
+
+    - source: select_B
+      target: display_epoching_A
+ 
+    - source: select_B
+      target: fit_predict
+    - source: select_A
+      target: fit_predict
+    - source: fit_predict:events
+      target: display 
+
+    rate: 1
+
+  # - id: saving
+  #   nodes :
+  #   - id: Subscriber
+  #     module: timeflux.nodes.zmq
+  #     class: Sub
+  #     params:
+  #       topics:
+  #       - PSD_A
+  #       - PSD_B
+
+  #   - id: Recorder
+  #     module: useful.csvfile 
+  #     class: SaveToCSV
+  #     params:
+  #       filename: "CSV_PSD" 
+  #       path : "./"
+
+  #   edges:
+  #     - source: Subscriber:PSD_B
+  #       target: Recorder:PSD_B
+  #     - source: Subscriber:PSD_A
+  #       target: Recorder:PSD_A
+
+
+
+
+  #   rate: 0.1
+
+
+  # - id: plot
+  #   nodes:
+  #   - id: sub_signal
+  #     module: timeflux.nodes.zmq
+  #     class: Sub
+  #     params:
+  #       topics: 
+  #         - raw_fit
+
+
+
+  #   - id: monitor
+  #     module: timeflux_ui.nodes.ui
+  #     class: UI
+  #     params:
+  #       settings:
+  #         monitor:
+  #           events: [ "Start" ]
+
+  #   - id: pub
+  #     module: timeflux.nodes.zmq
+  #     class: Pub
+  #     params:
+  #       topic: events
+
+  #   - id: display_raw
+  #     module: timeflux.nodes.debug
+  #     class: Display
+
+  #   edges:
+
+  #   - source: sub_signal:raw_fit
+  #     target: monitor:raw_fit
+  #   - source: monitor:events
+  #     target: pub
+
+
+    # rate: O.1
+
+
+
