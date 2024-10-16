@@ -365,6 +365,7 @@ class Dialog(QDialog):
                 # TODO !! manage error
                 myMsgBox("Missing workspace file!!")
             else:
+                workspaceMgmt.setKeyValue(self.workspace, "bciPlatform", self.parameterDict["bciPlatform"])
                 workspaceMgmt.setKeyValue(self.workspace, "pipelineType", self.parameterDict["pipelineType"])
                 workspaceMgmt.setKeyValue(self.workspace, "sensorMontage", self.parameterDict["sensorMontage"])
                 workspaceMgmt.setKeyValue(self.workspace, "customMontagePath", self.parameterDict["customMontagePath"])
@@ -459,6 +460,7 @@ class Dialog(QDialog):
             # TODO !! manage error
             myMsgBox("Missing workspace file!!")
         else:
+            workspaceMgmt.setKeyValue(self.workspace, "bciPlatform", self.parameterDict["bciPlatform"])
             workspaceMgmt.setKeyValue(self.workspace, "ovDesignerPath", self.parameterDict["ovDesignerPath"])
             workspaceMgmt.setKeyValue(self.workspace, "pipelineType", self.parameterDict["pipelineType"])
             workspaceMgmt.setKeyValue(self.workspace, "sensorMontage", self.parameterDict["sensorMontage"])
@@ -474,11 +476,6 @@ class Dialog(QDialog):
         #   SC3 (ONLINE)
         #   SC2-SPEEDUP-FIRSTSTEP (TRAIN+, 1)
         #   SC2-SPEEDUP-FINALIZE  (TRAIN+, 2)
-
-        # src_dir = os.path.join(os.path.dirname(__file__), self.templateFolder, 'useful')
-        # dst_dir = os.path.join(self.workspaceFolder, 'useful')
-        # copytree(src_dir, dst_dir)
-        # for filename in settings.templateScenFilenames_timeflux:  ## TIMEFLUX
 
         for filename in settings.templateScenFilenames:
             with resources.path(str(__name__.split('.')[0] + '.' + self.templateFolder), filename) as srcFile:

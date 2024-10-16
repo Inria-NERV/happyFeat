@@ -137,10 +137,14 @@ class Dialog(QDialog):
             print("--- Using parameters from workspace file: " + workspaceFile)
             with open(self.workspaceFile) as jsonfile:
                 self.parameterDict = json.load(jsonfile)
-            self.ovScript = self.parameterDict["ovDesignerPath"]
+            self.bciPlatform = self.parameterDict["bciPlatform"]
             self.sensorMontage = self.parameterDict["sensorMontage"]
             self.customMontagePath = self.parameterDict["customMontagePath"]
             self.currentSessionId = self.parameterDict["currentSessionId"]
+            if self.bciPlatform == settings.availablePlatforms[0]:  # openvibe
+                self.ovScript = self.parameterDict["ovDesignerPath"]
+            else:
+                self.ovScript = ""
 
         # -----------------------------------------------------------------------
         # CREATE INTERFACE...
