@@ -750,8 +750,12 @@ class Dialog(QDialog):
         # ----------
         self.refreshSignalList(self.fileListWidget, self.workspaceFolder)
         self.refreshAvailableFilesForVizList(self.workspaceFolder, self.currentSessionId)
-        self.refreshAvailableTrainSignalList(self.workspaceFolder, self.currentSessionId)
-        # self.refreshAvailableTrainSignalList_Timeflux(self.workspaceFolder, self.currentSessionId)
+
+        if self.parameterDict["bciPlatform"] == settings.availablePlatforms[0]:  # openvibe
+            self.refreshAvailableTrainSignalList(self.workspaceFolder, self.currentSessionId)
+        elif self.parameterDict["bciPlatform"] == settings.availablePlatforms[1]:  # timeflux
+            self.refreshAvailableTrainSignalList_Timeflux(self.workspaceFolder, self.currentSessionId)
+
         return
 
     def refreshSignalList(self, listwidget, workingFolder):
@@ -760,11 +764,16 @@ class Dialog(QDialog):
         # ----------
         signalFolder = os.path.join(workingFolder, "signals")
 
+        suffix = ""
+        if self.parameterDict["bciPlatform"] == settings.availablePlatforms[0]:  # openvibe
+            suffix = ".ov"
+        elif self.parameterDict["bciPlatform"] == settings.availablePlatforms[1]:  # timeflux
+            suffix = ".edf"
+
         # first get a list of all files in workingfolder that match the condition
         filelist = []
         for filename in os.listdir(signalFolder):
-            # if filename.endswith(".edf"):    # TIMEFLUX
-            if filename.endswith(".ov"):
+            if filename.endswith(suffix):
                 filelist.append(filename)
 
         # iterate over existing items in widget and delete those who don't exist anymore
@@ -1836,7 +1845,11 @@ class Dialog(QDialog):
         # A bit artisanal, but we'll see if we keep that...
         # ----------
         pipelineKey = self.parameterDict['pipelineType']
-        newDict = settings.pipelineExtractSettings[pipelineKey].copy()
+        if self.parameterDict["bciPlatform"] == settings.availablePlatforms[0]:  # openvibe
+            newDict = settings.pipelineExtractSettings_ov[pipelineKey].copy()
+        elif self.parameterDict["bciPlatform"] == settings.availablePlatforms[1]:  # timeflux
+            newDict = settings.pipelineExtractSettings_tf[pipelineKey].copy()
+
         print(newDict)
         return newDict
 

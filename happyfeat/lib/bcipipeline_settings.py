@@ -67,24 +67,19 @@ pipelineAcqSettings = { "TrialNb": 20,
                         "EndTrialMax": 3.5,
                         }
 
-global pipelineExtractSettings
-pipelineExtractSettings = {optionKeys[0]: None,
+global pipelineExtractSettings_ov
+pipelineExtractSettings_ov = {optionKeys[0]: None,
 
                            # POWER SPECTRUM
                            optionKeys[1]:
-                               {"StimulationEpoch": 3.5,
-                                "StimulationDelay": 0,
-                                # "TimeWindowLength": "0.25",
-                                # "TimeWindowShift": "0.161",
+                               {"StimulationEpoch": "3",
+                                "StimulationDelay": "1",
+                                "TimeWindowLength": "0.25",
+                                "TimeWindowShift": "0.161",
                                 # "AutoRegressiveOrder": "19",
-                                # "AutoRegressiveOrderTime": "0.038",
-                                "PsdSize": "500",
-                                "FreqRes": 1,
-                                "trim_samples": 1500,
-                                "nfft" : 1024,
-                                # "range_A": [8,30],
-                                # "range_B": [8,30],
-
+                                "AutoRegressiveOrderTime": "0.038",
+                                # "PsdSize": "500",
+                                "FreqRes": "1",
                                 },
 
                            # CONNECTIVITY
@@ -130,6 +125,26 @@ pipelineExtractSettings = {optionKeys[0]: None,
                                 }
                            }
 
+global pipelineExtractSettings_tf
+pipelineExtractSettings_tf = {optionKeys[0]: None,
+
+                           # POWER SPECTRUM
+                           optionKeys[1]:
+                               {"StimulationEpoch": 3.5,
+                                "StimulationDelay": 0,
+                                # "TimeWindowLength": "0.25",
+                                # "TimeWindowShift": "0.161",
+                                # "AutoRegressiveOrder": "19",
+                                # "AutoRegressiveOrderTime": "0.038",
+                                "PsdSize": "500",
+                                "FreqRes": 1,
+                                "trim_samples": 1500,
+                                "nfft" : 1024,
+                                # "range_A": [8,30],
+                                # "range_B": [8,30],
+                                },
+                           }
+
 global paramIdText
 paramIdText = {"TrialNb": "Nb Trials per class",
                "Class1": "Class / Stimulation 1",
@@ -163,5 +178,4 @@ paramIdText = {"TrialNb": "Nb Trials per class",
                "nfft" : "Number for nfft",
                "range_A": "range of frequency kept for the signal",
                "range_B": "range of frequency kept for the signal"
-
-                                             }
+               }
