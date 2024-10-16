@@ -1087,8 +1087,11 @@ class Dialog(QDialog):
         for selectedItem in self.fileListWidget.selectedItems():
             signalFiles.append(selectedItem.text() )
         signalFolder = os.path.join(self.workspaceFolder, "signals")
-        scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames[1])
-	    # scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames_timeflux[0]) # TIMEFLUX
+
+        if self.parameterDict["bciPlatform"] == settings.availablePlatforms[0]:  # openvibe
+            scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames[1])
+        elif self.parameterDict["bciPlatform"] == settings.availablePlatforms[1]:  # timeflux
+            scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames_timeflux[0])
 
         # For each selected signal file, check if extraction has already been done
         # => in .hfw file, at current extract idx, entry exists
@@ -1135,15 +1138,20 @@ class Dialog(QDialog):
         self.filesRefreshTimer.stop()
 
         # Instantiate the thread...
-        self.extractThread = Extraction(self.ovScript, scenFile, signalFiles, signalFolder, self.parameterDict, self.currentSessionId)
-	    # self.extractThread = Extraction_Timeflux( scenFile, signalFiles, signalFolder, self.parameterDict, self.currentSessionId) # TIMEFLUX
+        if self.parameterDict["bciPlatform"] == settings.availablePlatforms[0]:  # openvibe
+            self.extractThread = Extraction(self.ovScript, scenFile, signalFiles, signalFolder, self.parameterDict, self.currentSessionId)
+        elif self.parameterDict["bciPlatform"] == settings.availablePlatforms[1]:  # timeflux
+            self.extractThread = Extraction_Timeflux(scenFile, signalFiles, signalFolder, self.parameterDict, self.currentSessionId)
+
         # Signal: Extraction work thread finished one file of the selected list.
         # Refresh the viz&train file lists to make it available + increment progress bar
         self.extractThread.info.connect(self.progressBarExtract.increment)
         self.extractThread.info.connect(lambda : self.refreshLists())
         self.extractThread.info2.connect(self.progressBarExtract.changeLabel)
+
         # Signal: Extraction work thread finished
         self.extractThread.over.connect(self.extraction_over)
+
         # Launch the work thread
         self.extractTimerStart = time.perf_counter()
         self.extractThread.start()
@@ -1192,17 +1200,24 @@ class Dialog(QDialog):
 
         # Instantiate the thread...
         # TODO : refactor using automatic feature selection possibility
-        if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
-            self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq)
-            # self.loadFilesForVizThread = LoadFilesForVizPowSpectrum_Timeflux(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq) # TIMEFLUX
-        elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
-            self.loadFilesForVizThread = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features, self.samplingFreq)
-        elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
-            self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq)
-            self.loadFilesForVizThread2 = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features2, self.samplingFreq)
-        elif self.parameterDict["pipelineType"] == settings.optionKeys[4]:
-            self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq)
-            self.loadFilesForVizThread2 = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features2, self.samplingFreq)
+        if self.parameterDict["bciPlatform"] == settings.availablePlatforms[0]:  # openvibe
+            if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
+                self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq)
+            elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+                self.loadFilesForVizThread = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features, self.samplingFreq)
+            elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
+                self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq)
+                self.loadFilesForVizThread2 = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features2, self.samplingFreq)
+            elif self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+                self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq)
+                self.loadFilesForVizThread2 = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features2, self.samplingFreq)
+
+        elif self.parameterDict["bciPlatform"] == settings.availablePlatforms[1]:  # timeflux
+            if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
+                self.loadFilesForVizThread = LoadFilesForVizPowSpectrum_Timeflux(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq)
+            else:
+                myMsgBox(str("Pipeline " + self.parameterDict["pipelineType"] + " is not available with Timeflux") )
+                return
 
         # create progress bar window...
         self.progressBarViz = ProgressBar("Feature Visualization", "Loading data from Csv files...",
@@ -1310,6 +1325,9 @@ class Dialog(QDialog):
         # launch openvibe with sc2-train.xml (in the background) to train the classifier,
         # provide the classification score/accuracy as a textbox
         # ----------
+
+        # TODO : REFACTOR TO BETTER MERGE OPENVIBE/TIMEFLUX BRANCHES
+
         if not self.fileListWidgetTrain.selectedItems():
             myMsgBox("Please select a set of files for training")
             return
@@ -1421,21 +1439,40 @@ class Dialog(QDialog):
         if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             if self.enableSpeedUp.isChecked():
                 enableSpeedUp = True
-        ### TIMEFLUX
-        if 0:
+
+        templateFolder = settings.optionsTemplatesDir[trainingParamDict["pipelineType"]]
+
+        # Parametrize Train Thread, depending on the platform
+        if self.parameterDict["bciPlatform"] == settings.availablePlatforms[0]:  # openvibe
+            self.trainClassThread.append(TrainClassifier(self.trainingFiles,
+                                                         signalFolder, templateFolder,
+                                                         self.workspaceFolder,
+                                                         self.ovScript,
+                                                         trainingSize, listFeats,
+                                                         trainingParamDict, self.samplingFreq,
+                                                         self.currentAttempt, attemptId,
+                                                         enableSpeedUp))
+
+        elif self.parameterDict["bciPlatform"] == settings.availablePlatforms[1]:  # timeflux
+
             suffix = ""
             if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
                suffix = "-SPECTRUM"
             elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
                 suffix = "-CONNECT"
+                myMsgBox(str("Pipeline not available. What are you even doing here?"))
+                return
             elif self.parameterDict["pipelineType"] == settings.optionKeys[3] \
                      or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
                 suffix = "-SPECTRUM-CONNECT"
+                myMsgBox(str("Pipeline not available. What are you even doing here?"))
+                return
 
+            # TODO : REFACTOR THIS PART !
             trainFiles = []
             for selectedItem in self.fileListWidgetTrain.selectedItems():
                 trainFiles.append(selectedItem.text().removesuffix(suffix))
-            print("features list",listFeats)
+            print("Timeflux: training features list: ", listFeats)
 
             # Transforming the list
             filter_list = [item.split(';') for item in listFeats]
@@ -1444,29 +1481,29 @@ class Dialog(QDialog):
             filter_list = [[ele[0], int(ele[1])] for ele in filter_list]
             print(filter_list)
 
+            # TODO : REVIEW HOW THE SCEN / TEMPLATES ARE MANAGED BETWEEN HERE AND THREADS.PY
             scenFile = os.path.join(self.workspaceFolder, settings.templateScenFilenames_timeflux[1])
-        templateFolder = settings.optionsTemplatesDir[trainingParamDict["pipelineType"]]
 
-	    ### TIMEFLUX
-        # model_file_path=os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train",
-        #                                   str("classifier-weights-" + str(attemptId) + ".pkl"))
-        # self.trainClassThread.append( TrainClassifier_Timeflux(scenFile,trainFiles,self.workspaceFolder,self.parameterDict,self.currentSessionId,filter_list,trainingSize,self.currentAttempt,model_file_path) )
-
-        self.trainClassThread.append( TrainClassifier(self.trainingFiles,
-                                                    signalFolder, templateFolder,
-                                                    self.workspaceFolder,
-                                                    self.ovScript,
-                                                    trainingSize, listFeats,
-                                                    trainingParamDict, self.samplingFreq,
-                                                    self.currentAttempt, attemptId,
-                                                    enableSpeedUp) )
+            model_file_path = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train",
+                                           str("classifier-weights-" + str(attemptId) + ".pkl"))
+            self.trainClassThread.append(TrainClassifier_Timeflux(scenFile,
+                                                                  trainFiles,
+                                                                  self.workspaceFolder,
+                                                                  self.parameterDict,
+                                                                  self.currentSessionId,
+                                                                  filter_list,
+                                                                  trainingSize,
+                                                                  self.currentAttempt,
+                                                                  model_file_path))
 
         # Signal: Training work thread finished one step
         # Increment progress bar + change its label
         self.trainClassThread[0].info.connect(self.progressBarTrain.increment)
         self.trainClassThread[0].info2.connect(self.progressBarTrain.changeLabel)
+
         # Signal: Training work thread finished
         self.trainClassThread[0].over.connect(self.training_over)
+
         # Launch the work thread
         self.trainClassThread[0].start()
 
@@ -2463,17 +2500,20 @@ class Dialog(QDialog):
         print("electrodeList: " + str(electrodeList))
 
         # === 2nd step : check if classifier-weights-X.xml exists
-        classifWeightsPath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train",
-                                          str("classifier-weights-" + str(classifIdx) + ".xml"))
-        # classifWeightsPath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train",
-        #                                          str("classifier-weights-" + str(classifIdx) + ".pkl")) # TIMEFLUX
+        if self.parameterDict["bciPlatform"] == settings.availablePlatforms[0]:  # openvibe
+            classifWeightsPath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train",
+                                              str("classifier-weights-" + str(classifIdx) + ".xml"))
+        elif self.parameterDict["bciPlatform"] == settings.availablePlatforms[1]:  # timeflux
+            classifWeightsPath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train",
+                                              str("classifier-weights-" + str(classifIdx) + ".pkl"))
 
         if not os.path.exists(classifWeightsPath):
             myMsgBox("ERROR: for selected classification results (" + str(
                 classifIdx) + "),\nweights file not found in workspace.")
             return
+
         # Reformat to openvibe's preference... C:/etc.
-        if platform.system() == 'Windows':
+        if self.parameterDict["bciPlatform"] == settings.availablePlatforms[0] and platform.system() == 'Windows':
             classifWeightsPath = classifWeightsPath.replace("\\", "/")
 
         # === 3rd step : update sc3-online.xml with classifier-weights file and relevant features
@@ -2481,24 +2521,23 @@ class Dialog(QDialog):
         shouldRun = False
         isOnline = True
         templateFolder = settings.optionsTemplatesDir[self.parameterDict["pipelineType"]]
-	    # scenfile= os.path.join(self.workspaceFolder, settings.templateScenFilenames_timeflux[2])	# TIMEFLUX
 
         # Instantiate the thread...
-        self.runClassThread = RunClassifier([], templateFolder,
-                                            self.workspaceFolder, self.ovScript,
-                                            classifWeightsPath,
-                                            listFeat, listFeat2,
-                                            trainingParamDict, sampFreq, electrodeList,
-                                            shouldRun, isOnline)
+        if self.parameterDict["bciPlatform"] == settings.availablePlatforms[0]:  # openvibe
+            self.runClassThread = RunClassifier([], templateFolder,
+                                                self.workspaceFolder, self.ovScript,
+                                                classifWeightsPath, listFeat, listFeat2,
+                                                trainingParamDict, sampFreq, electrodeList,
+                                                shouldRun, isOnline)
+        elif self.parameterDict["bciPlatform"] == settings.availablePlatforms[1]:  # timeflux
+            scenfile= os.path.join(self.workspaceFolder, settings.templateScenFilenames_timeflux[2])
 
-        ### TIMEFLUX
-        # self.runClassThread = UseClassifier_Timeflux(scenfile,
-        #                                    self.workspaceFolder, self.parameterDict,self.currentSessionId,
-        #                                    listFeat, classifWeightsPath)
-
+            self.runClassThread = UseClassifier_Timeflux(scenfile, self.workspaceFolder, self.parameterDict,
+                                                         self.currentSessionId, listFeat, classifWeightsPath)
 
         # Signal: Running work thread finished
         self.runClassThread.over.connect(self.running_over)
+
         # Launch the work thread
         self.runClassThread.start()
 
