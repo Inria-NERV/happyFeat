@@ -355,7 +355,7 @@ class Dialog(QDialog):
                     self.parameterDict[param] = self.paramWidgets[i].text()
 
             # Write default parameters for selected pipeline
-            extractParamDict = settings.pipelineExtractSettings[self.parameterDict["pipelineType"]].copy()
+            extractParamDict = settings.pipelineExtractSettings_tf[self.parameterDict["pipelineType"]].copy()
 
             self.parameterDict["currentSessionId"] = "1"
             print(self.parameterDict)
