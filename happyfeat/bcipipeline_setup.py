@@ -272,8 +272,9 @@ class Dialog(QDialog):
     def checkTimefluxInstall(self):
         try:
             import timeflux
+            import timeflux_dsp
         except ImportError as e:
-            myMsgBox("WARNING: Timeflux is NOT installed!!")
+            myMsgBox("WARNING: timeflux and/or timeflux-dsp NOT installed!!")
             return False
 
         return True

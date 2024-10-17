@@ -711,10 +711,16 @@ class Dialog(QDialog):
         # ----------
         # Update status of buttons used for plotting
         # ----------
+
+        # Deactivate some buttons for timeflux verison
+        if self.parameterDict["bciPlatform"] == settings.availablePlatforms[1]:  # timeflux
+            self.btn_timefreq.setEnabled(False)
+
         if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
             self.btn_r2map.setEnabled(myBool)
             self.btn_r2mapAutoFeat.setEnabled(myBool)
-            self.btn_timefreq.setEnabled(myBool)
+            if self.parameterDict["bciPlatform"] == settings.availablePlatforms[0]:  # openvibe
+                self.btn_timefreq.setEnabled(myBool)
             self.btn_psd.setEnabled(myBool)
             self.btn_topo.setEnabled(myBool)
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
