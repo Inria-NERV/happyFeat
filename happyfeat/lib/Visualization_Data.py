@@ -498,10 +498,12 @@ def plot_psd_r2(Power_class1, Power_class2, Rsquare, freqs, channel, channel_arr
     for i in range(len(freqs)):
         if freqs[i] == fmin:
             index_fmin = i
+            break
 
     for i in range(len(freqs)):
         if freqs[i] == fmax:
             index_fmax = i
+            break
     # plt.plot(Aver_class2,freqs,Aver_class1,freqs)
     # index_fmin = np.where(np.abs(freqs-fmin)<0.00001)
     # index_fmax = np.where(np.abs(freqs-fmax)<0.00001)
@@ -521,21 +523,20 @@ def plot_psd_r2(Power_class1, Power_class2, Rsquare, freqs, channel, channel_arr
                      Selected_class1 + Selected_class1_STD,
                      color='red', alpha=0.3)
 
-    classes_max_value = max(max(Selected_class1), max(Selected_class2))
-    selected_Rsquare = Rsquare[channel, index_fmin:index_fmax] * classes_max_value
-    ax.plot(freqs[index_fmin:index_fmax], selected_Rsquare, label="r2", color='black')
+    # classes_max_value = max(max(Selected_class1), max(Selected_class2))
+    # selected_Rsquare = Rsquare[channel, index_fmin:index_fmax] * classes_max_value
 
-    max_r2_index=np.unravel_index(Rsquare.argmax(), Rsquare.shape)
-    print(max_r2_index)
-    max_r2_value = Rsquare[max_r2_index]
+    # "zoom" vertically to better distinguish the curves of the two classes
+    minVal = min(min(Selected_class1), min(Selected_class2)) - 10.0
+    maxVal = max(max(Selected_class1), max(Selected_class2)) + 10.0
+    ax.set_ylim([minVal, maxVal])
+    ax.set_xlim([int(index_fmin * fres) , int(index_fmax * fres)])
 
-    corresponding_frequency = freqs[index_fmin + max_r2_index[1]]
-    corresponding_value_class1 = Selected_class1[max_r2_index[1]]
-    corresponding_value_class2 = Selected_class2[max_r2_index[1]]
-    print(f"At frequency {corresponding_frequency} Hz:")
-    print(f"  R^2 value: {max_r2_value}")
-    print(f"  {class1label} value: {corresponding_value_class1}")
-    print(f"  {class2label} value: {corresponding_value_class2}")
+    # instantiate 2nd y axis
+    ax2 = ax.twinx()
+    ax2.plot(freqs[index_fmin:index_fmax], Rsquare[channel, index_fmin:index_fmax], label="r2", color='black')
+    ax2.tick_params(axis='y')
+    ax2.set_ylim([0.0, 1.0])
 
     sizing = round(len(freqs[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
     for i in freqs[index_fmin:(index_fmax + 1)]:
