@@ -81,7 +81,7 @@ def update_filenames(yaml_file, new_filenames_A, new_filenames_B, new_selections
     # Read the YAML file
     with open(yaml_file, 'r') as file:
         data = yaml.load(file)
-    print("updatting the training file")
+    print("updating the training file")
     # Update the parameters in the nodes
     
     for graph in data.get('graphs', []):

@@ -220,7 +220,9 @@ class Dialog(QDialog):
 
 
 def main():
-    app = QApplication(sys.argv)
+    if not QApplication.instance():
+        app = QApplication(sys.argv)
+
     dlg = Dialog()
     result = dlg.exec()
     if not result:

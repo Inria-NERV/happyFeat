@@ -352,11 +352,12 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
 class TrainClassifier_Timeflux(QtCore.QThread):
     info = Signal(bool)
     info2 = Signal(str)
-    over = Signal(bool, str)
+    over = Signal(bool, int, str)
 
     def __init__(self, scenFile, signalFiles, workspaceFolder,
                  parameterDict, currentSessionId, filter_list,
-                 cv, currentAttempt, model_path, parent=None):
+                 cv, currentAttempt, attemptId,
+                 model_path, parent=None):
 
         super().__init__(parent)
         self.stop = False
@@ -366,10 +367,11 @@ class TrainClassifier_Timeflux(QtCore.QThread):
         self.parameterDict = parameterDict.copy()
         self.currentSessionId = currentSessionId
         self.extractDict = parameterDict["Sessions"][currentSessionId]["ExtractionParams"].copy()
-        self.filter_list=filter_list
-        self.cv=cv
-        self.model_path=model_path
-        self.currentAttempt=currentAttempt
+        self.filter_list = filter_list
+        self.cv = cv
+        self.model_path = model_path
+        self.currentAttempt = currentAttempt
+        self.attemptId = attemptId
 
     def run(self):
 
@@ -415,7 +417,7 @@ class TrainClassifier_Timeflux(QtCore.QThread):
             if output:
                 print(str(output))
                 if "ValueError:" in str(output):
-                    self.over.emit(False, output.decode('utf-8').strip())
+                    self.over.emit(False, self.attemptId, output.decode('utf-8').strip())
                 if "accuracy" in str(output):
                     classification_scores= str(output)
                 if "specificity" in str(output):
@@ -480,7 +482,7 @@ class TrainClassifier_Timeflux(QtCore.QThread):
         tstop = time.perf_counter()
 
         self.stop = True
-        self.over.emit(True, textDisplay)
+        self.over.emit(True, self.attemptId, textDisplay)
 
     def stopThread(self):
         self.stop = True
@@ -508,7 +510,7 @@ class UseClassifier_Timeflux(QtCore.QThread):
 
         # Find the path for the scenario yaml file
         classify_yaml_file_path=os.path.join(self.workspaceFolder,self.scenFile)
-        print("the path we are checkinh",classify_yaml_file_path)
+        print("the path we are checking",classify_yaml_file_path)
 
         # Change parameters for the yaml File
         update_online_scenario(

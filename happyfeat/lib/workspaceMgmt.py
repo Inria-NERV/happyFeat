@@ -14,7 +14,7 @@ def initializeNewWorkspace(jsonFile):
 def setKeyValue(jsonFile, key, value):
     # Element can be whatever: None, int, str, list, dict...
     currentDict = {}
-    with open(jsonFile, "r+") as myjson:
+    with open(jsonFile, "r") as myjson:
         currentDict = json.load(myjson)
     currentDict[key] = value
     writeJson(jsonFile, currentDict)
@@ -39,7 +39,7 @@ def loadExtractedFiles(jsonFile, sessionId):
 
 def addExtractedFile(jsonFile, sessionId, filename):
     currentDict = {}
-    with open(jsonFile, "r+") as myjson:
+    with open(jsonFile, "r") as myjson:
         currentDict = json.load(myjson)
     currentDict["Sessions"][sessionId]["ExtractedSignalFiles"].append(filename)
     writeJson(jsonFile, currentDict)
@@ -52,7 +52,7 @@ def checkIfTrainingAlreadyDone(jsonFile, sessionId, listFiles, listFeatures):
     # - idx (str) : if result is true, idx of attempt, if false, lastidx+1
     # - score (str) : if result is true, score of attempt, if false, None
     currentDict = {}
-    with open(jsonFile, "r+") as myjson:
+    with open(jsonFile, "r") as myjson:
         currentDict = json.load(myjson)
     if currentDict["Sessions"][sessionId]["TrainingAttempts"] == {}:
         return False, "1", None
@@ -67,7 +67,7 @@ def checkIfTrainingAlreadyDone(jsonFile, sessionId, listFiles, listFeatures):
 
 def addTrainingAttempt(jsonFile, sessionId, listFiles, compositeFile, listFeatures, score):
     currentDict = {}
-    with open(jsonFile, "r+") as myjson:
+    with open(jsonFile, "r") as myjson:
         currentDict = json.load(myjson)
     # get last training id...
     if not "1" in currentDict["Sessions"][sessionId]["TrainingAttempts"]:
@@ -83,7 +83,7 @@ def addTrainingAttempt(jsonFile, sessionId, listFiles, compositeFile, listFeatur
 
 def replaceTrainingAttempt(jsonFile, sessionId, attemptId, listFiles, compositeFile, listFeatures, score):
     currentDict = {}
-    with open(jsonFile, "r+") as myjson:
+    with open(jsonFile, "r") as myjson:
         currentDict = json.load(myjson)
     newTrainAttempt = {"SignalFiles": listFiles, "CompositeFile": compositeFile, "Features": listFeatures,
                        "Score": str(score)}
@@ -101,7 +101,7 @@ def newSession(jsonFile, paramDict, newId, newParamDict):
     paramDict["Sessions"][newId] = {"ExtractionParams": newParamDict,
                                     "ExtractedSignalFiles": [],
                                     "TrainingAttempts": {}}
-    with open(jsonFile, "r+") as myjson:
+    with open(jsonFile, "r") as myjson:
         currentDict = json.load(myjson)
 
     if "Sessions" in currentDict:

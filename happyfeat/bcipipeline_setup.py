@@ -524,7 +524,8 @@ def launchOpenvibe(command, acqScen):
 
 
 def launch(folder, fullWorkspacePath):
-    app = QApplication(sys.argv)
+    if not QApplication.instance():
+        app = QApplication(sys.argv)
 
     # Check that workspace file exists, is a json file, and contains HappyFeatVersion field...
     if not os.path.exists(fullWorkspacePath):

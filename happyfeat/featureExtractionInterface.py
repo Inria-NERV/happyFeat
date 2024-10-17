@@ -1492,15 +1492,20 @@ class Dialog(QDialog):
 
             model_file_path = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train",
                                            str("classifier-weights-" + str(attemptId) + ".pkl"))
-            self.trainClassThread.append(TrainClassifier_Timeflux(scenFile,
-                                                                  trainFiles,
-                                                                  self.workspaceFolder,
-                                                                  self.parameterDict,
-                                                                  self.currentSessionId,
-                                                                  filter_list,
-                                                                  trainingSize,
-                                                                  self.currentAttempt,
-                                                                  model_file_path))
+
+            trainThread = TrainClassifier_Timeflux(scenFile,
+                                                 trainFiles,
+                                                 self.workspaceFolder,
+                                                 self.parameterDict,
+                                                 self.currentSessionId,
+                                                 filter_list,
+                                                 trainingSize,
+                                                 self.currentAttempt,
+                                                 attemptId,
+                                                 model_file_path,
+                                                 parent=self)
+
+            self.trainClassThread.append(trainThread)
 
         # Signal: Training work thread finished one step
         # Increment progress bar + change its label
@@ -2868,7 +2873,8 @@ def qt_plot_strongestConnectome(connect1, connect2, percentStrong, fmin, fmax, e
 
 # main entry point...
 def launch(folder, fullWorkspacePath):
-    app = QApplication(sys.argv)
+    if not QApplication.instance():
+        app = QApplication(sys.argv)
 
     # Check that workspace file exists, is a json file, and contains HappyFeatVersion field...
     if not os.path.exists(fullWorkspacePath):
@@ -2884,7 +2890,12 @@ def launch(folder, fullWorkspacePath):
             return -1
 
     dlg = Dialog(fullWorkspacePath)
-    return app.exec_()
+
+    retVal = app.exec_()
+
+    app.shutdown()
+
+    return retVal
 
 
 if __name__ == '__main__':

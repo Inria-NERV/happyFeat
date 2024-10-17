@@ -91,7 +91,7 @@ class LDA_NODE(Node):
                         # Split the data into training and test sets for this fold
                         X_train, X_test = data_np[train_index], data_np[test_index]
                         y_train, y_test = labels[train_index], labels[test_index]
-                        self.plot_eigenvalues_and_variance(X_train, y_train)
+                        # self.plot_eigenvalues_and_variance(X_train, y_train)
                         print("x_train",type(X_train),np.shape(X_train))
                         # Train the model on the training set
                         # self.model.fit(X_train, y_train)
@@ -162,7 +162,7 @@ class LDA_NODE(Node):
                     if train_accuracy == 1:
                         print("The model perfectly fits the training data (accuracy = 1)")
 
-                    self.visualize_lda(data_np,labels)
+                    # self.visualize_lda(data_np,labels)
 
 
                     self.trained = True
