@@ -405,6 +405,10 @@ class TrainClassifier_Timeflux(QtCore.QThread):
 
         )
 
+        classification_scores = None
+        specificity_scores = None
+        sensitivity_scores = None
+
         # Launch timeflux scenario !
         p = subprocess.Popen([ "timeflux", "-d", str(train_yaml_file_path)],
                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE)  # add cwd if needed
@@ -419,15 +423,19 @@ class TrainClassifier_Timeflux(QtCore.QThread):
                 if "ValueError:" in str(output):
                     self.over.emit(False, self.attemptId, output.decode('utf-8').strip())
                 if "accuracy" in str(output):
-                    classification_scores= str(output)
+                    classification_scores = str(output)
                 if "specificity" in str(output):
-                    specificity_scores= str(output)
+                    specificity_scores = str(output)
                 if "sensitivity" in str(output):
-                    sensitivity_scores= str(output)
+                    sensitivity_scores = str(output)
                 if "Terminated" in str(output):
                     p.kill()
                     break
-        
+
+        if not classification_scores or not sensitivity_scores or not specificity_scores:
+            myMsgBox("Error in training!")  # TODO : more specific error message
+            self.over.emit(False, self.attemptId, None)
+
         # Write the message at the end of training
         # Accuracy
         # Split the string by spaces and get the last element, which is the number
