@@ -105,6 +105,9 @@ class Dialog(QDialog):
         self.currentAttempt = []
         self.currentTrainCombination = None
 
+        self.nbThreadsViz = 1
+        self.vizThreadStatus = []
+
         self.extractTimerStart = 0
         self.extractTimerEnd = 0
         self.vizTimerStart = 0
@@ -1237,6 +1240,7 @@ class Dialog(QDialog):
 
         # Manage number of threads (for GUI reactivation...)
         self.nbThreadsViz = 1
+        self.vizThreadStatus = []
 
         # Launch the work thread
         self.loadFilesForVizThread.start()
@@ -1257,7 +1261,7 @@ class Dialog(QDialog):
 
         self.vizTimerStart = time.perf_counter()
 
-    def loadFilesForViz_over(self, success, text, fileValidityList):
+    def loadFilesForViz_over(self, success, text, fileValidityList, initWindowsList, validWindowsList):
         # Viz work thread is over, so we kill the progress bar,
         # and re-activate the GUI (if it's the last thread to finish)
         self.vizTimerEnd = time.perf_counter()
@@ -1268,17 +1272,23 @@ class Dialog(QDialog):
 
         if not success:
             myMsgBox(text)
-            self.plotBtnsEnabled = False
+            self.vizThreadStatus.append(False)
         else:
             self.samplingFreq = self.Features.samplingFreq
-            self.plotBtnsEnabled = True
+            self.vizThreadStatus.append(True)
 
         # unlock viz buttons only if both threads have finished.
         self.lockVizGui.acquire()
         try:
             self.nbThreadsViz -= 1
             if self.nbThreadsViz == 0:
+                if False in self.vizThreadStatus:
+                    self.plotBtnsEnabled = False
+                else:
+                    self.plotBtnsEnabled = True
+
                 self.enableGui(True)
+
         finally:
             self.lockVizGui.release()
 
@@ -1292,21 +1302,36 @@ class Dialog(QDialog):
             warnText += str("\nTrials with invalid values were dropped.")
             warnText += str("\n /!\\ The displayed statistics (R2 maps, etc.) might be biased...\n")
             for i in invalidFiles:
-                warnText += str("\n" + analysisFiles[i])
+                warnText += str("\n" + analysisFiles[i] + ": ")
+                warnText += str(str(validWindowsList[i]) + "/" + str(initWindowsList[i]) )
+                warnText += str(" valid windows")
 
             myMsgBox(warnText)
 
-    def loadFilesForViz_kill_PB(self, success, text, fileValidityList):
+    def loadFilesForViz_kill_PB(self, success, text, fileValidityList, initWindowsList, validWindowsList):
         # Viz work thread2 is over, so we kill the progress bar
         # and re-activate the GUI (if it's the last thread to finish)
         self.progressBarViz2.finish()
 
+        if not success:
+            myMsgBox(text)
+            self.vizThreadStatus.append(False)
+        else:
+            self.samplingFreq = self.Features.samplingFreq
+            self.vizThreadStatus.append(True)
+
         # unlock viz buttons only if both threads have finished.
         self.lockVizGui.acquire()
         try:
             self.nbThreadsViz -= 1
             if self.nbThreadsViz == 0:
+                if False in self.vizThreadStatus:
+                    self.plotBtnsEnabled = False
+                else:
+                    self.plotBtnsEnabled = True
+
                 self.enableGui(True)
+
         finally:
             self.lockVizGui.release()
 
@@ -1320,7 +1345,9 @@ class Dialog(QDialog):
             warnText += str("\nTrials with invalid values were dropped.")
             warnText += str("\n /!\\ The displayed statistics (R2 maps, etc.) might be biased...\n")
             for i in invalidFiles:
-                warnText += str("\n" + analysisFiles[i])
+                warnText += str("\n" + analysisFiles[i] + ": ")
+                warnText += str(str(validWindowsList[i]) + "/" + str(initWindowsList[i]))
+                warnText += str(" valid windows")
 
             myMsgBox(warnText)
 
@@ -1841,7 +1868,6 @@ class Dialog(QDialog):
         self.freqTopo.setEnabled(myBool)
         self.colormapScale.setEnabled(myBool)
         self.autofeatUseSign.setEnabled(myBool)
-        self.btn_autoFeat.setEnabled(myBool)
 
         self.btn_loadFilesForViz.setEnabled(myBool)
         if myBool and self.plotBtnsEnabled:
@@ -2185,7 +2211,7 @@ class Dialog(QDialog):
             try:
                 idx = results1.electrodes_final.index(chan)
             except ValueError:
-                myMsgBox("Electrode " + chan + " not in electrode list of selected files")
+                myMsgBox("AutoFeat: Electrode " + chan + " not in electrode list of selected files")
                 return
             Index_electrode.append(idx)
         print("Index_electrode:  " + str(Index_electrode))
@@ -2194,7 +2220,7 @@ class Dialog(QDialog):
         freqMin = int(self.autoFeatFreqRange.split(":")[0])
         freqMax = int(self.autoFeatFreqRange.split(":")[1])
         if freqMax <= freqMin or freqMax > self.samplingFreq / 2 or freqMin < 0 or freqMax < 1 :
-            myMsgBox("Invalid frequency range for AutoFeat ( freqmin:freqmax )" )
+            myMsgBox("AutoFeat: Invalid frequency range ( freqmin:freqmax )" )
             return
 
         # find closest indices in the frequencies list, corresponding to fmin and fmax
@@ -2224,11 +2250,11 @@ class Dialog(QDialog):
                     # The selected frequency is in "index" mode, we need to translate it to a human-readable format
                     result.autoselected.append((result.electrodes_final[idx], int(freqsArray[idxMaxValue])))
 
-                print("Best feats: " + str(result.autoselected))
                 if len(result.autoselected) < 1:
-                    myMsgBox("Error in automatic selection of best features")
+                    myMsgBox("AutoFeat: Error in automatic selection of best features")
                     # Todo: make more secure & explicit
                     return
+                print("Best feats: " + str(result.autoselected))
 
         # Remove all pairs of features in columns
         # TODO : refactor. A bit dirty...
