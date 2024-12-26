@@ -1730,6 +1730,15 @@ class Dialog(QDialog):
                                            self.currentAttempt[comb]["SignalFiles"],
                                            self.currentAttempt[comb]["Features"])
 
+            # we add (empty) training attempts corresponding to the id. Otherwise
+            # all tested combinations would have the same ID!
+            # They will get replaced in trainingCombination_over() method
+            addTrainingAttempt(self.workspaceFile, self.currentSessionId,
+                               self.currentAttempt[comb]["SignalFiles"],
+                               None,
+                               self.currentAttempt[comb]["Features"],
+                               "0.0")
+
             # Instantiate the thread...
             self.trainClassThread.append( TrainClassifier(  self.trainingFiles,
                                                             signalFolder, templateFolder,

@@ -709,7 +709,7 @@ class TrainClassifier(QtCore.QThread):
 
         # selectedFeats is either a list of feats. of interest
         # or (case of mixed features) a list of 2 lists
-        self.selectedFeats = selectedFeats
+        self.selectedFeats = selectedFeats.copy()
         self.parameterDict = parameterDict.copy()
         self.currentSessionId = self.parameterDict["currentSessionId"]
         self.extractDict = parameterDict["Sessions"][self.parameterDict["currentSessionId"]]["ExtractionParams"].copy()
