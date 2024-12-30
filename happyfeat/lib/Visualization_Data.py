@@ -362,7 +362,7 @@ def time_frequency_map(time_freq, time, freqs, channel, fmin, fmax, fres, each_p
         A.append(np.divide((tf[:, i] - PSD_baseline), PSD_baseline) * 100)
     tf = np.transpose(A)
 
-    frequence = []
+    frequencies = []
 
     time_seres = []
     print(time)
@@ -395,15 +395,15 @@ def time_frequency_map(time_freq, time, freqs, channel, fmin, fmax, fres, each_p
     sizing = round(len(freqs[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
     for i in freqs[index_fmin:(index_fmax + 1)]:
         if i % (round(sizing * 1 / fres)) == 0:
-            frequence.append(str(round(i)))
+            frequencies.append(str(round(i)))
         else:
-            frequence.append('')
+            frequencies.append('')
     cm.get_cmap('jet')
     # plt.jet()
     ax.tick_params(axis='both', which='both', length=0)
     cbar = plt.colorbar()
     cbar.set_label('ERD/ERS', rotation=270, labelpad=10)
-    plt.yticks(range(len(freqs[index_fmin:index_fmax + 1])), frequence, fontsize=7)
+    plt.yticks(range(len(freqs[index_fmin:index_fmax + 1])), frequencies, fontsize=7)
 
     plt.xticks(range(len(time)), time_seres, fontsize=7)
     plt.xlabel(' Time (s)', fontdict=font)
@@ -411,6 +411,7 @@ def time_frequency_map(time_freq, time, freqs, channel, fmin, fmax, fres, each_p
 
     # plt.show()
 
+# Plot the two class comparison of PSDs
 def plot_psd(Power_class1, Power_class2, freqs, channel, channel_array, each_point, fmin, fmax, fres, class1label,
              class2label, title):
     font = {'family': 'serif',
@@ -420,7 +421,7 @@ def plot_psd(Power_class1, Power_class2, freqs, channel, channel_array, each_poi
             }
 
     fig, ax = plt.subplots()
-    frequence = []
+    frequencies = []
     Aver_class2 = 10 * np.log10(Power_class2[:, channel, :])
     Aver_class2 = Aver_class2.mean(0)
     STD_class2 = 10 * np.log10(Power_class2[:, channel, :])
@@ -437,45 +438,42 @@ def plot_psd(Power_class1, Power_class2, freqs, channel, channel_array, each_poi
     for i in range(len(freqs)):
         if freqs[i] == fmax:
             index_fmax = i
-    # plt.plot(Aver_class2,freqs,Aver_class1,freqs)
-    # index_fmin = np.where(np.abs(freqs-fmin)<0.00001)
-    # index_fmax = np.where(np.abs(freqs-fmax)<0.00001)
-    # print(index_fmin)
+
     Selected_class2 = (Aver_class2[index_fmin:index_fmax])
     Selected_class1 = (Aver_class1[index_fmin:index_fmax])
-
     Selected_class2_STD = (STD_class2[index_fmin:index_fmax] / Power_class2.shape[0])
     Selected_class1_STD = (STD_class1[index_fmin:index_fmax] / Power_class2.shape[0])
 
+    # Plot Class 2 + deviation
     plt.plot(freqs[index_fmin:index_fmax], Selected_class2, label=class2label, color='blue')
-
     plt.fill_between(freqs[index_fmin:index_fmax], Selected_class2 - Selected_class2_STD, Selected_class2 + Selected_class2_STD,
                      color='blue', alpha=0.3)
+    # Plot Class 1 + deviation
     plt.plot(freqs[index_fmin:index_fmax], Selected_class1, label=class1label, color='red')
     plt.fill_between(freqs[index_fmin:index_fmax], Selected_class1 - Selected_class1_STD,
                      Selected_class1 + Selected_class1_STD,
                      color='red', alpha=0.3)
-    sizing = round(len(freqs[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
-    for i in freqs[index_fmin:(index_fmax + 1)]:
-        if i % (round(sizing * 1 / fres)) == 0:
-            frequence.append(str(round(i)))
-        else:
-            frequence.append('')
+
+    # sizing = round(len(freqs[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
+    # for i in freqs[index_fmin:(index_fmax + 1)]:
+    #     if i % (round(sizing * 1 / fres)) == 0:
+    #         frequencies.append(str(round(i)))
+    #     else:
+    #         frequencies.append('')
+    # ax.xticks(range(len(freqs[index_fmin:(index_fmax + 1)])), frequencies, fontsize=12)
+    # ax.set_xticks(np.arange(fmin, fmax, sizing))
+
     ax.tick_params(axis='both', which='both', length=0)
 
     plt.title(title+'Sensor: ' + channel_array[channel], fontsize='large')
-    # plt.xticks(range(len(freqs[index_fmin:(index_fmax + 1)])), frequence, fontsize=12)
     plt.xlabel(' Frequency (Hz)', fontdict=font)
     plt.ylabel('Power spectrum (db)', fontdict=font)
     plt.margins(x=0)
-    # ax.set_xticks(np.arange(fmin, fmax, sizing))
     ax.grid(axis='x')
-    # plt.axis('square')
 
     plt.legend()
-    # plt.show()
 
-
+# Plot the two class comparison of PSDs, plus the R2 value for each freq, on the same graph
 def plot_psd_r2(Power_class1, Power_class2, Rsquare, freqs, channel, channel_array, each_point, fmin, fmax, fres, class1label,
              class2label, title):
     font = {'family': 'serif',
@@ -485,7 +483,8 @@ def plot_psd_r2(Power_class1, Power_class2, Rsquare, freqs, channel, channel_arr
             }
 
     fig, ax = plt.subplots()
-    frequence = []
+
+    frequencies = []
     Aver_class2 = 10 * np.log10(Power_class2[:, channel, :])
     Aver_class2 = Aver_class2.mean(0)
     STD_class2 = 10 * np.log10(Power_class2[:, channel, :])
@@ -495,69 +494,70 @@ def plot_psd_r2(Power_class1, Power_class2, Rsquare, freqs, channel, channel_arr
     Aver_class1 = Aver_class1.mean(0)
     STD_class1 = 10 * np.log10(Power_class1[:, channel, :])
     STD_class1 = STD_class1.std(0)
+
+    # find actual indices of frequencies
     for i in range(len(freqs)):
         if freqs[i] == fmin:
             index_fmin = i
             break
-
     for i in range(len(freqs)):
         if freqs[i] == fmax:
             index_fmax = i
             break
-    # plt.plot(Aver_class2,freqs,Aver_class1,freqs)
-    # index_fmin = np.where(np.abs(freqs-fmin)<0.00001)
-    # index_fmax = np.where(np.abs(freqs-fmax)<0.00001)
-    # print(index_fmin)
+
     Selected_class2 = (Aver_class2[index_fmin:index_fmax])
     Selected_class1 = (Aver_class1[index_fmin:index_fmax])
-
     Selected_class2_STD = (STD_class2[index_fmin:index_fmax] / Power_class2.shape[0])
     Selected_class1_STD = (STD_class1[index_fmin:index_fmax] / Power_class2.shape[0])
 
-    ax.plot(freqs[index_fmin:index_fmax], Selected_class2, label=class2label, color='blue')
-
+    # Plot Class 2 + deviation
+    lns1 = ax.plot(freqs[index_fmin:index_fmax], Selected_class2, label=class2label, color='blue')
     ax.fill_between(freqs[index_fmin:index_fmax], Selected_class2 - Selected_class2_STD, Selected_class2 + Selected_class2_STD,
                      color='blue', alpha=0.3)
-    ax.plot(freqs[index_fmin:index_fmax], Selected_class1, label=class1label, color='red')
+    # Plot Class 1 + deviation
+    lns2 = ax.plot(freqs[index_fmin:index_fmax], Selected_class1, label=class1label, color='red')
     ax.fill_between(freqs[index_fmin:index_fmax], Selected_class1 - Selected_class1_STD,
                      Selected_class1 + Selected_class1_STD,
                      color='red', alpha=0.3)
-
-    # classes_max_value = max(max(Selected_class1), max(Selected_class2))
-    # selected_Rsquare = Rsquare[channel, index_fmin:index_fmax] * classes_max_value
 
     # "zoom" vertically to better distinguish the curves of the two classes
     minVal = min(min(Selected_class1), min(Selected_class2)) - 10.0
     maxVal = max(max(Selected_class1), max(Selected_class2)) + 10.0
     ax.set_ylim([minVal, maxVal])
     ax.set_xlim([int(index_fmin * fres) , int(index_fmax * fres)])
+    ax.set_ylabel('Power spectrum (db)', fontdict=font)
 
-    # instantiate 2nd y axis
+    # 2nd y axis for R2 values
     ax2 = ax.twinx()
-    ax2.plot(freqs[index_fmin:index_fmax], Rsquare[channel, index_fmin:index_fmax], label="r2", color='black')
+    lns3 = ax2.plot(freqs[index_fmin:index_fmax], Rsquare[channel, index_fmin:index_fmax], label="r2", color='black')
     ax2.tick_params(axis='y')
     ax2.set_ylim([0.0, 1.0])
+    ax2.set_ylabel('R^2 value', fontdict=font)
 
-    sizing = round(len(freqs[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
-    for i in freqs[index_fmin:(index_fmax + 1)]:
-        if i % (round(sizing * 1 / fres)) == 0:
-            frequence.append(str(round(i)))
-        else:
-            frequence.append('')
+    # sizing = round(len(freqs[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
+    # for i in freqs[index_fmin:(index_fmax + 1)]:
+    #     if i % (round(sizing * 1 / fres)) == 0:
+    #         frequencies.append(str(round(i)))
+    #     else:
+    #         frequencies.append('')
+    # ax.xticks(range(len(freqs[index_fmin:(index_fmax + 1)])), frequencies, fontsize=12)
+    # ax.set_xticks(np.arange(fmin, fmax, sizing))
+
     ax.tick_params(axis='both', which='both', length=0)
 
     plt.title(title+'Sensor: ' + channel_array[channel], fontsize='large')
-    # plt.xticks(range(len(freqs[index_fmin:(index_fmax + 1)])), frequence, fontsize=12)
     plt.xlabel(' Frequency (Hz)', fontdict=font)
-    plt.ylabel('Power spectrum (db)', fontdict=font)
     plt.margins(x=0)
-    # ax.set_xticks(np.arange(fmin, fmax, sizing))
     ax.grid(axis='x')
-    # plt.axis('square')
 
-    plt.legend()
+    # all labels in one spot
+    lns = lns1 + lns2 + lns3
+    labs = [l.get_label() for l in lns]
+    ax.legend(lns, labs, loc=0)
+
     # plt.show()
 
+# Plot the two class comparison of a given metric in [0;1] (not PSD)
 def plot_metric(Power_class1, Power_class2, freqs, channel, channel_array, each_point, fmin, fmax, fres, class1label,
              class2label, metricLabel, title):
     font = {'family': 'serif',
@@ -567,7 +567,8 @@ def plot_metric(Power_class1, Power_class2, freqs, channel, channel_array, each_
             }
 
     fig, ax = plt.subplots()
-    frequence = []
+    frequencies = []
+    # find actual indices of frequencies
     for i in range(len(freqs)):
         if freqs[i] == fmin:
             index_fmin = i
@@ -576,44 +577,49 @@ def plot_metric(Power_class1, Power_class2, freqs, channel, channel_array, each_
         if freqs[i] == fmax:
             index_fmax = i
 
+    # Get all useful data
     Aver_class1 = Power_class1[:, channel, :].mean(0)
     STD_class1 = Power_class1[:, channel, :].mean(0)
     Selected_class1 = (Aver_class1[index_fmin:index_fmax])
-    Selected_class1_STD = (STD_class1[index_fmin:index_fmax] / Power_class2.shape[0])
+    # Selected_class1_STD = (STD_class1[index_fmin:index_fmax] / Power_class2.shape[0])
     Aver_class2 = Power_class2[:, channel, :].mean(0)
     STD_class2 = Power_class2[:, channel, :].mean(0)
     Selected_class2 = (Aver_class2[index_fmin:index_fmax])
-    Selected_class2_STD = (STD_class2[index_fmin:index_fmax] / Power_class2.shape[0])
+    # Selected_class2_STD = (STD_class2[index_fmin:index_fmax] / Power_class2.shape[0])
 
+    # Plot Class 2
     plt.plot(freqs[index_fmin:index_fmax], Selected_class2, label=class2label, color='blue')
-
     # plt.fill_between(freqs[index_fmin:index_fmax], Selected_class2 - Selected_class2_STD, Selected_class2 + Selected_class2_STD,
     #                  color='blue', alpha=0.3)
+
+    # Plot Class 1
     plt.plot(freqs[index_fmin:index_fmax], Selected_class1, label=class1label, color='red')
     # plt.fill_between(freqs[index_fmin:index_fmax], Selected_class1 - Selected_class1_STD,
     #                  Selected_class1 + Selected_class1_STD,
     #                  color='red', alpha=0.3)
 
-    sizing = round(len(freqs[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
-    for i in freqs[index_fmin:(index_fmax + 1)]:
-        if i % (round(sizing * 1 / fres)) == 0:
-            frequence.append(str(round(i)))
-        else:
-            frequence.append('')
+    # sizing = round(len(freqs[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
+    # for i in freqs[index_fmin:(index_fmax + 1)]:
+    #     if i % (round(sizing * 1 / fres)) == 0:
+    #         frequencies.append(str(round(i)))
+    #     else:
+    #         frequencies.append('')
+    # ax.xticks(range(len(freqs[index_fmin:(index_fmax + 1)])), frequencies, fontsize=12)
+    # ax.set_xticks(np.arange(fmin, fmax, sizing))
+
     ax.tick_params(axis='both', which='both', length=0)
 
     plt.title(title+'Sensor: ' + channel_array[channel], fontsize='large')
-    # plt.xticks(range(len(freqs[index_fmin:(index_fmax + 1)])), frequence, fontsize=12)
     plt.xlabel(' Frequency (Hz)', fontdict=font)
     plt.ylabel(str(metricLabel + ' per frequency'), fontdict=font)
     plt.margins(x=0)
-    # ax.set_xticks(np.arange(fmin, fmax, sizing))
     ax.grid(axis='x')
     # plt.axis('square')
 
     plt.legend()
     # plt.show()
 
+# Plot the two class comparison of a given metric (not PSD), plus the R2 value for each freq, on the same graph
 def plot_metric2(Power_class1, Power_class2, Rsquare, freqs, channel, channel_array, each_point, fmin, fmax, fres, class1label,
              class2label, metricLabel, title):
     font = {'family': 'serif',
@@ -623,7 +629,9 @@ def plot_metric2(Power_class1, Power_class2, Rsquare, freqs, channel, channel_ar
             }
 
     fig, ax = plt.subplots()
-    frequence = []
+    frequencies = []
+
+    # find actual indices of frequencies
     for i in range(len(freqs)):
         if freqs[i] == fmin:
             index_fmin = i
@@ -632,6 +640,7 @@ def plot_metric2(Power_class1, Power_class2, Rsquare, freqs, channel, channel_ar
         if freqs[i] == fmax:
             index_fmax = i
 
+    # Get all useful data
     Aver_class1 = Power_class1[:, channel, :].mean(0)
     STD_class1 = Power_class1[:, channel, :].mean(0)
     Selected_class1 = (Aver_class1[index_fmin:index_fmax])
@@ -641,41 +650,51 @@ def plot_metric2(Power_class1, Power_class2, Rsquare, freqs, channel, channel_ar
     Selected_class2 = (Aver_class2[index_fmin:index_fmax])
     Selected_class2_STD = (STD_class2[index_fmin:index_fmax] / Power_class2.shape[0])
 
-    plt.plot(freqs[index_fmin:index_fmax], Selected_class2, label=class2label, color='blue')
-
+    # Plot Class 2
+    lns1 = ax.plot(freqs[index_fmin:index_fmax], Selected_class2, label=class2label, color='blue')
     # plt.fill_between(freqs[index_fmin:index_fmax], Selected_class2 - Selected_class2_STD, Selected_class2 + Selected_class2_STD,
     #                  color='blue', alpha=0.3)
-    plt.plot(freqs[index_fmin:index_fmax], Selected_class1, label=class1label, color='red')
+
+    # Plot Class 1
+    lns2 = ax.plot(freqs[index_fmin:index_fmax], Selected_class1, label=class1label, color='red')
     # plt.fill_between(freqs[index_fmin:index_fmax], Selected_class1 - Selected_class1_STD,
     #                  Selected_class1 + Selected_class1_STD,
     #                  color='red', alpha=0.3)
+    ax.set_ylabel(str(metricLabel + ' per frequency'), fontdict=font)
 
+    # Plot R2
     selected_Rsquare = Rsquare[channel, index_fmin:index_fmax]
-    # test scaling for r2
+    # test scaling -- to avoid bugs
+    # shouldn't happen, as R2 values should be in [0;1].
     if max(Selected_class1) > 1.0:
         factor = max(Selected_class1) / max(selected_Rsquare)
         selected_Rsquare = selected_Rsquare * factor
 
-    plt.plot(freqs[index_fmin:index_fmax], selected_Rsquare, label="r2", color='black')
+    ax2 = ax.twinx()
+    lns3 = ax2.plot(freqs[index_fmin:index_fmax], selected_Rsquare, label="r2", color='black')
+    ax2.set_ylabel(str("R^2 value"), fontdict=font)
+    ax2.set_ylim(ax.get_ylim())
 
-    sizing = round(len(freqs[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
-    for i in freqs[index_fmin:(index_fmax + 1)]:
-        if i % (round(sizing * 1 / fres)) == 0:
-            frequence.append(str(round(i)))
-        else:
-            frequence.append('')
+    # sizing = round(len(freqs[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
+    # for i in freqs[index_fmin:(index_fmax + 1)]:
+    #     if i % (round(sizing * 1 / fres)) == 0:
+    #         frequencies.append(str(round(i)))
+    #     else:
+    #         frequencies.append('')
+    # ax.xticks(range(len(freqs[index_fmin:(index_fmax + 1)])), frequencies, fontsize=12)
+    # ax.set_xticks(np.arange(fmin, fmax, sizing))
     ax.tick_params(axis='both', which='both', length=0)
 
     plt.title(title+'Sensor: ' + channel_array[channel], fontsize='large')
-    # plt.xticks(range(len(freqs[index_fmin:(index_fmax + 1)])), frequence, fontsize=12)
     plt.xlabel(' Frequency (Hz)', fontdict=font)
-    plt.ylabel(str(metricLabel + ' per frequency'), fontdict=font)
     plt.margins(x=0)
-    # ax.set_xticks(np.arange(fmin, fmax, sizing))
     ax.grid(axis='x')
-    # plt.axis('square')
 
-    plt.legend()
+    # all labels in one spot
+    lns = lns1 + lns2 + lns3
+    labs = [l.get_label() for l in lns]
+    ax.legend(lns, labs, loc=0)
+
     # plt.show()
 
 def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, each_point, fmin, fmax, colormapScale, title):
@@ -684,7 +703,7 @@ def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, eac
             'color': 'black',
             'weight': 'normal',
             'size': 14}
-    frequence = []
+    frequencies = []
 
     nearest_fmin, index_fmin = find_nearest(freq, fmin)
     nearest_fmax, index_fmax = find_nearest(freq, fmax)
@@ -711,9 +730,9 @@ def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, eac
     sizing = round(len(freq[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
     for i in freq[index_fmin:(index_fmax + 1)]:
         if i % (round(sizing * 1 / fres)) == 0:
-            frequence.append(str(round(i)))
+            frequencies.append(str(round(i)))
         else:
-            frequence.append('')
+            frequencies.append('')
 
     if smoothing:
         plt.xlim(0, 80)
@@ -721,7 +740,7 @@ def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, eac
         # plt.xticks(range(0,len(freq)-1,round(2/fres)),freq_real)
         # plt.xlim(0,round(70/fres))
         ax.tick_params(axis='both', which='both', length=0)
-        plt.xticks(range(len(freq[index_fmin:index_fmax + 1])), frequence, fontsize=10)
+        plt.xticks(range(len(freq[index_fmin:index_fmax + 1])), frequencies, fontsize=10)
         # plt.xlim(0,round(72/fres))
 
     plt.xlabel('Frequency (Hz)', fontdict=font)
@@ -732,7 +751,7 @@ def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, eac
     ax.set_yticks(np.arange(0, len(channel_array), 1))
 
     # Labels for major ticks
-    ax.set_xticklabels(frequence)
+    ax.set_xticklabels(frequencies)
     ax.set_yticklabels(channel_array)
 
     # Minor ticks
@@ -970,7 +989,7 @@ def plot_Wsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, eac
             'weight': 'normal',
             'size': 14,
             }
-    frequence = []
+    frequencies = []
 
     nearest_fmin, index_fmin = find_nearest(freq, fmin)
     nearest_fmax, index_fmax = find_nearest(freq, fmax)
@@ -990,9 +1009,9 @@ def plot_Wsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, eac
     sizing = round(len(freq[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
     for i in freq[index_fmin:(index_fmax + 1)]:
         if (i % (round(sizing * 1 / fres)) == 0):
-            frequence.append(str(round(i)))
+            frequencies.append(str(round(i)))
         else:
-            frequence.append('')
+            frequencies.append('')
 
     if smoothing:
         plt.xlim(0, 80)
@@ -1000,7 +1019,7 @@ def plot_Wsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, eac
         # plt.xticks(range(0,len(freq)-1,round(2/fres)),freq_real)
         # plt.xlim(0,round(70/fres))
         ax.tick_params(axis='both', which='both', length=0)
-        plt.xticks(range(len(freq[index_fmin:index_fmax + 1])), frequence, fontsize=10)
+        plt.xticks(range(len(freq[index_fmin:index_fmax + 1])), frequencies, fontsize=10)
         # plt.xlim(0,round(72/fres))
     plt.xlabel('Frequency (Hz)', fontdict=font)
     plt.ylabel('Sensors', fontdict=font)
@@ -1010,7 +1029,7 @@ def plot_Wsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, eac
     ax.set_yticks(np.arange(0, len(channel_array), 1))
 
     # Labels for major ticks
-    ax.set_xticklabels(frequence)
+    ax.set_xticklabels(frequencies)
     ax.set_yticklabels(channel_array)
 
     # Minor ticks
@@ -1032,7 +1051,7 @@ def time_frequency_map_between_cond(time_freq, time, freqs, channel, fmin, fmax,
     fig, ax = plt.subplots()
     rsquare_signed = Compute_Signed_Rsquare(time_freq[:, channel, :, :], baseline[:, channel, :, :])
     rsquare_signed = np.transpose(rsquare_signed)
-    frequence = []
+    frequencies = []
 
     time_seres = []
     print(time)
@@ -1062,15 +1081,15 @@ def time_frequency_map_between_cond(time_freq, time, freqs, channel, fmin, fmax,
     sizing = round(len(freqs[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
     for i in freqs[index_fmin:(index_fmax + 1)]:
         if i % (round(sizing * 1 / fres)) == 0:
-            frequence.append(str(round(i)))
+            frequencies.append(str(round(i)))
         else:
-            frequence.append('')
+            frequencies.append('')
     cm.get_cmap('jet')
     # plt.jet()
     ax.tick_params(axis='both', which='both', length=0)
     cbar = plt.colorbar()
     cbar.set_label('Signed R^2', rotation=270, labelpad=10)
-    plt.yticks(range(len(freqs[index_fmin:index_fmax + 1])), frequence, fontsize=7)
+    plt.yticks(range(len(freqs[index_fmin:index_fmax + 1])), frequencies, fontsize=7)
 
     plt.xticks(range(len(time)), time_seres, fontsize=7)
     plt.xlabel(' Time (s)', fontdict=font)
@@ -1086,7 +1105,7 @@ def plot_connect_spectrum(connect1, connect2, chan1idx, chan2idx, electrodeList,
             }
 
     fig, ax = plt.subplots()
-    frequence = []
+    frequencies = []
     avg_class1 = connect1[:, :, chan1idx, chan2idx].mean(axis=0)
     avg_class2 = connect2[:, :, chan1idx, chan2idx].mean(axis=0)
 
@@ -1098,7 +1117,7 @@ def plot_connect_spectrum(connect1, connect2, chan1idx, chan2idx, electrodeList,
     ax.tick_params(axis='both', which='both', length=0)
 
     plt.title('Connectivity btw. ' + electrodeList[chan1idx] + ' and ' + electrodeList[chan2idx], fontsize='large')
-    # plt.xticks(range(len(freqs[index_fmin:(index_fmax + 1)])), frequence, fontsize=12)
+    # plt.xticks(range(len(freqs[index_fmin:(index_fmax + 1)])), frequencies, fontsize=12)
     plt.xlabel(' Frequency (Hz)', fontdict=font)
     plt.ylabel('MSC', fontdict=font)
     plt.margins(x=0)
