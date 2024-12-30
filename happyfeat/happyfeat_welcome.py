@@ -5,18 +5,18 @@ from multiprocessing import Process
 import json
 from threading import Thread
 
-from PySide2 import QtCore
-from PySide2.QtWidgets import QApplication
-from PySide2.QtWidgets import QVBoxLayout, QHBoxLayout
-from PySide2.QtWidgets import QWidget
-from PySide2.QtWidgets import QListWidget
-from PySide2.QtWidgets import QLineEdit
-from PySide2.QtWidgets import QLabel
-from PySide2.QtWidgets import QFileDialog
-from PySide2.QtWidgets import QDialog
-from PySide2.QtWidgets import QPushButton
-from PySide2.QtWidgets import QInputDialog
-from PySide2.QtGui import QFont
+from PySide6 import QtCore
+from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout
+from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QListWidget
+from PySide6.QtWidgets import QLineEdit
+from PySide6.QtWidgets import QLabel
+from PySide6.QtWidgets import QFileDialog
+from PySide6.QtWidgets import QDialog
+from PySide6.QtWidgets import QPushButton
+from PySide6.QtWidgets import QInputDialog
+from PySide6.QtGui import QFont
 
 import happyfeat.lib.workspaceMgmt as workspaceMgmt
 from happyfeat.lib.workspaceMgmt import *
