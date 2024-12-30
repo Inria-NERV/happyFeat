@@ -1,9 +1,9 @@
-from PySide2.QtWidgets import QApplication
-from PySide2.QtWidgets import QDialog
-from PySide2.QtWidgets import QLabel
-from PySide2.QtWidgets import QProgressBar
-from PySide2.QtWidgets import QVBoxLayout, QHBoxLayout
-from PySide2.QtCore import Qt, QBasicTimer, QThread, Signal
+from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QDialog
+from PySide6.QtWidgets import QLabel
+from PySide6.QtWidgets import QProgressBar
+from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout
+from PySide6.QtCore import Qt, QBasicTimer, QThread, Signal
 
 import sys
 

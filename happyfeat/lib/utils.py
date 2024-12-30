@@ -1,6 +1,6 @@
 from itertools import chain, combinations
 import numpy as np
-from PySide2.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QMessageBox
 
 def myPowerset(iterable):
     s = list(iterable)

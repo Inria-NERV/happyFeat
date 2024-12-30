@@ -7,8 +7,8 @@ import platform
 from shutil import copyfile
 from importlib import resources
 
-from PySide2 import QtCore
-from PySide2.QtCore import Signal
+from PySide6 import QtCore
+from PySide6.QtCore import Signal
 from happyfeat.timeflux.modifyYamFile import modify_extraction_yaml_new,update_filenames,update_online_scenario
 from happyfeat.lib.mergeRunsCsv import mergeRunsCsv, mergeRunsCsv_new
 from happyfeat.lib.extractMetaData import extractMetadata, generateMetadata
