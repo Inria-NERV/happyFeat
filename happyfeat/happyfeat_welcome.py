@@ -222,6 +222,7 @@ class Dialog(QDialog):
 def main():
     if not QApplication.instance():
         app = QApplication(sys.argv)
+        app.setStyle('Fusion')
 
     dlg = Dialog()
     result = dlg.exec()

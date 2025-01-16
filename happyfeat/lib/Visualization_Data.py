@@ -6,8 +6,11 @@ from mne.defaults import _EXTRAPOLATE_DEFAULT, _BORDER_DEFAULT
 
 from happyfeat.lib.utils import find_nearest
 
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import plotly.offline
+
 import mne
-from mne.io.meas_info import Info
 from mne.viz import topomap
 
 import pandas as pd
@@ -196,7 +199,7 @@ def _plot_topomap_test(title, data, pos, vmin=None, vmax=None, cmap=None, sensor
 
     data = np.asarray(data)
 
-    if isinstance(pos, Info):  # infer pos from Info object
+    if isinstance(pos, mne.Info):  # infer pos from Info object
         picks = topomap._pick_data_channels(pos, exclude=())  # pick only data channels
         pos = topomap.pick_info(pos, picks)
 
@@ -473,9 +476,95 @@ def plot_psd(Power_class1, Power_class2, freqs, channel, channel_array, each_poi
 
     plt.legend()
 
+
 # Plot the two class comparison of PSDs, plus the R2 value for each freq, on the same graph
-def plot_psd_r2(Power_class1, Power_class2, Rsquare, freqs, channel, channel_array, each_point, fmin, fmax, fres, class1label,
-             class2label, title):
+def plot_psd_r2_plotly(Power_class1, Power_class2, Rsquare, freqs, channel,
+                       channel_array, each_point, fmin, fmax, fres,
+                       class1label, class2label, title, parent=None):
+
+    Aver_class2 = 10 * np.log10(Power_class2[:, channel, :])
+    Aver_class2 = Aver_class2.mean(0)
+    STD_class2 = 10 * np.log10(Power_class2[:, channel, :])
+    STD_class2 = STD_class2.std(0)
+
+    Aver_class1 = 10 * np.log10(Power_class1[:, channel, :])
+    Aver_class1 = Aver_class1.mean(0)
+    STD_class1 = 10 * np.log10(Power_class1[:, channel, :])
+    STD_class1 = STD_class1.std(0)
+
+    # find actual indices of frequencies
+    for i in range(len(freqs)):
+        if freqs[i] == fmin:
+            index_fmin = i
+            break
+    for i in range(len(freqs)):
+        if freqs[i] == fmax:
+            index_fmax = i
+            break
+
+    Selected_class2 = (Aver_class2[index_fmin:index_fmax])
+    Selected_class1 = (Aver_class1[index_fmin:index_fmax])
+    Selected_class2_STD = (STD_class2[index_fmin:index_fmax] / Power_class2.shape[0])
+    Selected_class1_STD = (STD_class1[index_fmin:index_fmax] / Power_class2.shape[0])
+
+    # Define traces
+    xfreqs = freqs[index_fmin:index_fmax]
+
+     # Create plot and add traces one after the other, + the "variance" areas for class 1 & 2
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+
+    # "Variance" traces
+    factor = 4  # make it more visible
+    fig.add_trace(go.Scatter(y=Selected_class1 - factor*Selected_class1_STD,
+                             x=xfreqs, mode='lines', line_color='rgba(0,0,0,0)',
+                             hoverinfo='skip'))
+    fig.add_trace(go.Scatter(y=Selected_class1 + factor*Selected_class1_STD,
+                             x=xfreqs, mode='lines', line_color='rgba(0,0,0,0)',
+                             hoverinfo='skip', fill='tonexty', fillcolor='rgba(0,0,255,0.3)'))
+    fig.add_trace(go.Scatter(y=Selected_class2 - factor*Selected_class2_STD,
+                             x=xfreqs, mode='lines', line_color='rgba(0,0,0,0)',
+                             hoverinfo='skip'))
+    fig.add_trace(go.Scatter(y=Selected_class2 + factor*Selected_class2_STD,
+                             x=xfreqs, mode='lines', line_color='rgba(0,0,0,0)',
+                             hoverinfo='skip', fill='tonexty', fillcolor='rgba(255,0,0,0.3)'))
+
+    fig.add_trace(go.Scatter(y=Selected_class1, x=xfreqs, name=class1label,
+                             mode='lines', line_color='rgba(0,0,255,1)', line_width=5))
+    fig.add_trace(go.Scatter(y=Selected_class2, x=xfreqs, name=class2label,
+                        mode='lines', line_color='rgba(255,0,0,1)', line_width=5))
+    fig.add_trace(go.Scatter(y=Rsquare[channel, index_fmin:index_fmax], x=xfreqs, name="R2",
+                        mode='lines', line_color='rgba(0,0,0,1)', line_width=5, yaxis='y2'), secondary_y=True)
+
+    fulltitle = str(title +', Sensor: ' + channel_array[channel])
+    fig.update_layout(title_text=fulltitle,
+                      plot_bgcolor='white',
+                      )
+    fig.update_xaxes(title_text="Frequency (Hz)",
+                     ticks='outside',
+                     showline=True,
+                     linecolor='black',
+                     gridcolor='lightgrey')
+    fig.update_yaxes(title_text="Power spectral density (dB)",
+                     ticks='outside',
+                     showline=True,
+                     linecolor='black',
+                     gridcolor='lightgrey',
+                     secondary_y=False)
+    fig.update_yaxes(title_text="R2 value",
+                     showgrid=False,
+                     ticks='outside',
+                     showline=True,
+                     linecolor='black',
+                     range=[0, 1],
+                     secondary_y=True)
+
+    return fig
+
+
+# Plot the two class comparison of PSDs, plus the R2 value for each freq, on the same graph
+def plot_psd_r2(Power_class1, Power_class2, Rsquare, freqs, channel,
+                channel_array, each_point, fmin, fmax, fres,
+                class1label, class2label, title, parent=None):
     font = {'family': 'serif',
             'color': 'black',
             'weight': 'normal',
@@ -534,14 +623,14 @@ def plot_psd_r2(Power_class1, Power_class2, Rsquare, freqs, channel, channel_arr
     ax2.set_ylim([0.0, 1.0])
     ax2.set_ylabel('R^2 value', fontdict=font)
 
-    # sizing = round(len(freqs[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
-    # for i in freqs[index_fmin:(index_fmax + 1)]:
-    #     if i % (round(sizing * 1 / fres)) == 0:
-    #         frequencies.append(str(round(i)))
-    #     else:
-    #         frequencies.append('')
-    # ax.xticks(range(len(freqs[index_fmin:(index_fmax + 1)])), frequencies, fontsize=12)
-    # ax.set_xticks(np.arange(fmin, fmax, sizing))
+    sizing = round(len(freqs[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
+    for i in freqs[index_fmin:(index_fmax + 1)]:
+        if i % (round(sizing * 1 / fres)) == 0:
+            frequencies.append(str(round(i)))
+        else:
+            frequencies.append('')
+    ax.xticks(range(len(freqs[index_fmin:(index_fmax + 1)])), frequencies, fontsize=12)
+    ax.set_xticks(np.arange(fmin, fmax, sizing))
 
     ax.tick_params(axis='both', which='both', length=0)
 
@@ -554,8 +643,8 @@ def plot_psd_r2(Power_class1, Power_class2, Rsquare, freqs, channel, channel_arr
     lns = lns1 + lns2 + lns3
     labs = [l.get_label() for l in lns]
     ax.legend(lns, labs, loc=0)
+    plt.show()
 
-    # plt.show()
 
 # Plot the two class comparison of a given metric in [0;1] (not PSD)
 def plot_metric(Power_class1, Power_class2, freqs, channel, channel_array, each_point, fmin, fmax, fres, class1label,
@@ -763,6 +852,39 @@ def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, eac
     plt.title(title)
     # Hplt.yticks(range(len(channel_array)),channel_array)
     # plt.show()
+
+def plot_Rsquare_plotly(Rsquare, channel_array, freq, smoothing, fres, each_point, fmin, fmax, colormapScale, title):
+
+    frequencies = []
+    nearest_fmin, index_fmin = find_nearest(freq, fmin)
+    nearest_fmax, index_fmax = find_nearest(freq, fmax)
+
+    Rsquare_reshape = Rsquare[0:len(channel_array), index_fmin:index_fmax + 1]
+
+    vmin = 0
+    vmax = 1
+    if colormapScale:
+        vmax = np.nanmax(abs(Rsquare_reshape))
+        if np.nanmin(Rsquare_reshape) < 0:
+            vmin = -np.amax(abs(Rsquare_reshape))
+
+    sizing = round(len(freq[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
+    for i in freq[index_fmin:(index_fmax + 1)]:
+        # if i % (round(sizing * 1 / fres)) == 0:
+        frequencies.append(str(round(i)))
+        # else:
+        #     frequencies.append('')
+
+    fig = go.Figure(data=go.Heatmap(z=Rsquare_reshape, y=channel_array, x=frequencies, colorscale='jet'))
+
+    fig.update_layout(title_text=title,
+                      plot_bgcolor='white',
+                      yaxis_nticks=len(channel_array)
+                      )
+    fig.update_xaxes(title_text="Frequency (Hz)")
+    fig.update_yaxes(title_text="Channel")
+
+    return fig
 
 def Reorder_plusplus(Rsquare, signTab, electrodes_orig, powerLeft, powerRight, timefreqLeft, timefreqRight):
     if len(electrodes_orig) == 74:

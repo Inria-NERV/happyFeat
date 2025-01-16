@@ -48,6 +48,8 @@ from happyfeat.lib.myProgressBar import ProgressBar, ProgressBarNoInfo
 from happyfeat.timeflux.Threads import *
 import happyfeat.lib.bcipipeline_settings as settings
 
+import plotly
+
 class Features:
     Rsquare = []
     Rsign_tab = []
@@ -1450,7 +1452,7 @@ class Dialog(QDialog):
                                        self.currentAttempt["Features"])
         if alreadyAttempted:
             message = str("Training was already attempted (id " + attemptId + ") ")
-            message += str("\nwith an accuracy of " + score + " \%")
+            message += str("\nwith an accuracy of " + score + " %")
             message += str("\n\tRun it again?")
             retVal = myOkCancelBox(message)
             if retVal == QMessageBox.Cancel:
@@ -1689,7 +1691,7 @@ class Dialog(QDialog):
                                        self.currentAttempt[0]["Features"])
         if alreadyAttempted:
             message = str("Training was already attempted (id " + attemptId + ") ")
-            message += str("\nwith an accuracy of " + score + " \%")
+            message += str("\nwith an accuracy of " + score + " %")
             message += str("\n\tRun it again?")
             retVal = myOkCancelBox(message)
             if retVal == QMessageBox.Cancel:
@@ -1936,15 +1938,40 @@ class Dialog(QDialog):
         print(newDict)
         return newDict
 
+    # Plot R2 map using Visualization_Data functions
     def btnR2(self, features, title, useSubselection):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
+            smoothing = False
+            each_point = 1  # Todo : make parameter?
 
+            # Full map
             if not useSubselection:
-                plot_stats(features.Rsquare,
-                           features.freqs_array,
-                           features.electrodes_final,
-                           features.fres, int(self.userFmin.text()), int(self.userFmax.text()),
-                           self.colormapScale.isChecked(), title)
+                # plot_Rsquare_calcul_welch(features.Rsquare,
+                #                           np.array(features.electrodes_final)[:],
+                #                           features.freqs_array,
+                #                           smoothing,
+                #                           features.fres,
+                #                           each_point,
+                #                           int(self.userFmin.text()),
+                #                           int(self.userFmax.text()),
+                #                           self.colormapScale.isChecked(),
+                #                           title)
+                # plt.show()
+                fig = plot_Rsquare_plotly(features.Rsquare,
+                                          np.array(features.electrodes_final)[:],
+                                          features.freqs_array,
+                                          smoothing,
+                                          features.fres,
+                                          each_point,
+                                          int(self.userFmin.text()),
+                                          int(self.userFmax.text()),
+                                          self.colormapScale.isChecked(),
+                                          title)
+                filename = str(self.workspaceFolder + "/lastfigure.html")
+                plotly.offline.plot(fig, filename=filename, auto_open=True)
+
+
+            # Map subselection
             else:
                 subR2 = []
                 subElectrodes = []
@@ -1961,17 +1988,50 @@ class Dialog(QDialog):
                     subElectrodes.append(chan)
 
                 subR2 = np.array(subR2)
-                plot_stats(subR2, features.freqs_array, subElectrodes, features.fres, freqMin, freqMax,
-                           self.colormapScale.isChecked(), title)
 
+                # plot_Rsquare_calcul_welch(subR2,
+                #                           np.array(features.electrodes_final)[:],
+                #                           features.freqs_array,
+                #                           smoothing,
+                #                           features.fres,
+                #                           each_point,
+                #                           freqMin,
+                #                           freqMax,
+                #                           self.colormapScale.isChecked(),
+                #                           title)
+                # plt.show()
+                fig = plot_Rsquare_plotly(subR2,
+                                          np.array(features.electrodes_final)[:],
+                                          features.freqs_array,
+                                          smoothing,
+                                          features.fres,
+                                          each_point,
+                                          freqMin,
+                                          freqMax,
+                                          self.colormapScale.isChecked(),
+                                          title)
+
+                filename = str(self.workspaceFolder + "/lastfigure.html")
+                plotly.offline.plot(fig, filename=filename, auto_open=True)
+
+    # Wilcoxon Map. Not used - TODO : delete?
     def btnW2(self, features, title):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
-            plot_stats(features.Wsigned,
-                       features.freqs_array,
-                       features.electrodes_final,
-                       features.fres, int(self.userFmin.text()), int(self.userFmax.text()),
-                       self.colormapScale.isChecked(), title)
+            smoothing = False
+            each_point = 1
+            plot_Rsquare_calcul_welch(features.Wsigned,
+                                      np.array(features.electrodes_final)[:],
+                                      features.freqs_array,
+                                      smoothing,
+                                      features.fres,
+                                      each_point,
+                                      int(self.userFmin.text()),
+                                      int(self.userFmax.text()),
+                                      self.colormapScale.isChecked(),
+                                      title)
+            plt.show()
 
+    # Btn callback: Plot "time-frequency analysis", in the POWER SPECTRUM pipeline ONLY.
     def btnTimeFreq(self, features, title):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             print("TimeFreq for sensor: " + self.electrodePsd.text())
@@ -1983,14 +2043,54 @@ class Dialog(QDialog):
             class1 = self.parameterDict["AcquisitionParams"]["Class1"]
             class2 = self.parameterDict["AcquisitionParams"]["Class2"]
 
-            qt_plot_tf(features.timefreq_cond1, features.timefreq_cond2,
-                       features.time_array, features.freqs_array,
-                       self.electrodePsd.text(), features.fres,
-                       features.average_baseline_cond1, features.average_baseline_cond2,
-                       features.std_baseline_cond1, features.std_baseline_cond2,
-                       features.electrodes_final,
-                       fmin, fmax, tmin, tmax, class1, class2, title)
+            self.plot_tf(features.timefreq_cond1, features.timefreq_cond2,
+                         features.time_array, features.freqs_array,
+                         self.electrodePsd.text(), features.fres,
+                         features.average_baseline_cond1, features.average_baseline_cond2,
+                         features.std_baseline_cond1, features.std_baseline_cond2,
+                         features.electrodes_final,
+                         fmin, fmax, tmin, tmax, class1, class2, title)
 
+    # interface for btnTimeFreq
+    # TODO : reorganize/refactor with Visualization_Data.py
+    def plot_tf(self, timefreq_cond1, timefreq_cond2, time_array, freqs_array, electrode, fres, average_baseline_cond1, average_baseline_cond2, std_baseline_cond1, std_baseline_cond2, electrodes, f_min_var, f_max_var, tmin, tmax, class1label, class2label, title):
+        font = {'family': 'serif',
+                'color': 'black',
+                'weight': 'normal',
+                'size': 14,
+                }
+        fmin = f_min_var
+        fmax = f_max_var
+        Test_existing = False
+        Index_electrode = 0
+        for i in range(len(electrodes)):
+            if electrodes[i] == electrode:
+                Index_electrode = i
+                Test_existing = True
+
+        if not Test_existing:
+            myMsgBox("No Electrode with this name found")
+        else:
+            tf = timefreq_cond1.mean(axis=0)
+            tf = np.transpose(tf[Index_electrode, :, :])
+            PSD_baseline = average_baseline_cond1[Index_electrode, :]
+
+            A = []
+            for i in range(tf.shape[1]):
+                A.append(np.divide((tf[:, i] - PSD_baseline), PSD_baseline) * 100)
+            tf = np.transpose(A)
+            vmin = np.amin(tf[f_min_var:f_max_var, :])
+            vmax = np.amax(tf[f_min_var:f_max_var, :])
+            tlength = tmax - tmin
+            time_frequency_map(timefreq_cond1, time_array, freqs_array, Index_electrode, fmin, fmax, fres, 10,
+                               average_baseline_cond1, electrodes, std_baseline_cond1, vmin, vmax, tlength)
+            plt.title(title + '(' + class1label + ') Sensor ' + electrodes[Index_electrode], fontdict=font)
+            time_frequency_map(timefreq_cond2, time_array, freqs_array, Index_electrode, fmin, fmax, fres, 10,
+                               average_baseline_cond2, electrodes, std_baseline_cond2, vmin, vmax, tlength)
+            plt.title(title + '(' + class2label + ') Sensor ' + electrodes[Index_electrode], fontdict=font)
+            plt.show()
+
+    # Btn Callback: Plot "time-frequency analysis", in the CONNECTIVITY pipeline ONLY.
     def btnTimeFreqConnect(self, features, title):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             print("TimeFreq for sensor: " + self.electrodePsd.text())
@@ -2002,46 +2102,116 @@ class Dialog(QDialog):
             class1 = self.parameterDict["AcquisitionParams"]["Class1"]
             class2 = self.parameterDict["AcquisitionParams"]["Class2"]
 
-            qt_plot_tf_connect(features.timefreq_cond1, features.timefreq_cond2,
-                               features.time_array, features.freqs_array,
-                               self.electrodePsd.text(), features.fres,
-                               features.electrodes_final,
-                               fmin, fmax, tmin, tmax, class1, class2, title)
+            self.plot_tf_connect(features.timefreq_cond1, features.timefreq_cond2,
+                                 features.time_array, features.freqs_array,
+                                 self.electrodePsd.text(), features.fres,
+                                 features.electrodes_final,
+                                 fmin, fmax, tmin, tmax, class1, class2, title)
 
+    # interface for btnTimeFreqConnect
+    # TODO : reorganize/refactor with Visualization_Data.py
+    def plot_tf_connect(self, timefreq_cond1, timefreq_cond2, time_array, freqs_array, electrode, fres, electrodes,
+                        f_min_var, f_max_var, tmin, tmax, class1label, class2label, title):
+        font = {'family': 'serif',
+                'color': 'black',
+                'weight': 'normal',
+                'size': 14,
+                }
+        fmin = int(f_min_var / fres)
+        fmax = int(f_max_var / fres)
+
+        Test_existing = False
+        idx = 0
+        for i in range(len(electrodes)):
+            if electrodes[i] == electrode:
+                idx = i
+                Test_existing = True
+        if not Test_existing:
+            myMsgBox("No Electrode with this name found")
+        else:
+            tf = (timefreq_cond1.mean(0) - timefreq_cond2.mean(0)) / timefreq_cond1.mean(0)
+            tf = tf.transpose(0, 2, 1)
+
+        fig, ax = plt.subplots()
+        im = ax.imshow(tf[idx, fmin:fmax, :], cmap='jet', origin='lower', aspect='auto',
+                       vmin=- np.nanmax(abs(tf[idx, fmin:fmax, :])),
+                       vmax=np.nanmax(abs(tf[idx, fmin:fmax, :])), interpolation="hanning")
+
+        time_increments = (tmax - tmin) / np.shape(tf)[2]
+        time_series = np.around(np.arange(tmin, tmax, time_increments), 2)
+        freq_series = np.arange(f_min_var, f_max_var + 1, int(f_max_var - f_min_var) / 10)
+        ax.set_xticks(np.arange(0, np.shape(tf)[2], 1))
+        ax.set_xticklabels(time_series, rotation=90)
+        ax.set_yticks(np.arange(fmin, fmax + 1, int(fmax - fmin) / 10))
+        ax.set_yticklabels(freq_series)
+
+        ax.set_xlabel(' Time (s)', fontdict=font)
+        ax.set_ylabel('Frequency (Hz)', fontdict=font)
+        plt.title(title + ' (' + class1label + '/' + class2label + ') Sensor ' + electrodes[idx], fontdict=font)
+        cbar = fig.colorbar(im, ax=ax)
+        cbar.set_label('ERD/ERS', rotation=270, labelpad=15)
+        plt.show()
+
+    # Plot compared metric for 2 classes using Visualization_Data functions
     def btnMetric(self, features, title):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
-            fmin = int(self.userFmin.text())
-            fmax = int(self.userFmax.text())
-            class1 = self.parameterDict["AcquisitionParams"]["Class1"]
-            class2 = self.parameterDict["AcquisitionParams"]["Class2"]
-            # TODO : change
-            metricLabel = "Average Node Strength"
-            #qt_plot_metric(features.power_cond1, features.power_cond2,
-            #               features.freqs_array, features.electrodes_final,
-            #               self.electrodePsd.text(),
-            #               features.fres, fmin, fmax, class1, class2, metricLabel)
-            qt_plot_metric2(features.power_cond1, features.power_cond2,
-                            features.Rsquare,
-                            features.freqs_array, features.electrodes_final,
-                            self.electrodePsd.text(),
-                            features.fres, fmin, fmax, class1, class2, metricLabel, title)
+            electrodeExists = False
+            electrodeIdx = 0
+            electrodeToDisp = self.electrodePsd.text()
+            for idx, elec in enumerate(features.electrodes_final):
+                if elec == electrodeToDisp:
+                    electrodeIdx = idx
+                    electrodeExists = True
+                    break
 
+            if not electrodeExists:
+                myMsgBox("No sensor with this name found")
+            else:                
+                fmin = int(self.userFmin.text())
+                fmax = int(self.userFmax.text())
+                class1 = self.parameterDict["AcquisitionParams"]["Class1"]
+                class2 = self.parameterDict["AcquisitionParams"]["Class2"]
+                # TODO : change according to actual metric name
+                metricLabel = "Average Node Strength"
+                each_point = 1
+                plot_metric2(features.power_cond1, features.power_cond2,
+                             features.Rsquare, 
+                             features.freqs_array, electrodeIdx, features.electrodes_final,
+                             each_point, fmin, fmax, features.fres, class1, class2, metricLabel, title)
+                plt.show()
+
+    # Plot compared PSD for 2 classes using Visualization_Data functions
+    # TODO : remove (duplicate)
     def btnPsd(self, features, title):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
-            fmin = int(self.userFmin.text())
-            fmax = int(self.userFmax.text())
-            class1 = self.parameterDict["AcquisitionParams"]["Class1"]
-            class2 = self.parameterDict["AcquisitionParams"]["Class2"]
-            # qt_plot_psd(features.power_cond1, features.power_cond2,
-            #            features.freqs_array, features.electrodes_final,
-            #            self.electrodePsd.text(),
-            #            features.fres, fmin, fmax, class1, class2)
-            qt_plot_psd_r2(features.power_cond1, features.power_cond2,
-                           features.Rsquare,
-                            features.freqs_array, features.electrodes_final,
-                            self.electrodePsd.text(),
-                            features.fres, fmin, fmax, class1, class2, title)
+            electrodeToDisp = self.electrodePsd.text()    
+            electrodeExists = False
+            electrodeIdx = 0
+            for idx, elec in enumerate(features.electrodes_final):
+                if elec == electrodeToDisp:
+                    electrodeIdx = idx
+                    electrodeExists = True
+                    break
+            if not electrodeExists:
+                myMsgBox("No sensor with this name found")
+            else:
+                fmin = int(self.userFmin.text())
+                fmax = int(self.userFmax.text())
+                class1 = self.parameterDict["AcquisitionParams"]["Class1"]
+                class2 = self.parameterDict["AcquisitionParams"]["Class2"]
+                each_point = 1
+                fig = plot_psd_r2_plotly(
+                    features.power_cond1, features.power_cond2,
+                    features.Rsquare, features.freqs_array,
+                    electrodeIdx, features.electrodes_final,
+                    each_point, fmin, fmax, features.fres, class1, class2, title, parent=self)
 
+                filename = str(self.workspaceFolder + "/lastfigure.html")
+                plotly.offline.plot(fig, filename=filename, auto_open=True)
+
+
+    # Plot "Brain topography", using either Power Spectrum (in same pipeline)
+    # or Node Strength (or similar metric) (in Connectivity pipeline)
     def btnTopo(self, features, title):
         error = True
 
@@ -2051,9 +2221,10 @@ class Dialog(QDialog):
             print("Freq Topo: " + self.freqTopo.text())
             error = False
             freqMax = -1
-            qt_plot_topo(features.Rsquare, self.sensorMontage, self.customMontagePath, features.electrodes_final,
-                         int(self.freqTopo.text()), freqMax, features.fres, self.samplingFreq,
-                         self.colormapScale.isChecked(), title)
+            topo_plot(features.Rsquare, title, self.sensorMontage, self.customMontagePath,
+                      features.electrodes_final, int(self.freqTopo.text()), freqMax,
+                      features.fres, self.samplingFreq, self.colormapScale.isChecked(), 'Signed R square')
+            plt.show()
         elif ":" in self.freqTopo.text() \
                 and len(self.freqTopo.text().split(":")) == 2:
                     if self.freqTopo.text().split(":")[0].isdigit() \
@@ -2062,9 +2233,10 @@ class Dialog(QDialog):
                         freqMax = int(self.freqTopo.text().split(":")[1])
                         if 0 < freqMin < freqMax < (self.samplingFreq / 2):
                             error = False
-                            qt_plot_topo(features.Rsquare, self.sensorMontage, self.customMontagePath, features.electrodes_final,
-                                         freqMin, freqMax, features.fres, self.samplingFreq,
-                                         self.colormapScale.isChecked(), title)
+                            topo_plot(features.Rsquare, title, self.sensorMontage, self.customMontagePath,
+                                      features.electrodes_final, int(self.freqTopo.text()), freqMax,
+                                      features.fres, self.samplingFreq, self.colormapScale.isChecked(), 'Signed R square')
+                            plt.show()
 
         if error:
             myMsgBox("Invalid frequency for topography")
@@ -2712,160 +2884,8 @@ def checkFreqsMinMax(fmin, fmax, fs):
 
     return ok
 
-def plot_stats(Rsquare, freqs_array, electrodes, fres, fmin, fmax, colormapScale, title):
-    smoothing = False
-    plot_Rsquare_calcul_welch(Rsquare, np.array(electrodes)[:], freqs_array, smoothing, fres, 10, fmin, fmax, colormapScale, title)
-    plt.show()
-
-def qt_plot_psd(power_cond1, power_cond2, freqs_array, electrodesList, electrodeToDisp, fres, fmin, fmax, class1label, class2label, title):
-    electrodeExists = False
-    electrodeIdx = 0
-    for idx, elec in enumerate(electrodesList):
-        if elec == electrodeToDisp:
-            electrodeIdx = idx
-            electrodeExists = True
-            break
-
-    if not electrodeExists:
-        myMsgBox("No sensor with this name found")
-    else:
-        plot_psd(power_cond1, power_cond2, freqs_array, electrodeIdx, electrodesList,
-                 10, fmin, fmax, fres, class1label, class2label, title)
-        plt.show()
-
-def qt_plot_psd_r2(power_cond1, power_cond2, rsquare, freqs_array, electrodesList, electrodeToDisp, fres, fmin, fmax, class1label, class2label, title):
-    electrodeExists = False
-    electrodeIdx = 0
-    for idx, elec in enumerate(electrodesList):
-        if elec == electrodeToDisp:
-            electrodeIdx = idx
-            electrodeExists = True
-            break
-
-    if not electrodeExists:
-        myMsgBox("No sensor with this name found")
-    else:
-        plot_psd_r2(power_cond1, power_cond2, rsquare, freqs_array, electrodeIdx, electrodesList,
-                 10, fmin, fmax, fres, class1label, class2label, title)
-        plt.show()
-
-def qt_plot_metric(power_cond1, power_cond2, freqs_array, electrodesList, electrodeToDisp, fres, fmin, fmax, class1label, class2label, metricLabel, title):
-    electrodeExists = False
-    electrodeIdx = 0
-    for idx, elec in enumerate(electrodesList):
-        if elec == electrodeToDisp:
-            electrodeIdx = idx
-            electrodeExists = True
-            break
-
-    if not electrodeExists:
-        myMsgBox("No sensor with this name found")
-    else:
-        plot_metric(power_cond1, power_cond2, freqs_array, electrodeIdx, electrodesList,
-                    10, fmin, fmax, fres, class1label, class2label, metricLabel, title)
-        plt.show()
-
-def qt_plot_metric2(power_cond1, power_cond2, rsquare, freqs_array, electrodesList, electrodeToDisp, fres, fmin, fmax, class1label, class2label, metricLabel, title):
-    electrodeExists = False
-    electrodeIdx = 0
-    for idx, elec in enumerate(electrodesList):
-        if elec == electrodeToDisp:
-            electrodeIdx = idx
-            electrodeExists = True
-            break
-
-    if not electrodeExists:
-        myMsgBox("No sensor with this name found")
-    else:
-        plot_metric2(power_cond1, power_cond2, rsquare, freqs_array, electrodeIdx, electrodesList,
-                    10, fmin, fmax, fres, class1label, class2label, metricLabel, title)
-        plt.show()
-
-# Plot "Brain topography", using either Power Spectrum (in same pipeline)
-# or Node Strength (or similar metric) (in Connectivity pipeline)
-def qt_plot_topo(Rsquare, montage, customMontage, electrodes, freqMin, freqMax, fres, fs, scaleColormap, title):
-    topo_plot(Rsquare, title, montage, customMontage, electrodes, freqMin, freqMax,
-              fres, fs, scaleColormap, 'Signed R square')
-    plt.show()
-
-# Plot "time-frequency analysis", in the POWER SPECTRUM pipeline ONLY.
-def qt_plot_tf(timefreq_cond1, timefreq_cond2, time_array, freqs_array, electrode, fres, average_baseline_cond1, average_baseline_cond2, std_baseline_cond1, std_baseline_cond2, electrodes, f_min_var, f_max_var, tmin, tmax, class1label, class2label, title):
-    font = {'family': 'serif',
-            'color':  'black',
-            'weight': 'normal',
-            'size': 14,
-            }
-    fmin = f_min_var
-    fmax = f_max_var
-    Test_existing = False
-    Index_electrode = 0
-    for i in range(len(electrodes)):
-        if electrodes[i] == electrode:
-            Index_electrode = i
-            Test_existing = True
-
-    if not Test_existing:
-        myMsgBox("No Electrode with this name found")
-    else:
-        tf = timefreq_cond1.mean(axis=0)
-        tf = np.transpose(tf[Index_electrode, :, :])
-        PSD_baseline = average_baseline_cond1[Index_electrode, :]
-
-        A = []
-        for i in range(tf.shape[1]):
-            A.append(np.divide((tf[:, i]-PSD_baseline), PSD_baseline)*100)
-        tf = np.transpose(A)
-        vmin = np.amin(tf[f_min_var:f_max_var, :])
-        vmax = np.amax(tf[f_min_var:f_max_var, :])
-        tlength = tmax-tmin
-        time_frequency_map(timefreq_cond1, time_array, freqs_array, Index_electrode, fmin, fmax, fres, 10, average_baseline_cond1, electrodes, std_baseline_cond1, vmin, vmax, tlength)
-        plt.title(title+'(' + class1label + ') Sensor ' + electrodes[Index_electrode], fontdict=font)
-        time_frequency_map(timefreq_cond2, time_array, freqs_array, Index_electrode, fmin, fmax, fres, 10, average_baseline_cond2, electrodes, std_baseline_cond2, vmin, vmax, tlength)
-        plt.title(title+'(' + class2label + ') Sensor ' + electrodes[Index_electrode], fontdict=font)
-        plt.show()
-
-def qt_plot_tf_connect(timefreq_cond1, timefreq_cond2, time_array, freqs_array, electrode, fres, electrodes, f_min_var, f_max_var, tmin, tmax, class1label, class2label, title):
-    font = {'family': 'serif',
-            'color':  'black',
-            'weight': 'normal',
-            'size': 14,
-            }
-    fmin = int(f_min_var/fres)
-    fmax = int(f_max_var/fres)
-
-    Test_existing = False
-    idx = 0
-    for i in range(len(electrodes)):
-        if electrodes[i] == electrode:
-            idx = i
-            Test_existing = True
-    if not Test_existing:
-        myMsgBox("No Electrode with this name found")
-    else:
-        tf = (timefreq_cond1.mean(0) - timefreq_cond2.mean(0)) / timefreq_cond1.mean(0)
-        tf = tf.transpose(0, 2, 1)
-
-    fig, ax = plt.subplots()
-    im = ax.imshow(tf[idx, fmin:fmax, :], cmap='jet', origin='lower', aspect='auto',
-                   vmin=- np.nanmax(abs(tf[idx, fmin:fmax, :])),
-                   vmax=np.nanmax(abs(tf[idx, fmin:fmax, :])), interpolation="hanning")
-
-    time_increments = (tmax-tmin)/np.shape(tf)[2]
-    time_series = np.around(np.arange(tmin, tmax, time_increments), 2)
-    freq_series = np.arange(f_min_var, f_max_var+1, int(f_max_var-f_min_var)/10)
-    ax.set_xticks(np.arange(0, np.shape(tf)[2], 1))
-    ax.set_xticklabels(time_series, rotation=90)
-    ax.set_yticks(np.arange(fmin, fmax+1, int(fmax-fmin)/10))
-    ax.set_yticklabels(freq_series)
-
-    ax.set_xlabel(' Time (s)', fontdict=font)
-    ax.set_ylabel('Frequency (Hz)', fontdict=font)
-    plt.title(title + ' (' + class1label + '/' + class2label + ') Sensor ' + electrodes[idx], fontdict=font)
-    cbar = fig.colorbar(im, ax=ax)
-    cbar.set_label('ERD/ERS', rotation=270, labelpad = 15)
-    plt.show()
-
-# Plot "connectivity spectrum" from a RAW connectivity matrix. UNUSED
+# Plot "connectivity spectrum" from a RAW connectivity matrix.
+# TODO: REMOVE? UNUSED!
 def qt_plot_connectSpectrum(connect1, connect2, chan1, chan2, electrodeList, fres, class1label, class2label, title):
     chan1ok = False
     chan2ok = False
@@ -2895,21 +2915,23 @@ def qt_plot_connectSpectrum(connect1, connect2, chan1, chan2, electrodeList, fre
         plot_connect_spectrum(connect1, connect2, chan1idx, chan2idx, electrodeList, 10, fres, class1label, class2label, title)
         plt.show()
 
-# Plot full RAW connectivity matrix for a given [fmin;fmax] range. UNUSED
+# Plot full RAW connectivity matrix for a given [fmin;fmax] range.
+# TODO: REMOVE? UNUSED!
 def qt_plot_connectMatrices(connect1, connect2, fmin, fmax, electrodeList, class1label, class2label, title):
     plot_connect_matrices(connect1, connect2, fmin, fmax, electrodeList, class1label, class2label, title)
     plt.show()
 
-# Plot % of strongest nodes, from a RAW connectivity matrix, in range [fmin;fmax]. UNUSED
+# Plot % of strongest nodes, from a RAW connectivity matrix, in range [fmin;fmax].
+# TODO: REMOVE? UNUSED!
 def qt_plot_strongestConnectome(connect1, connect2, percentStrong, fmin, fmax, electrodeList, class1label, class2label, title):
     plot_strongestConnectome(connect1, connect2, percentStrong, fmin, fmax, electrodeList, class1label, class2label, title)
     plt.show()
-
 
 # main entry point...
 def launch(folder, fullWorkspacePath):
     if not QApplication.instance():
         app = QApplication(sys.argv)
+        app.setStyle('Fusion')
 
     # Check that workspace file exists, is a json file, and contains HappyFeatVersion field...
     if not os.path.exists(fullWorkspacePath):
@@ -2926,7 +2948,7 @@ def launch(folder, fullWorkspacePath):
 
     dlg = Dialog(fullWorkspacePath)
 
-    retVal = app.exec_()
+    retVal = dlg.exec()
 
     app.shutdown()
 
