@@ -118,9 +118,8 @@ class Dialog(QDialog):
         self.trainTimerEnd = 0
 
         # default parameters for automatic selection
-        self.autoFeatChannelList = ['C5', 'C3', 'C1', 'CP5', 'CP3', 'CP1', 'FC5', 'FC3', 'FC1',
-                                    'Cz', 'CPz', 'FCz', 'C6', 'C4', 'C2', 'CP6', 'CP4', 'CP2', 'FC6', 'FC4', 'FC2']
-        self.autoFeatFreqRange = "7:35"
+        self.autoFeatChannelList = []
+        self.autoFeatFreqRange = ""
 
         # Work Threads & Progress bars
         self.acquisitionThread = None
@@ -146,6 +145,8 @@ class Dialog(QDialog):
             self.sensorMontage = self.parameterDict["sensorMontage"]
             self.customMontagePath = self.parameterDict["customMontagePath"]
             self.currentSessionId = self.parameterDict["currentSessionId"]
+            self.autoFeatFreqRange = self.parameterDict["autoFeatFreqRange"]
+            self.autoFeatChannelList = self.parameterDict["autoFeatChannelList"]
             if self.bciPlatform == settings.availablePlatforms[0]:  # openvibe
                 self.ovScript = self.parameterDict["ovDesignerPath"]
             else:
@@ -2521,6 +2522,9 @@ class Dialog(QDialog):
                 return
 
             self.autoFeatChannelList = text.split(";")
+            # Save in workspace file
+            setKeyValue(self.workspaceFile, "autoFeatChannelList", self.autoFeatChannelList)
+            self.parameterDict["autoFeatChannelList"] = self.autoFeatChannelList
 
         return
 
@@ -2548,7 +2552,9 @@ class Dialog(QDialog):
                 return
 
             self.autoFeatFreqRange = text
-
+            # Save in workspace file
+            setKeyValue(self.workspaceFile, "autoFeatFreqRange", self.autoFeatFreqRange)
+            self.parameterDict["autoFeatFreqRange"] = self.autoFeatFreqRange
         return
 
     def checkExistenceExtractFiles(self, file):

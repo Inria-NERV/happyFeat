@@ -337,7 +337,8 @@ class Dialog(QDialog):
                     myMsgBox("Please provide a valid file for the custom montage")
                     return
 
-            # Montage : default values...
+            # DEFAULT STUFF
+            # Montage
             self.parameterDict["sensorMontage"] = self.montageComboBox.currentText()
             self.parameterDict["customMontagePath"] = ''
             if self.montageComboBox.currentIndex() == 0:
@@ -345,6 +346,10 @@ class Dialog(QDialog):
                 self.parameterDict["customMontagePath"] = self.customMontagePath
 
             self.parameterDict["Sessions"] = {}
+            self.parameterDict["autoFeatChannelList"] = ['C5', 'C3', 'C1', 'CP5', 'CP3', 'CP1', 'FC5', 'FC3',
+                                                      'FC1', 'Cz', 'CPz', 'FCz', 'C6', 'C4', 'C2', 'CP6', 'CP4',
+                                                      'CP2', 'FC6', 'FC4', 'FC2']
+            self.parameterDict["autoFeatFreqRange"] = "7:35"
 
             # Acquisition parameters, set in this GUI...
             self.parameterDict["AcquisitionParams"] = {}
@@ -370,6 +375,8 @@ class Dialog(QDialog):
                 workspaceMgmt.setKeyValue(self.workspace, "pipelineType", self.parameterDict["pipelineType"])
                 workspaceMgmt.setKeyValue(self.workspace, "sensorMontage", self.parameterDict["sensorMontage"])
                 workspaceMgmt.setKeyValue(self.workspace, "customMontagePath", self.parameterDict["customMontagePath"])
+                workspaceMgmt.setKeyValue(self.workspace, "autoFeatChannelList", self.parameterDict["autoFeatChannelList"])
+                workspaceMgmt.setKeyValue(self.workspace, "autoFeatFreqRange", self.parameterDict["autoFeatFreqRange"])
                 workspaceMgmt.setKeyValue(self.workspace, "AcquisitionParams", self.parameterDict["AcquisitionParams"])
                 workspaceMgmt.setKeyValue(self.workspace, "currentSessionId", self.parameterDict["currentSessionId"])
                 workspaceMgmt.newSession(self.workspace, self.parameterDict, "1", extractParamDict)
@@ -419,17 +426,13 @@ class Dialog(QDialog):
 
         self.parameterDict["bciPlatform"] = settings.availablePlatforms[0]
 
-        # OpenViBE Path...
-        if self.ovScript is None:
-            myMsgBox("Please enter a valid path for the openViBE designer script")
-            return
-
         if self.montageComboBox.currentIndex() == 0:  # custom
             if self.customMontagePath is None:
                 myMsgBox("Please provide a valid file for the custom montage")
                 return
 
-        # Montage : default values...
+        # DEFAULT STUFF
+        # Montage
         self.parameterDict["sensorMontage"] = self.montageComboBox.currentText()
         self.parameterDict["customMontagePath"] = ''
         if self.montageComboBox.currentIndex() == 0:
@@ -440,6 +443,10 @@ class Dialog(QDialog):
         self.parameterDict["ovDesignerPath"] = self.ovScript
 
         self.parameterDict["Sessions"] = {}
+        self.parameterDict["autoFeatChannelList"] = ['C5', 'C3', 'C1', 'CP5', 'CP3', 'CP1', 'FC5', 'FC3',
+                                                  'FC1', 'Cz', 'CPz', 'FCz', 'C6', 'C4', 'C2', 'CP6', 'CP4',
+                                                  'CP2', 'FC6', 'FC4', 'FC2']
+        self.parameterDict["autoFeatFreqRange"] = "7:35"
 
         # Acquisition parameters, set in this GUI...
         self.parameterDict["AcquisitionParams"] = {}
@@ -466,6 +473,8 @@ class Dialog(QDialog):
             workspaceMgmt.setKeyValue(self.workspace, "pipelineType", self.parameterDict["pipelineType"])
             workspaceMgmt.setKeyValue(self.workspace, "sensorMontage", self.parameterDict["sensorMontage"])
             workspaceMgmt.setKeyValue(self.workspace, "customMontagePath", self.parameterDict["customMontagePath"])
+            workspaceMgmt.setKeyValue(self.workspace, "autoFeatChannelList", self.parameterDict["autoFeatChannelList"])
+            workspaceMgmt.setKeyValue(self.workspace, "autoFeatFreqRange", self.parameterDict["autoFeatFreqRange"])
             workspaceMgmt.setKeyValue(self.workspace, "AcquisitionParams", self.parameterDict["AcquisitionParams"])
             workspaceMgmt.setKeyValue(self.workspace, "currentSessionId", self.parameterDict["currentSessionId"])
             workspaceMgmt.newSession(self.workspace, self.parameterDict, "1", extractParamDict)
