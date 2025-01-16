@@ -167,9 +167,10 @@ class Dialog(QDialog):
         self.menuBar.addMenu(self.menuOptions)
 
         # OpenViBE designer browser...
-        self.qActionFindOV = QAction("&Browse for OpenViBE", self)
-        self.qActionFindOV.triggered.connect(lambda: self.browseForDesigner())
-        self.menuOptions.addAction(self.qActionFindOV)
+        if self.parameterDict["bciPlatform"] == settings.availablePlatforms[0]:  # openvibe
+            self.qActionFindOV = QAction("&Browse for OpenViBE", self)
+            self.qActionFindOV.triggered.connect(lambda: self.browseForDesigner())
+            self.menuOptions.addAction(self.qActionFindOV)
         # Activate/deactivate advanced options...
         self.qActionEnableAdvancedMode = QAction("&Enable/Disable Advanced Mode", self)
         self.qActionEnableAdvancedMode.triggered.connect(lambda: self.toggleAdvanced())
@@ -717,7 +718,7 @@ class Dialog(QDialog):
         # Update status of buttons used for plotting
         # ----------
 
-        # Deactivate some buttons for timeflux verison
+        # Deactivate some buttons for timeflux version
         if self.parameterDict["bciPlatform"] == settings.availablePlatforms[1]:  # timeflux
             self.btn_timefreq.setEnabled(False)
 
