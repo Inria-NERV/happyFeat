@@ -1,0 +1,9 @@
+# environment.yaml
+
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.12.8
+  - pip
+  - pip:
+    - -r requirements.txt
