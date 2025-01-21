@@ -57,30 +57,33 @@ class Replay(Node):
 
         # Extract events
         self.events, self.event_id = mne.events_from_annotations(self.data)
-        self.events_df = self._create_events_df()
+        # Retrieve wanted stimulations "idx" in the annotations given by MNE
+        stimkeys = {}
+        try:
+            for stim in self.stimulations:
+                id = self.event_id[stim]
+                stimkeys[stim] = id
+        except KeyError as e:
+            raise WorkerInterrupt(e)
+
+        # create events dataframes, using only specified stimulations
+        self.events_df = self._create_events_df(stimkeys)
+
+        print("===========filtered events:")
+        print(self.events_df)
+
         self.counter = 0
 
     def update(self):
-        self.counter+=1
-        if self.counter==1:
-            data=self.data.to_data_frame(time_format='datetime')
+        self.counter += 1
+        if self.counter == 1:
+            data = self.data.to_data_frame(time_format='datetime')
             data.set_index('time', inplace=True)
-            events=self.events_df.copy(deep=True)
-            events.set_index('time',inplace=True)
+            events = self.events_df.copy(deep=True)
+            events.set_index('time', inplace=True)
             if (not data is None) and (not events is None):
                 getattr(self, "o_raw").data = data
                 getattr(self, "o_events").data = events
-
-        # data=self.data.to_data_frame(time_format='datetime')
-        # data.set_index('time', inplace=True)
-        # events=self.events_df.copy(deep=True)
-        # events.set_index('time',inplace=True)
-        # if (not data is None) and (not events is None):
-        #     getattr(self, "o_raw").data = data
-        #     getattr(self, "o_events").data = events
-        #     self.o_raw.clear()
-        #     self.o_events.clear()
-
 
     def _find_path(self, path):
         path = os.path.normpath(path)
@@ -94,7 +97,7 @@ class Replay(Node):
                     return full_path
         raise WorkerLoadError(f"File `{path}` could not be found in the search path.")
 
-    def _create_events_df(self):
+    def _create_events_df(self, stimkeys):
         sfreq = self.data.info['sfreq']
         start_time = self.data.info['meas_date']
         if isinstance(start_time, tuple):
@@ -104,7 +107,7 @@ class Replay(Node):
         event_times = self._samples_to_datetime(self.events[:, 0], start_time, sfreq)
 
         # Filter events
-        filtered_events = [(event_time, event_id) for event_time, event_id in zip(event_times, self.events[:, 2]) if event_id in [5, 6, 7]]
+        filtered_events = [(event_time, event_id) for event_time, event_id in zip(event_times, self.events[:, 2]) if event_id in list(stimkeys.values())]
         
         # Separate the filtered events into lists
         event_times_filtered, event_ids_filtered = zip(*filtered_events)

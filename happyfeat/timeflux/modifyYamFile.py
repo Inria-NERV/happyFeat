@@ -3,8 +3,8 @@ import ruamel.yaml
 # ------------------------------------------------------
 # Change the Extraction yaml file 
 # ------------------------------------------------------
-def modify_extraction_yaml_new(yaml_file, filename=None, rate=None, keys=None, epoch_params=None, trim_samples=None,
-                           welch_rate=None, recorder_filename=None, path=None,nfft=None):
+def modify_extraction_yaml_new(yaml_file, filename=None, rate=None, keys=None, stimulations=None, epoch_params=None, trim_samples=None,
+                               welch_rate=None, recorder_filename=None, path=None, nfft=None, nperseg=None):
     print("---Modifying " + yaml_file + " parameters")
 
     # Read the YAML file
@@ -28,23 +28,30 @@ def modify_extraction_yaml_new(yaml_file, filename=None, rate=None, keys=None, e
                     params['key'] = keys
                 
                 if node_id in ['epoching_A', 'epoching_B'] and epoch_params is not None:
-                    params['before'] = float(epoch_params.get('before', params.get('before')))
-                    params['after'] = float(epoch_params.get('after', params.get('after')))
-                
-                if node_id in ['trim_A', 'trim_B']:
-                    params['samples'] = int(float(epoch_params.get('after', params.get('after')))*float(welch_rate))
+                    params['before'] = float(epoch_params.get('before'))
+                    params['after'] = float(epoch_params.get('after'))
+                    triggers = epoch_params.get('event_trigger').split(";")
+                    if node_id == 'epoching_A':
+                        params['event_trigger'] = str(triggers[0])
+                    if node_id == 'epoching_B':
+                        params['event_trigger'] = str(triggers[1])
 
-                
+                if node_id in ['trim_A', 'trim_B']:
+                    params['samples'] = int(float(epoch_params.get('after'))*float(welch_rate))
+
                 if node_id in ['dynamic_output_A', 'dynamic_output_B'] and trim_samples is not None:
                     params['length'] = int(trim_samples)
                 
                 if node_id in ['welch_psd_A', 'welch_psd_B'] and welch_rate is not None:
-                    params['rate'] = float(welch_rate)
+                    params['rate'] = int(welch_rate)
                 if node_id in ['welch_psd_A', 'welch_psd_B'] and nfft is not None:
                     params['nfft'] = int(nfft)
-                
+                if node_id in ['welch_psd_A', 'welch_psd_B'] and nperseg is not None:
+                    params['nperseg'] = int(nperseg)
+
                 if node_id == 'edf_reader' and filename is not None:
-                    params['filename'] = filename  # Update filename for edf_reader node
+                    params['filename'] = filename
+                    params['stimulations'] = stimulations.split(";")
                 
                 if node_id == 'Recorder' and recorder_filename is not None:
                     params['filename'] = recorder_filename
@@ -58,7 +65,7 @@ def modify_extraction_yaml_new(yaml_file, filename=None, rate=None, keys=None, e
 # Change the offline Training yaml file 
 # ------------------------------------------------------
 
-def update_filenames(yaml_file, new_filenames_A, new_filenames_B, new_selections,path,cv=None):
+def update_filenames(yaml_file, new_filenames_A, new_filenames_B, new_selections, path, cv=None):
     """
     Update the filenames for the 'data_reader_A' and 'data_reader_B' nodes,
     and the selections for the 'select_A' and 'select_B' nodes in the graph.
@@ -111,7 +118,7 @@ def update_filenames(yaml_file, new_filenames_A, new_filenames_B, new_selections
 
 
 def update_online_scenario(yaml_file, rate=None, keys=None, epoch_params=None, trim_samples=None,
-                           welch_rate=None, path=None,nfft=None):
+                           welch_rate=None, path=None, nfft=None, nperseg=None):
     print("---Modifying " + yaml_file + " parameters")
 
     # Read the YAML file
@@ -133,24 +140,29 @@ def update_online_scenario(yaml_file, rate=None, keys=None, epoch_params=None, t
 
                 if node_id in ['select_A', 'select_B'] and keys is not None:
                     params['selections'] = keys
-                
+
                 if node_id in ['epoching_A', 'epoching_B'] and epoch_params is not None:
-                    params['before'] = float(epoch_params.get('before', params.get('before')))
-                    params['after'] = float(epoch_params.get('after', params.get('after')))
+                    params['before'] = float(epoch_params.get('before'))
+                    params['after'] = float(epoch_params.get('after'))
+                    triggers = epoch_params.get('event_trigger').split(";")
+                    if node_id == 'epoching_A':
+                        params['event_trigger'] = str(triggers[0])
+                    if node_id == 'epoching_B':
+                        params['event_trigger'] = str(triggers[1])
                 
                 if node_id in ['trim_A', 'trim_B']:
-                    params['samples'] = int(float(epoch_params.get('after', params.get('after')))*float(welch_rate))
+                    params['samples'] = int(float(epoch_params.get('after'))*float(welch_rate))
 
-                
                 if node_id in ['dynamic_output_A', 'dynamic_output_B'] and trim_samples is not None:
                     params['length'] = int(trim_samples)
-
 
                 if node_id in ['welch_psd_A', 'welch_psd_B'] and welch_rate is not None:
                     params['rate'] = float(welch_rate)
                 if node_id in ['welch_psd_A', 'welch_psd_B'] and nfft is not None:
                     params['nfft'] = int(nfft)
-            
+                if node_id in ['welch_psd_A', 'welch_psd_B'] and nperseg is not None:
+                    params['nperseg'] = int(nperseg)
+
                 if node_id == 'fit_predict' and path is not None:
                     steps = node.get('params', {}).get('steps', [])
                     for step in steps:

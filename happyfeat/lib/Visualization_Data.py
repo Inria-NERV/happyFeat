@@ -993,8 +993,8 @@ def Reorder_custom(Rsquare, customPath, electrodes_orig, powerLeft, powerRight):
 
 def Reorder_custom_plus(Rsquare, signTab, customPath, electrodes_orig, powerLeft, powerRight, timefreqLeft, timefreqRight):
 
-    df = pd.read_csv(customPath)
-    electrodes_target = df.name.to_list()
+    df = pd.read_csv(customPath, usecols=[0])
+    electrodes_target = df[df.columns.tolist()[0]].tolist()
 
     index_elec = []
     for k in range(len(electrodes_target)):

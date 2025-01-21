@@ -1,8 +1,6 @@
-## This Yaml file is used to extract psd feature from a csf file of raw data
+## This Yaml file is used to extract psd feature from an edf file of raw EEG data containing MI trials
 
 graphs:
-
-
 
   - id: analysing
     nodes:
@@ -13,6 +11,9 @@ graphs:
       class: Replay
       params:
         filename: C:\happyfeat\workspaces\test\signals\Test-[2022.10.17-16.24.55].edf
+        stimulations: 
+        - T2
+        - T0
     - id: select_A
       module: timeflux.nodes.query
       class: LocQuery
@@ -43,9 +44,13 @@ graphs:
       module: timeflux.nodes.epoch
       class: Trim
       params:
-        # assumes 500 Hz sample rate and trim to 3 seconds
+        # (sample rate) x (trial length)
         samples: 2000
 
+    - id: car_A
+      module: useful.common_average_ref
+      class: CommonAvgRefNode
+    
     - id: dynamic_output_A
       module: useful.dynamic_output
       class: DynamicOutputNode
@@ -63,8 +68,8 @@ graphs:
       class: Welch
       params:
         rate: 500 
-        nfft: 512
-
+        nfft: 500
+        nperseg: 500
 
     - id: Transform_A
       module: useful.debugging_printing   #timeflux.nodes.xarray
@@ -81,7 +86,6 @@ graphs:
           - 8
           - 30
 
-
     - id: PublisherWelch_A
       module: timeflux.nodes.zmq
       class: Pub
@@ -89,7 +93,6 @@ graphs:
         topic: PSD_A
 
     # stimulation class B
-
       
     - id: epoching_B
       module: timeflux.nodes.epoch
@@ -99,13 +102,16 @@ graphs:
           after: 4 
           event_trigger:  'OVTK_GDF_Right'
           
-
     - id: trim_B
       module: timeflux.nodes.epoch
       class: Trim
       params:
-        # assumes 500 Hz sample rate and trim to 3 seconds
         samples: 2000
+        
+    - id: car_B
+      module: useful.common_average_ref
+      class: CommonAvgRefNode
+      
     - id: dynamic_output_B
       module: useful.dynamic_output
       class: DynamicOutputNode
@@ -121,13 +127,15 @@ graphs:
       class: Welch
       params:
         rate: 500
-        nfft: 512
+        nfft: 500
+        nperseg: 500
 
     - id: Transform_B
       module: useful.debugging_printing   #timeflux.nodes.xarray
       class: ToDataFrame
       params:
         index_dim : 'time'
+        
     - id: Bands_B
       module: timeflux_dsp.nodes.spectral
       class: Bands
@@ -135,8 +143,7 @@ graphs:
         bands:
           range_B:
           - 8
-          - 30
-        
+          - 30        
 
     - id: PublisherWelch_B
       module: timeflux.nodes.zmq
@@ -162,6 +169,8 @@ graphs:
 
 
     - source: select_A
+      target: car_A
+    - source: car_A    
       target: epoching_A      
     - source: edf_reader:events
       target: epoching_A:events
@@ -179,6 +188,8 @@ graphs:
       target: PublisherWelch_A
 
     - source: select_B
+      target: car_B
+    - source: car_B
       target: epoching_B
     - source: edf_reader:events
       target: epoching_B:events

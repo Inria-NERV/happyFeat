@@ -86,17 +86,22 @@ class Extraction_Timeflux(QtCore.QThread):
             # Notes:
             # Epoching : "before" is really *before* the stimulation (so here we need 0.0s)
             # Epoching : "after" is after. :)
+            afterTime = float(self.extractDict["StimulationEpoch"])+float(self.extractDict["StimulationDelay"])
+            stimulations = self.parameterDict["extractionStims"]
+
             modify_extraction_yaml_new(
                 extraction_yaml_file_path,
                 filename=os.path.join(self.signalFolder, signalFile),
                 rate=1,
                 keys=self.extractDict["ChannelNames"],
-                epoch_params={'before': 0.0, 'after': float(self.extractDict["StimulationEpoch"])+float(self.extractDict["StimulationDelay"])},
+                stimulations=stimulations,
+                epoch_params={'before': 0.0, 'after': afterTime, 'event_trigger': stimulations},
                 trim_samples=trim_samples,
                 welch_rate=sampFreq,
                 recorder_filename=outputSpect,
                 path=csv_file_path,
-                nfft=nfft
+                nfft=nfft,
+                nperseg=nfft  # TODO : check if that is correct
             )
 
             # Launch timeflux scenario !
@@ -147,7 +152,7 @@ def Extract_CSV_Data_Timeflux(data_cond, nbElectrodes, bins):
 class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
     info = Signal(bool)
     info2 = Signal(str)
-    over = Signal(bool, str, list)
+    over = Signal(bool, str, list, list, list)
 
     def __init__(self, analysisFiles, workingFolder, parameterDict, Features, sampFreq, parent=None):
 
@@ -177,6 +182,8 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
 
         # load files per class
         validFiles = []
+        initSizes = []
+        validSizes = []
         for selectedFilesForViz in self.analysisFiles:
             idxFile += 1
             pipelineLabel = "SPECTRUM"
@@ -203,7 +210,7 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
                 errMsg = str(errMsg + "\nSampling frequency or frequency bins mismatch")
                 errMsg = str(errMsg + "\n(" + str(sampFreq1) + " vs " + str(sampFreq2) + " or ")
                 errMsg = str(errMsg + str(freqBins1) + " vs " + str(freqBins2) + ")")
-                self.over.emit(False, errMsg, None)
+                self.over.emit(False, errMsg, None, None, None)
                 return
 
             listSampFreq.append(sampFreq1)
@@ -220,19 +227,26 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
             if electrodeList1 != electrodeList2:
                 errMsg = str("Error when loading " + path1 + "\n" + " and " + path2)
                 errMsg = str(errMsg + "\nElectrode List mismatch")
-                self.over.emit(False, errMsg, None)
+                self.over.emit(False, errMsg, None, None, None)
                 return
 
             listElectrodeList.append(electrodeList1)
 
             # check for invalid values...
-            newData1, valid1 = check_valid_np(data1)
-            newData2, valid2 = check_valid_np(data2)
+            initSize1 = 0
+            validSize1 = 0
+            initSize2 = 0
+            validSize2 = 0
+            newData1, valid1, initSize1, validSize1 = check_valid_np(data1)
+            newData2, valid2, initSize2, validSize2 = check_valid_np(data2)
 
             if valid1 and valid2:
                 validFiles.append(True)
             else:
                 validFiles.append(False)
+
+            initSizes.append(initSize1 + initSize2)
+            validSizes.append(validSize1 + validSize2)
 
             self.dataNp1.append(data1)
             self.dataNp2.append(data2)
@@ -243,7 +257,7 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
         if not all(freqsamp == listSampFreq[0] for freqsamp in listSampFreq):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Sampling frequency mismatch (" + str(listSampFreq) + ")")
-            self.over.emit(False, errMsg, None)
+            self.over.emit(False, errMsg, None, None, None)
             return
         else:
             self.samplingFreq = listSampFreq[0]
@@ -252,7 +266,7 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
         if not all(electrodeList == listElectrodeList[0] for electrodeList in listElectrodeList):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Electrode List mismatch")
-            self.over.emit(False, errMsg, None)
+            self.over.emit(False, errMsg, None, None, None)
             return
         else:
             print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
@@ -260,7 +274,7 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
         if not all(freqBins == listFreqBins[0] for freqBins in listFreqBins):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Not same number of frequency bins (" + str(listSampFreq) + ")")
-            self.over.emit(False, errMsg, None)
+            self.over.emit(False, errMsg, None, None, None)
             return
         else:
             print("Frequency bins: " + str(listFreqBins[0]))
@@ -344,7 +358,7 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
         self.Features.samplingFreq = self.samplingFreq
 
         self.stop = True
-        self.over.emit(True, "", validFiles)
+        self.over.emit(True, "", validFiles, initSizes, validSizes)
 
     def stopThread(self):
         self.stop = True

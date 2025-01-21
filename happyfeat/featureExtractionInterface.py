@@ -117,6 +117,8 @@ class Dialog(QDialog):
         self.trainTimerStart = 0
         self.trainTimerEnd = 0
 
+        self.extractionStims = "OVTK_GDF_Left;OVTK_GDF_Right"  # default values
+
         # default parameters for automatic selection
         self.autoFeatChannelList = []
         self.autoFeatFreqRange = ""
@@ -145,6 +147,7 @@ class Dialog(QDialog):
             self.sensorMontage = self.parameterDict["sensorMontage"]
             self.customMontagePath = self.parameterDict["customMontagePath"]
             self.currentSessionId = self.parameterDict["currentSessionId"]
+            self.extractionStims = self.parameterDict["extractionStims"]
             self.autoFeatFreqRange = self.parameterDict["autoFeatFreqRange"]
             self.autoFeatChannelList = self.parameterDict["autoFeatChannelList"]
             if self.bciPlatform == settings.availablePlatforms[0]:  # openvibe
@@ -177,7 +180,15 @@ class Dialog(QDialog):
         self.qActionEnableAdvancedMode.triggered.connect(lambda: self.toggleAdvanced())
         self.menuOptions.addAction(self.qActionEnableAdvancedMode)
 
-        # Auto-select feature: select a set of channels for autoselection
+        # Menu for advanced extraction parameters
+        self.menuExtraction = QMenu("&Extraction")
+        self.menuBar.addMenu(self.menuExtraction)
+
+        self.qActionStimulations = QAction("Set Class &Stimulations", self)
+        self.qActionStimulations.triggered.connect(lambda: self.extractionSetStimulations())
+        self.menuExtraction.addAction(self.qActionStimulations)
+
+        # Menu for Auto-select: select a set of channels for autoselection
         self.menuAutoSelect = QMenu("&Feature AutoSelect")
         self.menuBar.addMenu(self.menuAutoSelect)
 
@@ -1046,7 +1057,7 @@ class Dialog(QDialog):
             # Manually refresh lists
             self.refreshLists()
             self.updateTrainingAttemptsTree()
-	    # Manually set Visualization part "off", to force user to reload a run
+            # Manually set Visualization part "off", to force user to reload a run
             self.enablePlotBtns(False)
 
         return changed, alreadyExists, newId
@@ -2333,10 +2344,8 @@ class Dialog(QDialog):
     def toggleAdvanced(self):
         # Toggles some options in the interface...
 
-        if self.advanced:
-            self.advanced = False
-        else:
-            self.advanced = True
+        # Toggle "advanced" status
+        self.advanced = not self.advanced
 
         self.labelRunClassif.setVisible(self.advanced)
         self.btn_selectFilesClassif.setVisible(self.advanced)
@@ -2347,6 +2356,35 @@ class Dialog(QDialog):
             self.enableSpeedUp.setVisible(self.advanced)
             self.speedUpLabel.setVisible(self.advanced)
 
+        return
+
+    def extractionSetStimulations(self):
+        # ----------
+        # Allow user to set Stimulations corresponding to classes
+        # ----------
+        text, ok = QInputDialog.getText(self, 'Class Stimulation names for extraction',
+                                        'Enter two strings separated with \";\"', text=self.extractionStims)
+        if ok:
+            # Check if it's all alphanumeric, except for ":"...
+            for c in text:
+                if not c.isalnum():
+                    if c != ";" and c != "_":  # we authorize "_" for openvibe...
+                        myMsgBox("Please respect formatting: two strings separated with \";\"")
+                        return
+
+            if text == "":
+                myMsgBox("Please respect formatting: two strings separated with \";\"")
+                return
+
+            stims = text.split(";")
+            if len(stims) != 2:
+                myMsgBox("Please respect formatting: two numbers separated with \";\"")
+                return
+
+            self.extractionStims = text
+            # Save in workspace file
+            setKeyValue(self.workspaceFile, "extractionStims", self.extractionStims)
+            self.parameterDict["extractionStims"] = self.extractionStims
         return
 
     def btnAutoFeat(self, results1, results2):
@@ -2402,7 +2440,7 @@ class Dialog(QDialog):
         # Check if frequencies are correct...
         freqMin = int(self.autoFeatFreqRange.split(":")[0])
         freqMax = int(self.autoFeatFreqRange.split(":")[1])
-        if freqMax <= freqMin or freqMax > self.samplingFreq / 2 or freqMin < 0 or freqMax < 1 :
+        if freqMax <= freqMin or freqMax > self.samplingFreq / 2 or freqMin < 0 or freqMax < 1:
             myMsgBox("AutoFeat: Invalid frequency range ( freqmin:freqmax )" )
             return
 
@@ -2572,7 +2610,7 @@ class Dialog(QDialog):
             extractFile1 = str(os.path.splitext(file)[0] + "-" + metric + "-" + class1 + ".csv")
             extractFile2 = str(os.path.splitext(file)[0] + "-" + metric + "-" + class2 + ".csv")
             extractFile1Path = os.path.join(extractFolder, extractFile1)
-            extractFile2Path = os.path.join(extractFolder, extractFile1)
+            extractFile2Path = os.path.join(extractFolder, extractFile2)
             if not os.path.exists(extractFile1Path) or not os.path.exists(extractFile2Path):
                 return False
 
@@ -2588,17 +2626,18 @@ class Dialog(QDialog):
             if not os.path.exists(extractFile1Path) or not os.path.exists(extractFile2Path):
                 return False
 
-        trainFolder = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train")
-        if not os.path.exists(trainFolder):
-            return False
-        trialsFile = os.path.join(trainFolder, str(os.path.splitext(file)[0] + "-TRIALS.csv"))
-        if not os.path.exists(trialsFile):
-            return False
+        if self.parameterDict["bciPlatform"] == settings.availablePlatforms[0]:  # openvibe
+            trainFolder = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train")
+            if not os.path.exists(trainFolder):
+                return False
+            trialsFile = os.path.join(trainFolder, str(os.path.splitext(file)[0] + "-TRIALS.csv"))
+            if not os.path.exists(trialsFile):
+                return False
 
-        signalsFolder = os.path.join(self.workspaceFolder, "signals")
-        metaFile = os.path.join(signalsFolder, str(os.path.splitext(file)[0] + "-META.csv"))
-        if not os.path.exists(metaFile):
-            return False
+            signalsFolder = os.path.join(self.workspaceFolder, "signals")
+            metaFile = os.path.join(signalsFolder, str(os.path.splitext(file)[0] + "-META.csv"))
+            if not os.path.exists(metaFile):
+                return False
 
         return True
 
@@ -2954,7 +2993,6 @@ def launch(folder, fullWorkspacePath):
             return -1
 
     dlg = Dialog(fullWorkspacePath)
-
     retVal = dlg.exec()
 
     app.shutdown()
