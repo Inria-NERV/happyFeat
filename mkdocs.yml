@@ -21,6 +21,7 @@ nav:
   - Citing HappyFeat: cite.md
   - User Guide:
     - Installation: user_guide/install.md
+    - Tutorial: user_guide/tutorial.md
     - Getting started: user_guide/start.md
     - Sensor Montages: user_guide/montage.md
     - Workspaces: user_guide/workspaces.md
