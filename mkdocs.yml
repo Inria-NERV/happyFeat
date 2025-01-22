@@ -19,12 +19,11 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Citing HappyFeat: cite.md
-  - User Guide:
+  - Getting Started:
     - Installation: user_guide/install.md
     - Tutorial: user_guide/tutorial.md
-    - Getting started: user_guide/start.md
-    - Sensor Montages: user_guide/montage.md
-    - Workspaces: user_guide/workspaces.md
+    - Launch & setup: user_guide/start.md
+  - User guide:
     - Using HappyFeat: user_guide/using_hf.md
     - Feature Extraction: user_guide/extract.md
     - Automatic Feat. selection: user_guide/autofeat.md
@@ -33,6 +32,9 @@ nav:
     - Using a trained classifier: user_guide/onlinebci.md
     - Combination training: user_guide/combinationtraining.md
     - Using HappyFeat in BCI experiments: user_guide/bci_hf.md
+  - More in depth:
+    - Sensor Montages: user_guide/montage.md
+    - Workspaces: user_guide/workspaces.md
     
 plugins:
   - search
