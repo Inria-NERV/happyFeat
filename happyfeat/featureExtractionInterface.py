@@ -2236,7 +2236,7 @@ class Dialog(QDialog):
             freqMax = -1
             topo_plot(features.Rsquare, title, self.sensorMontage, self.customMontagePath,
                       features.electrodes_final, int(self.freqTopo.text()), freqMax,
-                      features.fres, self.samplingFreq, self.colormapScale.isChecked(), 'Signed R square')
+                      features.fres, self.samplingFreq, self.colormapScale.isChecked())
             plt.show()
         elif ":" in self.freqTopo.text() \
                 and len(self.freqTopo.text().split(":")) == 2:
@@ -2248,7 +2248,7 @@ class Dialog(QDialog):
                             error = False
                             topo_plot(features.Rsquare, title, self.sensorMontage, self.customMontagePath,
                                       features.electrodes_final, int(self.freqTopo.text()), freqMax,
-                                      features.fres, self.samplingFreq, self.colormapScale.isChecked(), 'Signed R square')
+                                      features.fres, self.samplingFreq, self.colormapScale.isChecked())
                             plt.show()
 
         if error:

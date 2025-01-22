@@ -12,6 +12,7 @@ import plotly.offline
 
 import mne
 from mne.viz import topomap
+from mne.channels.layout import _find_topomap_coords, _pair_grad_sensors, find_layout
 
 import pandas as pd
 
@@ -26,7 +27,7 @@ def add_colorbar(ax, im, cmap, side="right", pad=.05, title=None,
 
     return cbar, cax
 
-def topo_plot(Rsquare, title, montageStr, customMontage, electrodes, freqMin, freqMax, fres, fs, scaleColormap, Stat_method):
+def topo_plot(Rsquare, title, montageStr, customMontage, electrodes, freqMin, freqMax, fres, fs, scaleColormap):
     fig, ax = plt.subplots()
 
     useRange = False
@@ -55,10 +56,12 @@ def topo_plot(Rsquare, title, montageStr, customMontage, electrodes, freqMin, fr
         else:
             montage_inter = mne.channels.make_dig_montage(ch_pos=dig_ch_pos)
             ind = [i for (i, channel) in enumerate(montage_inter.ch_names) if channel in electrodes]
+            print(ind)
             montage = montage_inter.copy()
             # Only keep the desired channels
             montage.ch_names = [montage_inter.ch_names[x] for x in ind]
-            montage.dig = [montage_inter.dig[x + 3] for x in ind]
+            print(montage.ch_names)
+            montage.dig = [montage_inter.dig[x] for x in ind]
 
     else:
         montage_inter = mne.channels.make_standard_montage(montageStr)
@@ -99,10 +102,16 @@ def topo_plot(Rsquare, title, montageStr, customMontage, electrodes, freqMin, fr
     if scaleColormap:
         vmax = None
 
+    # im, cn = mne.viz.plot_topomap(sizer, fake_evoked.info, sensors=False, names=montage.ch_names,
+    #                               res=500, mask_params=dict(marker='', markerfacecolor='w', markeredgecolor='k', linewidth=0,
+    #                                                         markersize=0), contours=0, image_interp='cubic', show=True,
+    #                               extrapolate='head', cmap='jet')
+
+
     plot_topomap_data_viz(title, sizer, fake_evoked.info, sensors=False, names=montage.ch_names, show_names=True,
-                          res=500, mask_params=dict(marker='', markerfacecolor='w', markeredgecolor='k', linewidth=0,
-                                                    markersize=0), contours=0, image_interp='cubic', show=True,
-                          extrapolate='head', cmap='jet', freq=freq, vmin=vmin, vmax=vmax, Stat_method=Stat_method)
+                         res=500, mask_params=dict(marker='', markerfacecolor='w', markeredgecolor='k', linewidth=0,
+                                                   markersize=0), contours=0, image_interp='cubic', show=True,
+                         extrapolate='head', cmap='jet', freq=freq, vmin=vmin, vmax=vmax)
 
 def plot_topomap_data_viz(title, data, pos, vmin=None, vmax=None, cmap=None, sensors=True,
                           res=64, axes=None, names=None, show_names=False, mask=None,
@@ -110,7 +119,7 @@ def plot_topomap_data_viz(title, data, pos, vmin=None, vmax=None, cmap=None, sen
                           contours=6, image_interp='cubic', show=True,
                           onselect=None, extrapolate=_EXTRAPOLATE_DEFAULT,
                           sphere=None, border=_BORDER_DEFAULT,
-                          ch_type='eeg', freq='10', Stat_method='R_square signed'):
+                          ch_type='eeg', freq='10'):
     """Plot a topographic map as image.
 
     Parameters
@@ -185,17 +194,18 @@ def plot_topomap_data_viz(title, data, pos, vmin=None, vmax=None, cmap=None, sen
         The fieldlines.
     """
     sphere = topomap._check_sphere(sphere)
+    
     return _plot_topomap_test(title, data, pos, vmin, vmax, cmap, sensors, res, axes,
                               names, show_names, mask, mask_params, outlines,
                               contours, image_interp, show,
                               onselect, extrapolate, sphere=sphere, border=border,
-                              ch_type=ch_type, freq=freq, Stat_method=Stat_method)[:2]
+                              ch_type=ch_type, freq=freq)[:2]
 
 
 def _plot_topomap_test(title, data, pos, vmin=None, vmax=None, cmap=None, sensors=True, res=64, axes=None, names=None,
                        show_names=False, mask=None, mask_params=None, outlines='head', contours=6,
                        image_interp='cubic', show=True, onselect=None, extrapolate=_EXTRAPOLATE_DEFAULT, sphere=None,
-                       border=_BORDER_DEFAULT, ch_type='eeg', freq='10', Stat_method='R square signed'):
+                       border=_BORDER_DEFAULT, ch_type='eeg', freq='10'):
 
     data = np.asarray(data)
 
@@ -204,7 +214,7 @@ def _plot_topomap_test(title, data, pos, vmin=None, vmax=None, cmap=None, sensor
         pos = topomap.pick_info(pos, picks)
 
         # check if there is only 1 channel type, and n_chans matches the data
-        ch_type = topomap._get_channel_types(pos, unique=True)
+        ch_type = mne.Info.get_channel_types(pos, unique=True)
         info_help = ("Pick Info with e.g. mne.pick_info and "
                      "mne.io.pick.channel_indices_by_type.")
         if len(ch_type) > 1:
@@ -219,13 +229,13 @@ def _plot_topomap_test(title, data, pos, vmin=None, vmax=None, cmap=None, sensor
 
         if any(type_ in ch_type for type_ in ('planar', 'grad')):
             # deal with grad pairs
-            picks = topomap._pair_grad_sensors(pos, topomap_coords=False)
-            pos = topomap._find_topomap_coords(pos, picks=picks[::2], sphere=sphere, ignore_overlap=True)
+            picks = _pair_grad_sensors(pos, topomap_coords=False)
+            pos = _find_topomap_coords(pos, picks=picks[::2], sphere=sphere, ignore_overlap=True)
             data, _ = topomap._merge_ch_data(data[picks], ch_type, [])
             data = data.reshape(-1)
         else:
             picks = list(range(data.shape[0]))
-            pos = topomap._find_topomap_coords(pos, picks=picks, sphere=sphere, ignore_overlap=True)
+            pos = _find_topomap_coords(pos, picks=picks, sphere=sphere, ignore_overlap=True)
 
     extrapolate = topomap._check_extrapolate(extrapolate, ch_type)
     if data.ndim > 1:
