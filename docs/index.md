@@ -22,7 +22,7 @@ The focus is put on ease of use, trial-and-error training of the classifier, and
 # Requirements
 
 * **Python 3.12**
-* Python packages : shutils / PySide6 / numpy / MNE / matplotlib / scipy / spectrum / statsmodel / pandas / ruamel.yaml
+* Python packages : shutils / PySide6 / numpy / MNE / matplotlib / scipy / spectrum / statsmodel / pandas / ruamel.yaml / plotly
 * **OpenViBE Version 3.6.0**: http://openvibe.inria.fr/downloads/
 * .. and/or **Timeflux Version 0.16.0**: https://doc.timeflux.io/en/stable/usage/getting_started.html#installation
 
