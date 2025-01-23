@@ -2014,7 +2014,7 @@ class Dialog(QDialog):
                 #                           title)
                 # plt.show()
                 fig = plot_Rsquare_plotly(subR2,
-                                          np.array(features.electrodes_final)[:],
+                                          np.array(subElectrodes)[:],
                                           features.freqs_array,
                                           smoothing,
                                           features.fres,
@@ -2549,11 +2549,12 @@ class Dialog(QDialog):
         text, ok = QInputDialog.getText(self, 'Channel list for automatic feature selection', 'Enter a list of channels separated with \";\"', text=displayed)
 
         if ok:
-            # Check if it's all alphanumeric, except for ";"...
+            # Check if it's all alphanumeric, except for ";"
+            # another exception : dots ("."), as it's used in physionet dataset...
             for c in text:
                 if not c.isalnum():
-                    if c != ";":
-                        myMsgBox("Please respect formatting: channels as alphanumeric characters, separated with \";\"")
+                    if c != ";" and c != ".":
+                        myMsgBox("Please respect formatting: channels as alphanumeric characters (or dots), separated with \";\"")
                         return
             if text == "":
                 self.autoFeatChannelList = []
