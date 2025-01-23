@@ -304,6 +304,13 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
             power_cond2, timefreq_cond2 = \
                 Extract_CSV_Data_Timeflux(self.dataNp2[run], nbElectrodes, n_bins)
 
+            # experimental: if mismatch in number of trials for the 2 classes,
+            # only keep the lowest amount...
+            if np.shape(power_cond1)[0] != np.shape(power_cond2)[0]:
+                minNb = min(np.shape(power_cond1)[0], np.shape(power_cond2)[0])
+                power_cond1 = power_cond1[0:minNb, :, :]
+                power_cond2 = power_cond2[0:minNb, :, :]
+
             if power_cond1_final is None:
                 power_cond1_final = power_cond1
                 power_cond2_final = power_cond2
