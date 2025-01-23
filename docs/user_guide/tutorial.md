@@ -11,18 +11,45 @@ python -m pip install timeflux
 python -m pip install timeflux_dsp
 ```
 
+## Launching *HappyFeat*
+
+If you installed from PyPI, launch HappyFeat using this command:
+
+```shell
+happyfeat
+```
+
+If you cloned the repository from github, the application's entry point is the Python script *happyfeat_welcome.py*. Navigate to the cloned repo and type the following:
+
+```shell
+python happyfeat/happyfeat_welcome.py
+```
+
+or
+
+```shell
+python
+>>> from happyfeat import happyfeat_welcome
+>>> happyfeat_welcome.main()
+```
+
+A "welcome" GUI opens, allowing you to create or load a workspace.
+
 ## Creating and setting up a workspace 
-
-First, browse for the folder in which you would like **HappyFeat** to create and look for workspaces. This will be referred to as `<workspaces>`
-
-Click on "Start new workspace" and enter a name for your workspace. This will be referred to as `<newWorkspace>`.
 
 ```shell
 						insert figure
 ```
 
+First, browse for the folder in which you would like **HappyFeat** to create and look for workspaces. This will be referred to as `<workspaces>`
+
+Click on "Start new workspace" and enter a name for your workspace. This will be referred to as `<newWorkspace>`.
 
 A new assistant GUI will open, allowing you to set up the BCI experiment parameters. 
+
+```shell
+						insert figure
+```
 
 - In the first drop-down menu, select **Timeflux** as a BCI platform.
 
@@ -35,10 +62,6 @@ A new assistant GUI will open, allowing you to set up the BCI experiment paramet
 
 - Click on `Generate and launch HappyFeat` to proceed.
 
-
-```shell
-						insert figure
-```
 
 ## Loading data from Physionet
 In a terminal, navigate to **HappyFeat**'s installation folder, then type:
