@@ -88,7 +88,9 @@ class Extraction_Timeflux(QtCore.QThread):
             # Epoching : "after" is after. :)
             afterTime = float(self.extractDict["StimulationEpoch"])+float(self.extractDict["StimulationDelay"])
             stimulations = self.parameterDict["extractionStims"]
-
+            class1 = self.parameterDict["AcquisitionParams"]["Class1"]
+            class2 = self.parameterDict["AcquisitionParams"]["Class2"]
+            classes = [class1, class2]
             modify_extraction_yaml_new(
                 extraction_yaml_file_path,
                 filename=os.path.join(self.signalFolder, signalFile),
@@ -101,7 +103,8 @@ class Extraction_Timeflux(QtCore.QThread):
                 recorder_filename=outputSpect,
                 path=csv_file_path,
                 nfft=nfft,
-                nperseg=nfft  # TODO : check if that is correct
+                nperseg=nfft,  # TODO : check if that is correct
+                classes=classes
             )
 
             # Launch timeflux scenario !

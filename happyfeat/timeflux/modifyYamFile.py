@@ -4,7 +4,7 @@ import ruamel.yaml
 # Change the Extraction yaml file 
 # ------------------------------------------------------
 def modify_extraction_yaml_new(yaml_file, filename=None, rate=None, keys=None, stimulations=None, epoch_params=None, trim_samples=None,
-                               welch_rate=None, recorder_filename=None, path=None, nfft=None, nperseg=None):
+                               welch_rate=None, recorder_filename=None, path=None, nfft=None, nperseg=None, classes=None):
     print("---Modifying " + yaml_file + " parameters")
 
     # Read the YAML file
@@ -56,7 +56,15 @@ def modify_extraction_yaml_new(yaml_file, filename=None, rate=None, keys=None, s
                 if node_id == 'Recorder' and recorder_filename is not None:
                     params['filename'] = recorder_filename
                     params['path'] = path
-    
+
+            for edge in graph.get('edges', []):
+                source = edge['source']
+                if source in ['Transform_A', 'Transform_B'] and classes is not None:
+                    if source == 'Transform_A':
+                        edge['target'] = str('Recorder:'+classes[0])
+                    elif source == 'Transform_B':
+                        edge['target'] = str('Recorder:' + classes[1])
+
     # Write the updated YAML back to the file
     with open(yaml_file, 'w') as file:
         yaml.dump(data, file)
