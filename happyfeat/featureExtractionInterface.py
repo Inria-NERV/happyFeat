@@ -398,7 +398,7 @@ class Dialog(QDialog):
         self.autofeatUseSign = QCheckBox()
         self.autofeatUseSign.setTristate(False)
         self.autofeatUseSign.setChecked(False)
-        self.formLayoutViz.addRow('Use the sign of R² (colormap & AutoFeat)', self.autofeatUseSign)
+        self.formLayoutViz.addRow('Use the sign of R² (colormap and AutoFeat)', self.autofeatUseSign)
 
         self.layoutViz.addLayout(self.formLayoutViz)
 
@@ -417,10 +417,12 @@ class Dialog(QDialog):
             titleR2 = "Freq.-chan. map of R² values of spectral power between classes"
             titleTimeFreq = "Time-Frequency ERD/ERS analysis"
             titlePsd = "Power Spectrum "
+            metricPsd = "Power Spectral Density (dB)"
+            isLogPsd = True
             titleTopo = "Topography of power spectra, for freq. "
             self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2, False))
             self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq(self.Features, titleTimeFreq))
-            self.btn_psd.clicked.connect(lambda: self.btnPsd(self.Features, titlePsd))
+            self.btn_psd.clicked.connect(lambda: self.btnMetric(self.Features, metricPsd, isLogPsd, titlePsd))
             self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo))
 
             self.btn_r2mapAutoFeat = QPushButton("R² map (sub-select.)")
@@ -444,9 +446,11 @@ class Dialog(QDialog):
             titleR2 = "Freq.-chan. map of R² values of node strength"
             titleTimeFreq = "Time-Frequency ERD/ERS analysis"
             titleMetric = "Connectivity-based node strength, "
+            metricLabel = "Average Node Strength"
+            isLogNodeStrength = False
             titleTopo = "Topography of node strengths, for freq. "
             self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2, False))
-            self.btn_metric.clicked.connect(lambda: self.btnMetric(self.Features, titleMetric))
+            self.btn_metric.clicked.connect(lambda: self.btnMetric(self.Features, metricLabel, isLogNodeStrength, titleMetric))
             self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreqConnect(self.Features, titleTimeFreq))
             self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo))
 
@@ -480,9 +484,11 @@ class Dialog(QDialog):
             titleR2 = "Freq.-chan. map of R² values of spectral power between classes"
             titleTimeFreq = "Time-Frequency ERD/ERS analysis"
             titlePsd = "Power Spectrum "
+            metricPsd = "Power Spectral Density (dB)"
+            isLogPsd = True
             titleTopo = "Topography of power spectra, for freq. "
             self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2, False))
-            self.btn_psd.clicked.connect(lambda: self.btnPsd(self.Features, titlePsd))
+            self.btn_psd.clicked.connect(lambda: self.btnMetric(self.Features, metricPsd, isLogPsd, titlePsd))
             self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo))
 
             self.btn_r2mapAutoFeat = QPushButton("R² map (sub-select.)")
@@ -500,9 +506,11 @@ class Dialog(QDialog):
             titleR2_c = "Freq.-chan. map of R² values of node strength"
             titleTimeFreq_c = "Time-Frequency ERD/ERS analysis"
             titleMetric_c = "Connectivity-based Node Strength, "
+            metricLabel_c = "Average Node Strength"
+            isLog_c = False
             titleTopo_c = "Topography of node strengths, for freq. "
             self.btn_r2map2.clicked.connect(lambda: self.btnR2(self.Features2, titleR2_c, False))
-            self.btn_metric.clicked.connect(lambda: self.btnMetric(self.Features2, titleMetric_c))
+            self.btn_metric.clicked.connect(lambda: self.btnMetric(self.Features2, metricLabel_c, isLog_c, titleMetric_c))
             self.btn_topo2.clicked.connect(lambda: self.btnTopo(self.Features2, titleTopo_c))
 
             self.btn_r2mapAutoFeat2 = QPushButton("R² map (sub-select.)")
@@ -1964,9 +1972,8 @@ class Dialog(QDialog):
                 # mask = features.Rsign_tab < 0
                 tempRsign = features.Rsign_tab.copy()
                 # reverse the sign for the Rsquare map...
-
-                tempRsign[np.where(features.Rsign_tab < 0)] = 1
-                tempRsign[np.where(features.Rsign_tab > 0)] = -1
+                # tempRsign[np.where(features.Rsign_tab < 0)] = 1
+                # tempRsign[np.where(features.Rsign_tab > 0)] = -1
                 tempR2 = tempR2 * tempRsign
                 # tempR2[np.where(mask == False)] = 0
 
@@ -2159,7 +2166,7 @@ class Dialog(QDialog):
         plt.show()
 
     # Plot compared metric for 2 classes using Visualization_Data functions
-    def btnMetric(self, features, title):
+    def btnMetric(self, features, metricLabel, isLog, title):
         if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
             electrodeExists = False
             electrodeIdx = 0
@@ -2177,52 +2184,16 @@ class Dialog(QDialog):
                 fmax = int(self.userFmax.text())
                 class1 = self.parameterDict["AcquisitionParams"]["Class1"]
                 class2 = self.parameterDict["AcquisitionParams"]["Class2"]
-                # TODO : change according to actual metric name
-                metricLabel = "Average Node Strength"
                 each_point = 1
-                fig = plot_metric2_plotly(
+                fig = plot_comparison_plotly(
                     features.power_cond1, features.power_cond2,
                     features.Rsquare, features.freqs_array,
                     electrodeIdx, features.electrodes_final,
-                    each_point, fmin, fmax, features.fres, class1, class2, metricLabel, title)
+                    each_point, fmin, fmax, features.fres, class1, class2,
+                    metricLabel, isLog, title)
 
                 filename = str(self.workspaceFolder + "/lastfigure.html")
                 plotly.offline.plot(fig, filename=filename, auto_open=True)
-                # plot_metric2(features.power_cond1, features.power_cond2,
-                #              features.Rsquare,
-                #              features.freqs_array, electrodeIdx, features.electrodes_final,
-                #              each_point, fmin, fmax, features.fres, class1, class2, metricLabel, title)
-                # plt.show()
-
-    # Plot compared PSD for 2 classes using Visualization_Data functions
-    # TODO : remove (duplicate)
-    def btnPsd(self, features, title):
-        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
-            electrodeToDisp = self.electrodePsd.text()    
-            electrodeExists = False
-            electrodeIdx = 0
-            for idx, elec in enumerate(features.electrodes_final):
-                if elec == electrodeToDisp:
-                    electrodeIdx = idx
-                    electrodeExists = True
-                    break
-            if not electrodeExists:
-                myMsgBox("No sensor with this name found")
-            else:
-                fmin = int(self.userFmin.text())
-                fmax = int(self.userFmax.text())
-                class1 = self.parameterDict["AcquisitionParams"]["Class1"]
-                class2 = self.parameterDict["AcquisitionParams"]["Class2"]
-                each_point = 1
-                fig = plot_psd_r2_plotly(
-                    features.power_cond1, features.power_cond2,
-                    features.Rsquare, features.freqs_array,
-                    electrodeIdx, features.electrodes_final,
-                    each_point, fmin, fmax, features.fres, class1, class2, title)
-
-                filename = str(self.workspaceFolder + "/lastfigure.html")
-                plotly.offline.plot(fig, filename=filename, auto_open=True)
-
 
     # Plot "Brain topography", using either Power Spectrum (in same pipeline)
     # or Node Strength (or similar metric) (in Connectivity pipeline)
@@ -2235,8 +2206,8 @@ class Dialog(QDialog):
         if self.autofeatUseSign.isChecked():
             tempRsign = features.Rsign_tab.copy()
             # reverse the sign for the Rsquare map...
-            tempRsign[np.where(features.Rsign_tab < 0)] = 1
-            tempRsign[np.where(features.Rsign_tab > 0)] = -1
+            # tempRsign[np.where(features.Rsign_tab < 0)] = 1
+            # tempRsign[np.where(features.Rsign_tab > 0)] = -1
             tempR2 = tempR2 * tempRsign
 
         # 2 cases : 1 freq bin, or freq range
