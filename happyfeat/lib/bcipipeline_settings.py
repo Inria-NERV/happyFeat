@@ -61,7 +61,7 @@ pipelineAcqSettings = { "TrialNb": 20,
                         "Class2": "REST",  # OV : RIGHT
                         "Baseline": 20,
                         "TrialWait": 3,
-                        "TrialLength": 3,  # Not really trial length but reaction time...
+                        "TrialLength": 1,  # Not really trial length but reaction time...
                         "FeedbackLength": 3,  # Task / Feedback duraction
                         "EndTrialMin": 2.5,
                         "EndTrialMax": 3.5,
