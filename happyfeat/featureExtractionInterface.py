@@ -393,12 +393,12 @@ class Dialog(QDialog):
         self.colormapScale = QCheckBox()
         self.colormapScale.setTristate(False)
         self.colormapScale.setChecked(True)
-        self.formLayoutViz.addRow('Scale Colormap (R²map and Topography)', self.colormapScale)
+        self.formLayoutViz.addRow('Scale Colormap (R²map and Topo) for max contrast', self.colormapScale)
         # Param : checkbox for considering Class2-Class1 sign for AutoFeat
         self.autofeatUseSign = QCheckBox()
         self.autofeatUseSign.setTristate(False)
         self.autofeatUseSign.setChecked(False)
-        self.formLayoutViz.addRow('AutoFeat: consider the sign (Class2-Class1)', self.autofeatUseSign)
+        self.formLayoutViz.addRow('Use the sign of R² (colormap & AutoFeat)', self.autofeatUseSign)
 
         self.layoutViz.addLayout(self.formLayoutViz)
 
@@ -1957,20 +1957,22 @@ class Dialog(QDialog):
             smoothing = False
             each_point = 1  # Todo : make parameter?
 
+            # if "consider the sign of Class2-Class1" is checked,
+            # modify the R2 to display
+            tempR2 = features.Rsquare.copy()
+            if self.autofeatUseSign.isChecked():
+                # mask = features.Rsign_tab < 0
+                tempRsign = features.Rsign_tab.copy()
+                # reverse the sign for the Rsquare map...
+
+                tempRsign[np.where(features.Rsign_tab < 0)] = 1
+                tempRsign[np.where(features.Rsign_tab > 0)] = -1
+                tempR2 = tempR2 * tempRsign
+                # tempR2[np.where(mask == False)] = 0
+
             # Full map
             if not useSubselection:
-                # plot_Rsquare_calcul_welch(features.Rsquare,
-                #                           np.array(features.electrodes_final)[:],
-                #                           features.freqs_array,
-                #                           smoothing,
-                #                           features.fres,
-                #                           each_point,
-                #                           int(self.userFmin.text()),
-                #                           int(self.userFmax.text()),
-                #                           self.colormapScale.isChecked(),
-                #                           title)
-                # plt.show()
-                fig = plot_Rsquare_plotly(features.Rsquare,
+                fig = plot_Rsquare_plotly(tempR2,
                                           np.array(features.electrodes_final)[:],
                                           features.freqs_array,
                                           smoothing,
@@ -1979,6 +1981,7 @@ class Dialog(QDialog):
                                           int(self.userFmin.text()),
                                           int(self.userFmax.text()),
                                           self.colormapScale.isChecked(),
+                                          self.autofeatUseSign.isChecked(),
                                           title)
                 filename = str(self.workspaceFolder + "/lastfigure.html")
                 plotly.offline.plot(fig, filename=filename, auto_open=True)
@@ -1994,7 +1997,7 @@ class Dialog(QDialog):
                 for chan in self.autoFeatChannelList:
                     try:
                         # subR2.append(features.Rsquare[features.electrodes_final.index(chan), freqMin:(freqMax+1)])
-                        subR2.append(features.Rsquare[features.electrodes_final.index(chan), :])
+                        subR2.append(tempR2[features.electrodes_final.index(chan), :])
                     except ValueError:
                         myMsgBox("Invalid electrode subselection or frequency range for auto. feature selection")
                         return
@@ -2002,17 +2005,6 @@ class Dialog(QDialog):
 
                 subR2 = np.array(subR2)
 
-                # plot_Rsquare_calcul_welch(subR2,
-                #                           np.array(features.electrodes_final)[:],
-                #                           features.freqs_array,
-                #                           smoothing,
-                #                           features.fres,
-                #                           each_point,
-                #                           freqMin,
-                #                           freqMax,
-                #                           self.colormapScale.isChecked(),
-                #                           title)
-                # plt.show()
                 fig = plot_Rsquare_plotly(subR2,
                                           np.array(subElectrodes)[:],
                                           features.freqs_array,
@@ -2022,6 +2014,7 @@ class Dialog(QDialog):
                                           freqMin,
                                           freqMax,
                                           self.colormapScale.isChecked(),
+                                          self.autofeatUseSign.isChecked(),
                                           title)
 
                 filename = str(self.workspaceFolder + "/lastfigure.html")

@@ -625,21 +625,23 @@ def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, eac
     # Hplt.yticks(range(len(channel_array)),channel_array)
     # plt.show()
 
-def plot_Rsquare_plotly(Rsquare, channel_array, freq, smoothing, fres, each_point, fmin, fmax, colormapScale, title):
-
+# New version of the R² map using plotly
+def plot_Rsquare_plotly(Rsquare, channel_array, freq, smoothing, fres, each_point, fmin, fmax, colormapScale, useSign, title):
+    # Get frequencies to display
     frequencies = []
     nearest_fmin, index_fmin = find_nearest(freq, fmin)
     nearest_fmax, index_fmax = find_nearest(freq, fmax)
 
+    # Only consider the useful part of the map
     Rsquare_reshape = Rsquare[0:len(channel_array), index_fmin:index_fmax + 1]
 
+    # scaling (not used - TODO)
     vmin = 0
     vmax = 1
     if colormapScale:
         vmax = np.nanmax(abs(Rsquare_reshape))
         if np.nanmin(Rsquare_reshape) < 0:
             vmin = -np.amax(abs(Rsquare_reshape))
-
     sizing = round(len(freq[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
     for i in freq[index_fmin:(index_fmax + 1)]:
         # if i % (round(sizing * 1 / fres)) == 0:
@@ -647,15 +649,28 @@ def plot_Rsquare_plotly(Rsquare, channel_array, freq, smoothing, fres, each_poin
         # else:
         #     frequencies.append('')
 
-    fig = go.Figure(data=go.Heatmap(z=Rsquare_reshape, y=channel_array, x=frequencies, colorscale='jet'))
+    # If "consider sign of Class2-Class1" btn is checked :
+    # Blue (negative) to white (zero) to red (positive) colormap
+    if useSign:
+        fig = go.Figure(data=go.Heatmap(z=Rsquare_reshape,
+                                        y=channel_array,
+                                        x=frequencies,
+                                        colorscale='RdBu_r',
+                                        zmid=0))
+    # Else (normal case) : jet colormap, from zero to max value
+    else:
+        fig = go.Figure(data=go.Heatmap(z=Rsquare_reshape,
+                                        y=channel_array,
+                                        x=frequencies,
+                                        colorscale='jet'))
 
     fig.update_layout(title_text=title,
-                      plot_bgcolor='white',
+                      plot_bgcolor='black',
                       yaxis_nticks=len(channel_array),
                       autosize=True
                       )
-    fig.update_xaxes(title_text="Frequency (Hz)")
-    fig.update_yaxes(title_text="Channel")
+    fig.update_xaxes(title_text="Frequency (Hz)", showgrid=False)
+    fig.update_yaxes(title_text="Channel", showgrid=False)
 
     return fig
 
