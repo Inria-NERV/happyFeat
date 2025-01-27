@@ -104,12 +104,12 @@ def topo_plot(Rsquare, title, montageStr, customMontage, electrodes, freqMin, fr
     if not useSign:
         im, cn = plot_topomap(sizer, fake_evoked.info, sensors=False, names=montage.ch_names,
                               res=500, contours=0, image_interp='cubic', show=False,
-                              cmap='jet', axes=ax, outlines='head', sphere=95)
+                              cmap='jet', axes=ax, outlines='head')
     else:
         divnorm = colors.TwoSlopeNorm(vmin=np.min(Rsquare), vcenter=0., vmax=np.max(Rsquare))
         im, cn = plot_topomap(sizer, fake_evoked.info, sensors=False, names=montage.ch_names,
                               res=500, contours=0, image_interp='cubic', show=False,
-                              cmap='bwr', cnorm=divnorm, axes=ax, outlines='head', sphere=95)
+                              cmap='bwr', cnorm=divnorm, axes=ax, outlines='head')
 
     for tt in plt.findobj(fig, plt.Text):
         if tt.get_text() in montage.ch_names:
@@ -258,17 +258,15 @@ def plot_psd(Power_class1, Power_class2, freqs, channel, channel_array, each_poi
 # Plot the two class comparison of PSDs, plus the R2 value for each freq, on the same graph
 def plot_psd_r2_plotly(Power_class1, Power_class2, Rsquare, freqs, channel,
                        channel_array, each_point, fmin, fmax, fres,
-                       class1label, class2label, title, parent=None):
+                       class1label, class2label, title):
 
-    Aver_class2 = 10 * np.log10(Power_class2[:, channel, :])
-    Aver_class2 = Aver_class2.mean(0)
-    STD_class2 = 10 * np.log10(Power_class2[:, channel, :])
-    STD_class2 = STD_class2.std(0)
+    class2 = 10 * np.log10(Power_class2[:, channel, :])
+    Aver_class2 = class2.mean(0)
+    STD_class2 = class2.std(0)
 
-    Aver_class1 = 10 * np.log10(Power_class1[:, channel, :])
-    Aver_class1 = Aver_class1.mean(0)
-    STD_class1 = 10 * np.log10(Power_class1[:, channel, :])
-    STD_class1 = STD_class1.std(0)
+    class1 = 10 * np.log10(Power_class1[:, channel, :])
+    Aver_class1 = class1.mean(0)
+    STD_class1 = class1.std(0)
 
     # find actual indices of frequencies
     for i in range(len(freqs)):
@@ -563,6 +561,87 @@ def plot_metric2(Power_class1, Power_class2, Rsquare, freqs, channel, channel_ar
     ax.legend(lns, labs, loc=0)
 
     # plt.show()
+
+# Plot the two class comparison of PSDs, plus the R2 value for each freq, on the same graph
+def plot_metric2_plotly(Power_class1, Power_class2, Rsquare, freqs, channel,
+                        channel_array, each_point, fmin, fmax, fres,
+                        class1label, class2label, metricLabel, title):
+
+    class2 = Power_class2[:, channel, :]
+    Aver_class2 = class2.mean(0)
+    STD_class2 = class2.std(0)
+
+    class1 = Power_class1[:, channel, :]
+    Aver_class1 = class1.mean(0)
+    STD_class1 = class1.std(0)
+
+    # find actual indices of frequencies
+    for i in range(len(freqs)):
+        if freqs[i] == fmin:
+            index_fmin = i
+            break
+    for i in range(len(freqs)):
+        if freqs[i] == fmax:
+            index_fmax = i
+            break
+
+    Selected_class2 = (Aver_class2[index_fmin:index_fmax])
+    Selected_class1 = (Aver_class1[index_fmin:index_fmax])
+    Selected_class2_STD = (STD_class2[index_fmin:index_fmax] / Power_class2.shape[0])
+    Selected_class1_STD = (STD_class1[index_fmin:index_fmax] / Power_class2.shape[0])
+
+    # Define traces
+    xfreqs = freqs[index_fmin:index_fmax]
+
+     # Create plot and add traces one after the other, + the "variance" areas for class 1 & 2
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+
+    # "Variance" traces
+    factor = 4  # make it more visible
+    fig.add_trace(go.Scatter(y=Selected_class1 - factor*Selected_class1_STD,
+                             x=xfreqs, mode='lines', line_color='rgba(0,0,0,0)',
+                             hoverinfo='skip', showlegend=False))
+    fig.add_trace(go.Scatter(y=Selected_class1 + factor*Selected_class1_STD,
+                             x=xfreqs, mode='lines', line_color='rgba(0,0,0,0)',
+                             hoverinfo='skip', showlegend=False, fill='tonexty', fillcolor='rgba(0,0,255,0.3)'))
+    fig.add_trace(go.Scatter(y=Selected_class2 - factor*Selected_class2_STD,
+                             x=xfreqs, mode='lines', line_color='rgba(0,0,0,0)',
+                             hoverinfo='skip', showlegend=False))
+    fig.add_trace(go.Scatter(y=Selected_class2 + factor*Selected_class2_STD,
+                             x=xfreqs, mode='lines', line_color='rgba(0,0,0,0)',
+                             hoverinfo='skip', showlegend=False, fill='tonexty', fillcolor='rgba(255,0,0,0.3)'))
+
+    fig.add_trace(go.Scatter(y=Selected_class1, x=xfreqs, name=class1label,
+                             mode='lines', line_color='rgba(0,0,255,1)', line_width=5))
+    fig.add_trace(go.Scatter(y=Selected_class2, x=xfreqs, name=class2label,
+                        mode='lines', line_color='rgba(255,0,0,1)', line_width=5))
+    fig.add_trace(go.Scatter(y=Rsquare[channel, index_fmin:index_fmax], x=xfreqs, name="R2",
+                        mode='lines', line_color='rgba(0,0,0,1)', line_width=5, yaxis='y2'), secondary_y=True)
+
+    fulltitle = str(title +', Sensor: ' + channel_array[channel])
+    fig.update_layout(title_text=fulltitle,
+                      plot_bgcolor='white',
+                      )
+    fig.update_xaxes(title_text="Frequency (Hz)",
+                     ticks='outside',
+                     showline=True,
+                     linecolor='black',
+                     gridcolor='lightgrey')
+    fig.update_yaxes(title_text=str(metricLabel + " per freq."),
+                     ticks='outside',
+                     showline=True,
+                     linecolor='black',
+                     gridcolor='lightgrey',
+                     secondary_y=False)
+    fig.update_yaxes(title_text="R2 value",
+                     showgrid=False,
+                     ticks='outside',
+                     showline=True,
+                     linecolor='black',
+                     range=[0, 1],
+                     secondary_y=True)
+
+    return fig
 
 def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, each_point, fmin, fmax, colormapScale, title):
     fig, ax = plt.subplots()

@@ -2180,11 +2180,19 @@ class Dialog(QDialog):
                 # TODO : change according to actual metric name
                 metricLabel = "Average Node Strength"
                 each_point = 1
-                plot_metric2(features.power_cond1, features.power_cond2,
-                             features.Rsquare, 
-                             features.freqs_array, electrodeIdx, features.electrodes_final,
-                             each_point, fmin, fmax, features.fres, class1, class2, metricLabel, title)
-                plt.show()
+                fig = plot_metric2_plotly(
+                    features.power_cond1, features.power_cond2,
+                    features.Rsquare, features.freqs_array,
+                    electrodeIdx, features.electrodes_final,
+                    each_point, fmin, fmax, features.fres, class1, class2, metricLabel, title)
+
+                filename = str(self.workspaceFolder + "/lastfigure.html")
+                plotly.offline.plot(fig, filename=filename, auto_open=True)
+                # plot_metric2(features.power_cond1, features.power_cond2,
+                #              features.Rsquare,
+                #              features.freqs_array, electrodeIdx, features.electrodes_final,
+                #              each_point, fmin, fmax, features.fres, class1, class2, metricLabel, title)
+                # plt.show()
 
     # Plot compared PSD for 2 classes using Visualization_Data functions
     # TODO : remove (duplicate)
@@ -2210,7 +2218,7 @@ class Dialog(QDialog):
                     features.power_cond1, features.power_cond2,
                     features.Rsquare, features.freqs_array,
                     electrodeIdx, features.electrodes_final,
-                    each_point, fmin, fmax, features.fres, class1, class2, title, parent=self)
+                    each_point, fmin, fmax, features.fres, class1, class2, title)
 
                 filename = str(self.workspaceFolder + "/lastfigure.html")
                 plotly.offline.plot(fig, filename=filename, auto_open=True)
