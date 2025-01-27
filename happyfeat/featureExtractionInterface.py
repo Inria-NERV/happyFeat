@@ -2221,15 +2221,26 @@ class Dialog(QDialog):
     def btnTopo(self, features, title):
         error = True
 
+        tempR2 = features.Rsquare.copy()
+        # if "consider the sign of Class2-Class1" is checked,
+        # modify the R2 to display
+        if self.autofeatUseSign.isChecked():
+            tempRsign = features.Rsign_tab.copy()
+            # reverse the sign for the Rsquare map...
+            tempRsign[np.where(features.Rsign_tab < 0)] = 1
+            tempRsign[np.where(features.Rsign_tab > 0)] = -1
+            tempR2 = tempR2 * tempRsign
+
         # 2 cases : 1 freq bin, or freq range
         if self.freqTopo.text().isdigit() \
                 and 0 < int(self.freqTopo.text()) < (self.samplingFreq / 2):
             print("Freq Topo: " + self.freqTopo.text())
             error = False
             freqMax = -1
-            topo_plot(features.Rsquare, title, self.sensorMontage, self.customMontagePath,
+            topo_plot(tempR2, title, self.sensorMontage, self.customMontagePath,
                       features.electrodes_final, int(self.freqTopo.text()), freqMax,
-                      features.fres, self.samplingFreq, self.colormapScale.isChecked())
+                      features.fres, self.samplingFreq, self.colormapScale.isChecked(),
+                      self.autofeatUseSign.isChecked())
             plt.show()
         elif ":" in self.freqTopo.text() \
                 and len(self.freqTopo.text().split(":")) == 2:
@@ -2239,9 +2250,10 @@ class Dialog(QDialog):
                         freqMax = int(self.freqTopo.text().split(":")[1])
                         if 0 < freqMin < freqMax < (self.samplingFreq / 2):
                             error = False
-                            topo_plot(features.Rsquare, title, self.sensorMontage, self.customMontagePath,
+                            topo_plot(tempR2, title, self.sensorMontage, self.customMontagePath,
                                       features.electrodes_final, int(self.freqTopo.text()), freqMax,
-                                      features.fres, self.samplingFreq, self.colormapScale.isChecked())
+                                      features.fres, self.samplingFreq, self.colormapScale.isChecked(),
+                                      self.autofeatUseSign.isChecked())
                             plt.show()
 
         if error:

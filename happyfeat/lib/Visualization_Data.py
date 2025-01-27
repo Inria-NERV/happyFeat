@@ -2,7 +2,7 @@ from happyfeat.lib.Statistical_analysis import *
 import matplotlib.pyplot as plt
 from matplotlib.widgets import RectangleSelector
 from matplotlib import cm
-from mne.defaults import _EXTRAPOLATE_DEFAULT, _BORDER_DEFAULT
+from matplotlib import colors
 
 from happyfeat.lib.utils import find_nearest
 
@@ -11,8 +11,8 @@ from plotly.subplots import make_subplots
 import plotly.offline
 
 import mne
-from mne.viz import topomap
-from mne.channels.layout import _find_topomap_coords, _pair_grad_sensors, find_layout
+from mne.viz import plot_topomap
+# from mne_connectivity.viz import plot_connectivity_circle
 
 import pandas as pd
 
@@ -27,7 +27,7 @@ def add_colorbar(ax, im, cmap, side="right", pad=.05, title=None,
 
     return cbar, cax
 
-def topo_plot(Rsquare, title, montageStr, customMontage, electrodes, freqMin, freqMax, fres, fs, scaleColormap):
+def topo_plot(Rsquare, title, montageStr, customMontage, electrodes, freqMin, freqMax, fres, fs, scaleColormap, useSign):
 
     fig, ax = plt.subplots()
 
@@ -101,9 +101,15 @@ def topo_plot(Rsquare, title, montageStr, customMontage, electrodes, freqMin, fr
     if scaleColormap:
         vmax = None
 
-    im, cn = mne.viz.plot_topomap(sizer, fake_evoked.info, sensors=False, names=montage.ch_names,
-                                  res=500, contours=0, image_interp='cubic', show=False,
-                                  cmap='jet', axes=ax, outlines='head', sphere=95)
+    if not useSign:
+        im, cn = plot_topomap(sizer, fake_evoked.info, sensors=False, names=montage.ch_names,
+                              res=500, contours=0, image_interp='cubic', show=False,
+                              cmap='jet', axes=ax, outlines='head', sphere=95)
+    else:
+        divnorm = colors.TwoSlopeNorm(vmin=np.min(Rsquare), vcenter=0., vmax=np.max(Rsquare))
+        im, cn = plot_topomap(sizer, fake_evoked.info, sensors=False, names=montage.ch_names,
+                              res=500, contours=0, image_interp='cubic', show=False,
+                              cmap='bwr', cnorm=divnorm, axes=ax, outlines='head', sphere=95)
 
     for tt in plt.findobj(fig, plt.Text):
         if tt.get_text() in montage.ch_names:
@@ -1094,14 +1100,17 @@ def plot_strongestConnectome(connect1, connect2, percentStrong, fmin, fmax, elec
     connect2disp = (connect2disp >= sortedVec[idxPercent]) * connect2disp
 
     plt.cla()
-    mne.viz.plot_connectivity_circle(connect1disp, electrodeList, fig=f, subplot=(1, 2, 1),
-                                       facecolor='black', textcolor='white', node_edgecolor='black',
-                                       linewidth=1.5, colormap='hot', vmin=0, vmax=1, show=False,
-                                       title=class1label)
 
-    f, ax = mne.viz.plot_connectivity_circle(connect2disp, electrodeList, fig=f, subplot=(1, 2, 2),
-                                       facecolor='black', textcolor='white', node_edgecolor='black',
-                                       linewidth=1.5, colormap='hot', vmin=0, vmax=1, show=False,
-                                       title=class2label)
+    # unused for now reactivate later?
+
+    # mne.viz.plot_connectivity_circle(connect1disp, electrodeList, fig=f, subplot=(1, 2, 1),
+    #                                  facecolor='black', textcolor='white', node_edgecolor='black',
+    #                                  linewidth=1.5, colormap='hot', vmin=0, vmax=1, show=False,
+    #                                  title=class1label)
+
+    # f, ax = mne.viz.plot_connectivity_circle(connect2disp, electrodeList, fig=f, subplot=(1, 2, 2),
+    #                                          facecolor='black', textcolor='white', node_edgecolor='black',
+    #                                          linewidth=1.5, colormap='hot', vmin=0, vmax=1, show=False,
+    #                                          title=class2label)
 
     f.suptitle("Strongest " + str(percentStrong) + "% of links for MSC, [" + str(fmin) + ":" + str(fmax) + "]Hz", color='white')
