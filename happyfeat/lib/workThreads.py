@@ -822,6 +822,7 @@ class TrainClassifier(QtCore.QThread):
 
         # Case of a single feature type (power spectrum OR connectivity...)
         # RE-COPY sc2 & sc3 FROM TEMPLATE, SO THE USER CAN DO THIS MULTIPLE TIMES
+        # TODO ! better management of errors, with try/catch instead of success/print("problem")
         for i in [2, 3, 4, 5]:
             scenName = templateScenFilenames[i]
             print("---Copying file from folder " + str(__name__.split('.')[0] + '.' + self.templateFolder))
@@ -834,13 +835,19 @@ class TrainClassifier(QtCore.QThread):
             if i == 2:
                 # training scenarios
                 if not self.usingDualFeatures:
-                    modifyTrainScenUsingSplitAndClassifiers("SPLIT", "Classifier trainer", selectedFeats, epochCount[0], destFile)
+                    success = modifyTrainScenUsingSplitAndClassifiers("SPLIT", ["Classifier trainer"], selectedFeats, epochCount[0], destFile)
+                    if not success:
+                        myMsgBox("FAILED TO MODIFY SC2-TRAIN.XML")
                     # Special case: "connectivity metric"
                     if "ConnectivityMetric" in self.extractDict.keys():
                         modifyConnectivityMetric(self.extractDict["ConnectivityMetric"], destFile)
                 else:
-                    modifyTrainScenUsingSplitAndClassifiers("SPLIT POWSPECTRUM", "Classifier trainer", selectedFeats, epochCount[0], destFile)
-                    modifyTrainScenUsingSplitAndClassifiers("SPLIT CONNECT", "Classifier trainer", selectedFeats2, epochCount[1], destFile)
+                    success = modifyTrainScenUsingSplitAndClassifiers("SPLIT POWSPECTRUM", ["Classifier trainer"], selectedFeats, epochCount[0], destFile)
+                    if not success:
+                        myMsgBox("FAILED TO MODIFY SC2-TRAIN.XML")
+                    success = modifyTrainScenUsingSplitAndClassifiers("SPLIT CONNECT",["Classifier trainer"], selectedFeats2, epochCount[1], destFile)
+                    if not success:
+                        myMsgBox("FAILED TO MODIFY SC2-TRAIN.XML")
                     modifyConnectivityMetric(self.extractDict["ConnectivityMetric"], destFile)
 
             elif i == 4 and not self.usingDualFeatures and self.parameterDict["pipelineType"] == optionKeys[2]:
@@ -851,13 +858,24 @@ class TrainClassifier(QtCore.QThread):
                 #  "online" scenario
                 modifyAcqScenario(destFile, self.parameterDict["AcquisitionParams"])
                 if not self.usingDualFeatures:
-                    modifyTrainScenUsingSplitAndClassifiers("SPLIT", "Classifier processor", selectedFeats, epochCount[0], destFile)
+                    success = modifyTrainScenUsingSplitAndClassifiers("SPLIT", ["Classifier processor"], selectedFeats, epochCount[0], destFile)
+                    if not success:
+                        myMsgBox("FAILED TO MODIFY SC3-ONLINE.XML")
                     # Special case: "connectivity metric"
                     if "ConnectivityMetric" in self.extractDict.keys():
                         modifyConnectivityMetric(self.extractDict["ConnectivityMetric"], destFile)
                 else:
-                    modifyTrainScenUsingSplitAndClassifiers("SPLIT POWSPECTRUM", "Classifier processor", selectedFeats, epochCount[0], destFile)
-                    modifyTrainScenUsingSplitAndClassifiers("SPLIT CONNECT", "Classifier processor", selectedFeats2, epochCount[1], destFile)
+                    classifStr = None
+                    if self.parameterDict["pipelineType"] == optionKeys[4]:  # 1 class BCINET
+                        classifStr = ["Classifier processor MI", "Classifier processor REST"]
+                    else:
+                        classifStr = ["Classifier processor"]
+                    success = modifyTrainScenUsingSplitAndClassifiers("SPLIT POWSPECTRUM", classifStr, selectedFeats, epochCount[0], destFile)
+                    if not success:
+                        myMsgBox("FAILED TO MODIFY SC3-ONLINE.XML")
+                    success = modifyTrainScenUsingSplitAndClassifiers("SPLIT CONNECT", classifStr, selectedFeats2, epochCount[1], destFile)
+                    if not success:
+                        myMsgBox("FAILED TO MODIFY SC3-ONLINE.XML")
                     modifyConnectivityMetric(self.extractDict["ConnectivityMetric"], destFile)
 
 
@@ -1330,13 +1348,19 @@ class RunClassifier(QtCore.QThread):
 
         # modify online or replay scenario with selected features
         if not self.usingDualFeatures:
-            modifyTrainScenUsingSplitAndClassifiers("SPLIT", "Classifier processor", selectedFeats, epochCount[0], destScenFile)
+            success = modifyTrainScenUsingSplitAndClassifiers("SPLIT", ["Classifier processor"], selectedFeats, epochCount[0], destScenFile)
+            if not success:
+                myMsgBox("FAILED TO MODIFY SC3-ONLINE.XML")
             # Special case: "connectivity metric"
             if "ConnectivityMetric" in self.extractDict.keys():
                 modifyConnectivityMetric(self.extractDict["ConnectivityMetric"], destScenFile)
         else:
-            modifyTrainScenUsingSplitAndClassifiers("SPLIT POWSPECTRUM", "Classifier processor", selectedFeats, epochCount[0], destScenFile)
-            modifyTrainScenUsingSplitAndClassifiers("SPLIT CONNECT", "Classifier processor", selectedFeats2, epochCount[1], destScenFile)
+            success = modifyTrainScenUsingSplitAndClassifiers("SPLIT POWSPECTRUM", ["Classifier processor"], selectedFeats, epochCount[0], destScenFile)
+            if not success:
+                myMsgBox("FAILED TO MODIFY SC3-ONLINE.XML")
+            success = modifyTrainScenUsingSplitAndClassifiers("SPLIT CONNECT", ["Classifier processor"], selectedFeats2, epochCount[1], destScenFile)
+            if not success:
+                myMsgBox("FAILED TO MODIFY SC3-ONLINE.XML")
             modifyConnectivityMetric(self.extractDict["ConnectivityMetric"], destScenFile)
 
         modifyOneGeneralSetting(destScenFile, "ClassifWeights", self.classifWeightsPath)

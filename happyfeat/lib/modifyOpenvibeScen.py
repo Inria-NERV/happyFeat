@@ -238,16 +238,30 @@ def modifyTrainScenUsingSplitAndClassifiers(splitStr, classifStr, chanFreqPairs,
                 print("-- SPLIT POWSPECT " + str(len(splitBoxes)+1))
                 continue
 
-    # Find Id of Classifier trainer box
-    boxLast = findBox(root, classifStr)
-    boxLastId = boxLast.find("Identifier").text
+    # Find Id of Classifier trainer box(es)
+    boxLast = []
+    boxLastId = []
+    for classifName in classifStr:
+        temp = findBox(root, classifName)
+        if not temp:
+            return False
+        tempId = temp.find("Identifier").text
+        boxLast.append(temp)
+        boxLastId.append(tempId)
 
     # FIRST STEP : modify existing branches in the scenario, using the first pair of features
     for splitbox in splitBoxes:
         boxId = splitbox.find("Identifier").text
         # Find all boxes chained btw this box and the last one (classifier trainer or processor)
-        if boxId is not None and boxLastId is not None:
-            boxList = findChainedBoxes(root, boxId, boxLastId)
+        boxList = []
+        if boxId is not None and len(boxLastId) > 0:
+            for boxId2 in boxLastId:
+                temp = findChainedBoxes(root, boxId, boxId2)
+                if len(temp) > 0:
+                    boxList = temp
+
+        if len(boxList) == 0:
+            return False
 
         # Change parameters of particular boxes in this list of chained boxes
         for boxid in boxList:
@@ -292,8 +306,14 @@ def modifyTrainScenUsingSplitAndClassifiers(splitStr, classifStr, chanFreqPairs,
             locOffset = 120
             boxId = splitbox.find("Identifier").text
             # Find all boxes chained btw this split and the last (classifier trainer or processor)
-            if boxId is not None and boxLastId is not None:
-                boxList = findChainedBoxes(root, boxId, boxLastId)
+            if boxId is not None and len(boxLastId) > 0 is not None:
+                for boxId2 in boxLastId:
+                    temp = findChainedBoxes(root, boxId, boxId2)
+                    if len(temp) > 0:
+                        boxList = temp
+
+                if len(boxList) == 0:
+                    return False
 
                 for idxPair, [chan, freq] in enumerate(chanFreqPairs):
                     # Don't do it for the first pair, it was done earlier in the function
@@ -314,7 +334,7 @@ def modifyTrainScenUsingSplitAndClassifiers(splitStr, classifStr, chanFreqPairs,
 
     # WRITE NEW XML
     tree.write(scenXml)
-    return
+    return True
 
 def modifyTrainScenUsingSplitAndCsvWriter(splitStr, chanFreqPairs, epochCount, scenXml, trainingpath):
     print("---Modifying " + scenXml + " with Selected Features")
