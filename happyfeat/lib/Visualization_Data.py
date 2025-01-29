@@ -15,17 +15,8 @@ from mne.viz import plot_topomap
 # from mne_connectivity.viz import plot_connectivity_circle
 
 import pandas as pd
+from scipy.stats import sem
 
-def add_colorbar(ax, im, cmap, side="right", pad=.05, title=None,
-                 format=None, size="5%"):
-    """Add a colorbar to an axis."""
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.axes_grid1 import make_axes_locatable
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes(side, size=size, pad=pad)
-    cbar = plt.colorbar(im, cax=cax, format=format)
-
-    return cbar, cax
 
 def topo_plot(Rsquare, title, montageStr, customMontage, electrodes, freqMin, freqMax, fres, fs, scaleColormap, useSign):
 
@@ -197,6 +188,9 @@ def plot_comparison_plotly(Power_class1, Power_class2, Rsquare, freqs, channel,
                            channel_array, each_point, fmin, fmax, fres,
                            class1label, class2label, metricLabel, isLog, title):
 
+    STD_class2 = sem(Power_class2[:, channel, :], axis=0)
+    STD_class1 = sem(Power_class1[:, channel, :], axis=0)
+    
     if isLog:
         class2 = 10.0 * np.log10(Power_class2[:, channel, :])
         class1 = 10.0 * np.log10(Power_class1[:, channel, :])
@@ -204,10 +198,8 @@ def plot_comparison_plotly(Power_class1, Power_class2, Rsquare, freqs, channel,
         class2 = Power_class2[:, channel, :]
         class1 = Power_class1[:, channel, :]
 
-    Aver_class2 = class2.mean(0)
-    STD_class2 = class2.std(0)
-    Aver_class1 = class1.mean(0)
-    STD_class1 = class1.std(0)
+    Aver_class2 = class2.mean(axis=0)
+    Aver_class1 = class1.mean(axis=0)
 
     # find actual indices of frequencies
     for i in range(len(freqs)):
@@ -221,8 +213,8 @@ def plot_comparison_plotly(Power_class1, Power_class2, Rsquare, freqs, channel,
 
     Selected_class2 = (Aver_class2[index_fmin:index_fmax])
     Selected_class1 = (Aver_class1[index_fmin:index_fmax])
-    Selected_class2_STD = (STD_class2[index_fmin:index_fmax] / Power_class2.shape[0])
-    Selected_class1_STD = (STD_class1[index_fmin:index_fmax] / Power_class2.shape[0])
+    Selected_class2_STD = (STD_class2[index_fmin:index_fmax])
+    Selected_class1_STD = (STD_class1[index_fmin:index_fmax])
 
     # Define traces
     xfreqs = freqs[index_fmin:index_fmax]
@@ -231,7 +223,7 @@ def plot_comparison_plotly(Power_class1, Power_class2, Rsquare, freqs, channel,
     fig = make_subplots(specs=[[{"secondary_y": True}]])
 
     # "Variance" traces
-    factor = 4  # make it more visible
+    factor = 1  # make it more visible
     fig.add_trace(go.Scatter(y=Selected_class1 - factor*Selected_class1_STD,
                              x=xfreqs, mode='lines', line_color='rgba(0,0,0,0)',
                              hoverinfo='skip', showlegend=False))
