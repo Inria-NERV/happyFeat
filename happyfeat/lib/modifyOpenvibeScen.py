@@ -306,7 +306,7 @@ def modifyTrainScenUsingSplitAndClassifiers(splitStr, classifStr, chanFreqPairs,
             locOffset = 120
             boxId = splitbox.find("Identifier").text
             # Find all boxes chained btw this split and the last (classifier trainer or processor)
-            if boxId is not None and len(boxLastId) > 0 is not None:
+            if boxId is not None and len(boxLastId) > 0:
                 for boxId2 in boxLastId:
                     temp = findChainedBoxes(root, boxId, boxId2)
                     if len(temp) > 0:
