@@ -148,17 +148,27 @@ class Dialog(QDialog):
                         if retVal == QMessageBox.Cancel:
                             return
 
-                    pathToCheck = os.path.join(self.workspacesFolder, os.path.splitext(chosenWorkspace)[0])
-                    if os.path.exists(pathToCheck):
-                        pathToCheck1 = os.path.join(pathToCheck, "signals")
-                        pathToCheck2 = os.path.join(pathToCheck, "sessions")
-                        if os.path.exists(pathToCheck1) and os.path.exists(pathToCheck2):
-                            pathToCheck2 = os.path.join(pathToCheck2, "1")
-                            if os.path.exists(pathToCheck2):
-                                pathToCheck1 = os.path.join(pathToCheck2, "extract")
-                                pathToCheck2 = os.path.join(pathToCheck2, "train")
-                                if os.path.exists(pathToCheck1) and os.path.exists(pathToCheck2):
-                                    validWs = True
+                    workspaceFolder = os.path.join(self.workspacesFolder, os.path.splitext(chosenWorkspace)[0])
+                    if os.path.exists(workspaceFolder):
+                        pathToCheck = []
+                        # Check if basic folder structure exists: ws/signals and ws/sessions.
+                        # if not, something's really messed up
+                        pathToCheck.append(os.path.join(workspaceFolder, "signals"))
+                        pathToCheck.append(os.path.join(workspaceFolder, "sessions"))
+                        pathToCheck.append(os.path.join(workspaceFolder, "sessions", "1"))
+                        success = [self.checkFolder(path, False) for path in pathToCheck]
+                        # Check if the rest of the arborescence exists
+                        # if not, we're a bit more lenient here, and create the missing subfolders
+                        if all(success):
+                            sessionList = os.listdir(os.path.join(workspaceFolder, "sessions"))
+                            for session in sessionList:
+                                pathToCheck.append(os.path.join(workspaceFolder, "sessions", session, "extract"))
+                                pathToCheck.append(os.path.join(workspaceFolder, "sessions", session, "train"))
+                                pathToCheck.append(os.path.join(workspaceFolder, "sessions", session, "results"))
+                                pathToCheck.append(os.path.join(workspaceFolder, "sessions", session, "figures"))
+                            success = [self.checkFolder(path, True) for path in pathToCheck]
+                            if all(success):
+                                validWs = True
         
         if not validWs:
             myMsgBox("Selected workspace is invalid.\nPlease make sure all subfolders exist...")
@@ -167,6 +177,14 @@ class Dialog(QDialog):
         self.selectedWorkspace = fullWorkspacePath
         self.launchMainGui = True
         self.accept()
+
+    def checkFolder(self, fullPath, create):
+        if not os.path.exists(fullPath):
+            if create:
+                os.mkdir(fullPath)
+            else:
+                return False
+        return True
 
     def startNewWorkspace(self):
         # Check that a top Workspace folder has been selected
@@ -204,6 +222,10 @@ class Dialog(QDialog):
                 os.mkdir(os.path.join(self.workspacesFolder, workspaceName, "sessions", "1", "extract"))
             if not os.path.exists(os.path.join(self.workspacesFolder, workspaceName, "sessions", "1", "train")):
                 os.mkdir(os.path.join(self.workspacesFolder, workspaceName, "sessions", "1", "train"))
+            if not os.path.exists(os.path.join(self.workspacesFolder, workspaceName, "sessions", "1", "results")):
+                os.mkdir(os.path.join(self.workspacesFolder, workspaceName, "sessions", "1", "results"))
+            if not os.path.exists(os.path.join(self.workspacesFolder, workspaceName, "sessions", "1", "figures")):
+                os.mkdir(os.path.join(self.workspacesFolder, workspaceName, "sessions", "1", "figures"))
             # Launch GUI 1 (metric and acquisition parameters)
             self.launchAcqGui = True
             self.accept()

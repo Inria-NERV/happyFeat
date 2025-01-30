@@ -856,7 +856,14 @@ class TrainClassifier(QtCore.QThread):
 
             elif i == 3:
                 #  "online" scenario
-                modifyAcqScenario(destFile, self.parameterDict["AcquisitionParams"])
+                modifyAcqScenario(self.parameterDict["AcquisitionParams"], destFile)
+                modifySessionId(self.currentSessionId, destFile)
+
+                # update weights path to generic...
+                classifWeightsPath = str(self.workspaceFolder + "/classifier-weights.xml")
+                classifWeightsPath = classifWeightsPath.replace("\\", "/")
+                modifyOneGeneralSetting(destFile, "ClassifWeights", classifWeightsPath)
+
                 if not self.usingDualFeatures:
                     success = modifyTrainScenUsingSplitAndClassifiers("SPLIT", ["Classifier processor"], selectedFeats, epochCount[0], destFile)
                     if not success:
@@ -1329,10 +1336,10 @@ class RunClassifier(QtCore.QThread):
         # Select relevant scenario (in bcipipeline_settings.py)
         if self.isOnline:
             scenIdx = 3  # idx in bcipipeline_settings.py
-            scenName = templateScenFilenames[scenIdx]
         else:
             scenIdx = 6  # idx in bcipipeline_settings.py
-            scenName = templateScenFilenames[scenIdx]
+
+        scenName = templateScenFilenames[scenIdx]
 
         destScenFile = os.path.join(self.workspaceFolder, scenName)
 
@@ -1345,6 +1352,9 @@ class RunClassifier(QtCore.QThread):
         # current session (linked to extraction parameters), to know where to get training results...
         trainingpath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train")
         modifyScenarioGeneralSettings(str(destScenFile), self.extractDict)
+
+        # Update the session ID (to write the results in the correct place
+        modifySessionId(self.currentSessionId, destScenFile)
 
         # modify online or replay scenario with selected features
         if not self.usingDualFeatures:
@@ -1369,6 +1379,7 @@ class RunClassifier(QtCore.QThread):
                 myMsgBox("FAILED TO MODIFY SC3-ONLINE.XML")
             modifyConnectivityMetric(self.extractDict["ConnectivityMetric"], destScenFile)
 
+        self.classifWeightsPath = self.classifWeightsPath.replace("\\", "/")
         modifyOneGeneralSetting(destScenFile, "ClassifWeights", self.classifWeightsPath)
 
         if not self.shouldRun:

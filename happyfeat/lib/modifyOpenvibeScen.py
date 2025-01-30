@@ -80,7 +80,7 @@ def modifyExtractionIO(scenXml, newFilename, newOutputSpect1, newOutputSpect2, n
     tree.write(scenXml)
     return
 
-def modifyAcqScenario(scenXml, parameterDict):
+def modifyAcqScenario(parameterDict, scenXml):
     print("---Modifying " + scenXml + " Graz Variables")
     tree = ET.parse(scenXml)
     root = tree.getroot()
@@ -497,6 +497,22 @@ def modifyTrainIO(newFilename, newWeightsName, newExtractIdx, scenXml):
                 xmlVal = setting.find('Value')
                 xmlVal.text = newWeightsName
             elif setting.find('Name').text == "ExtractionIdx":
+                xmlVal = setting.find('Value')
+                xmlVal.text = newExtractIdx
+
+    # WRITE NEW XML
+    tree.write(scenXml)
+    return
+
+def modifySessionId(newExtractIdx, scenXml):
+    print("---Modifying " + scenXml + " session ID")
+    tree = ET.parse(scenXml)
+    root = tree.getroot()
+
+    # PARSE SCENARIO GENERAL SETTINGS
+    for settings in root.findall('Settings'):
+        for setting in settings.findall('Setting'):
+            if setting.find('Name').text == "ExtractionIdx":
                 xmlVal = setting.find('Value')
                 xmlVal.text = newExtractIdx
 

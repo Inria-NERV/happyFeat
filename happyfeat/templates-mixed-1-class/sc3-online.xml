@@ -11,6 +11,13 @@
 			<Value>motor-imagery-live.ov</Value>
 		</Setting>
 		<Setting>
+			<Identifier>(0xbafdafab, 0x4c98bb69)</Identifier>
+			<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
+			<Name>ExtractionIdx</Name>
+			<DefaultValue>0</DefaultValue>
+			<Value>1</Value>
+		</Setting>
+		<Setting>
 			<Identifier>(0x018f81c4, 0xd5bb371b)</Identifier>
 			<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 			<Name>ClassifWeights</Name>
@@ -890,7 +897,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue>record-[$core{date}-$core{time}].csv</DefaultValue>
-					<Value>${Player_ScenarioDirectory}/signals/Test-[$core{date}-$core{time}]-results-classif-MI.csv</Value>
+					<Value>${Player_ScenarioDirectory}/sessions/$var{ExtractionIdx}/results/Test-[$core{date}-$core{time}]-results-classif-MI.csv</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
@@ -961,7 +968,7 @@
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Filename</Name>
 					<DefaultValue>record-[$core{date}-$core{time}].csv</DefaultValue>
-					<Value>${Player_ScenarioDirectory}/signals/Test-[$core{date}-$core{time}]-results-classif-REST.csv</Value>
+					<Value>${Player_ScenarioDirectory}/sessions/$var{ExtractionIdx}/results/Test-[$core{date}-$core{time}]-results-classif-REST.csv</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>

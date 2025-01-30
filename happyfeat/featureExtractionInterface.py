@@ -1,6 +1,7 @@
 import sys
 import os
 import time
+import datetime
 import subprocess
 import platform
 import json
@@ -440,13 +441,13 @@ class Dialog(QDialog):
             metricPsd = "Power Spectral Density (dB)"
             isLogPsd = True
             titleTopo = "Topography of power spectra, for freq. "
-            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2, False))
+            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2, useSubselection=False, metric_suffix='PSD'))
             self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq(self.Features, titleTimeFreq))
-            self.btn_psd.clicked.connect(lambda: self.btnMetric(self.Features, metricPsd, isLogPsd, titlePsd))
-            self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo))
+            self.btn_psd.clicked.connect(lambda: self.btnMetric(self.Features, metricPsd, isLogPsd, titlePsd, metric_suffix="PSD"))
+            self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo, metric_suffix="PSD"))
 
             self.btn_r2mapAutoFeat = QPushButton("R² map (sub-select.)")
-            self.btn_r2mapAutoFeat.clicked.connect(lambda: self.btnR2(self.Features, titleR2, True))
+            self.btn_r2mapAutoFeat.clicked.connect(lambda: self.btnR2(self.Features, titleR2, useSubselection=True, metric_suffix='PSD'))
 
             self.parallelVizLayouts[0].addWidget(self.btn_r2map)
             self.parallelVizLayouts[0].addWidget(self.btn_r2mapAutoFeat)
@@ -463,19 +464,19 @@ class Dialog(QDialog):
             self.btn_timefreq = QPushButton("Display Time-Frequency ERD/ERS analysis")
             self.btn_metric = QPushButton("Display NODE STRENGTH comparison between classes")
             self.btn_topo = QPushButton("Display NODE STRENGTH Brain Topography")
-            titleR2 = "Freq.-chan. map of R² values of node strength"
+            titleR2 = "R² values of node strength"
             titleTimeFreq = "Time-Frequency ERD/ERS analysis"
             titleMetric = "Connectivity-based node strength, "
             metricLabel = "Average Node Strength"
             isLogNodeStrength = False
             titleTopo = "Topography of node strengths, for freq. "
-            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2, False))
-            self.btn_metric.clicked.connect(lambda: self.btnMetric(self.Features, metricLabel, isLogNodeStrength, titleMetric))
+            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2, useSubselection=False, metric_suffix="NS"))
+            self.btn_metric.clicked.connect(lambda: self.btnMetric(self.Features, metricLabel, isLogNodeStrength, titleMetric, metric_suffix="NS"))
             self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreqConnect(self.Features, titleTimeFreq))
-            self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo))
+            self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo, metric_suffix="NS"))
 
             self.btn_r2mapAutoFeat = QPushButton("R² map (sub-select.)")
-            self.btn_r2mapAutoFeat.clicked.connect(lambda: self.btnR2(self.Features, titleR2, True))
+            self.btn_r2mapAutoFeat.clicked.connect(lambda: self.btnR2(self.Features, titleR2, useSubselection=True, metric_suffix="NS"))
 
             self.parallelVizLayouts[1].addWidget(self.btn_r2map)
             self.parallelVizLayouts[1].addWidget(self.btn_r2mapAutoFeat)
@@ -507,12 +508,12 @@ class Dialog(QDialog):
             metricPsd = "Power Spectral Density (dB)"
             isLogPsd = True
             titleTopo = "Topography of power spectra, for freq. "
-            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2, False))
-            self.btn_psd.clicked.connect(lambda: self.btnMetric(self.Features, metricPsd, isLogPsd, titlePsd))
-            self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo))
+            self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2, useSubselection=False, metric_suffix="PSD"))
+            self.btn_psd.clicked.connect(lambda: self.btnMetric(self.Features, metricPsd, isLogPsd, titlePsd, metric_suffix="PSD"))
+            self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo, metric_suffix="PSD"))
 
             self.btn_r2mapAutoFeat = QPushButton("R² map (sub-select.)")
-            self.btn_r2mapAutoFeat.clicked.connect(lambda: self.btnR2(self.Features, titleR2, True))
+            self.btn_r2mapAutoFeat.clicked.connect(lambda: self.btnR2(self.Features, titleR2, useSubselection=True, metric_suffix="PSD"))
 
             self.parallelVizLayouts[0].addWidget(self.btn_r2map)
             self.parallelVizLayouts[0].addWidget(self.btn_r2mapAutoFeat)
@@ -529,12 +530,12 @@ class Dialog(QDialog):
             metricLabel_c = "Average Node Strength"
             isLog_c = False
             titleTopo_c = "Topography of node strengths, for freq. "
-            self.btn_r2map2.clicked.connect(lambda: self.btnR2(self.Features2, titleR2_c, False))
-            self.btn_metric.clicked.connect(lambda: self.btnMetric(self.Features2, metricLabel_c, isLog_c, titleMetric_c))
-            self.btn_topo2.clicked.connect(lambda: self.btnTopo(self.Features2, titleTopo_c))
+            self.btn_r2map2.clicked.connect(lambda: self.btnR2(self.Features2, titleR2_c, useSubselection=False, metric_suffix="NS"))
+            self.btn_metric.clicked.connect(lambda: self.btnMetric(self.Features2, metricLabel_c, isLog_c, titleMetric_c, metric_suffix="NS"))
+            self.btn_topo2.clicked.connect(lambda: self.btnTopo(self.Features2, titleTopo_c, metric_suffix="NS"))
 
             self.btn_r2mapAutoFeat2 = QPushButton("R² map (sub-select.)")
-            self.btn_r2mapAutoFeat2.clicked.connect(lambda: self.btnR2(self.Features2, titleR2, True))
+            self.btn_r2mapAutoFeat2.clicked.connect(lambda: self.btnR2(self.Features2, titleR2, useSubselection=True, metric_suffix="NS"))
 
             self.parallelVizLayouts[1].addWidget(self.btn_r2map2)
             self.parallelVizLayouts[1].addWidget(self.btn_r2mapAutoFeat2)
@@ -1981,7 +1982,7 @@ class Dialog(QDialog):
         return newDict
 
     # Plot R2 map using Visualization_Data functions
-    def btnR2(self, features, title, useSubselection):
+    def btnR2(self, features, title, useSubselection, metric_suffix):
         if checkFreqsMinMax(self.userFmin, self.userFmax, self.samplingFreq):
             each_point = 1  # Todo : make parameter?
 
@@ -2010,9 +2011,12 @@ class Dialog(QDialog):
                                           self.colormapScale.isChecked(),
                                           (useSign > 0),
                                           title)
-                filename = str(self.workspaceFolder + "/lastfigure.html")
-                plotly.offline.plot(fig, filename=filename, auto_open=True)
 
+                now = datetime.datetime.now()
+                file = str(metric_suffix + "_R2map_" + str(now.year) + "." + str('%02d' % now.month) + "." + str('%02d' % now.day))
+                file = str(file + "-" + str('%02d' % now.hour) + "." + str('%02d' % now.minute) + "." + str('%02d' % now.second) + ".html")
+                fullPath = str(self.workspaceFolder + "/sessions/" + str(self.currentSessionId) + "/figures/" + file)
+                plotly.offline.plot(fig, filename=fullPath, auto_open=True)
 
             # Map subselection
             else:
@@ -2043,8 +2047,11 @@ class Dialog(QDialog):
                                           (useSign > 0),
                                           title)
 
-                filename = str(self.workspaceFolder + "/lastfigure.html")
-                plotly.offline.plot(fig, filename=filename, auto_open=True)
+                now = datetime.datetime.now()
+                file = str(metric_suffix + "_R2map_sub_" + str(now.year) + "." + str('%02d' % now.month) + "." + str('%02d' % now.day))
+                file = str(file + "-" + str('%02d' % now.hour) + "." + str('%02d' % now.minute) + "." + str('%02d' % now.second) + ".html")
+                fullPath = str(self.workspaceFolder + "/sessions/" + str(self.currentSessionId) + "/figures/" + file)
+                plotly.offline.plot(fig, filename=fullPath, auto_open=True)
 
     # Wilcoxon Map. Not used - TODO : delete?
     def btnW2(self, features, title):
@@ -2185,7 +2192,7 @@ class Dialog(QDialog):
         plt.show()
 
     # Plot compared metric for 2 classes using Visualization_Data functions
-    def btnMetric(self, features, metricLabel, isLog, title):
+    def btnMetric(self, features, metricLabel, isLog, title, metric_suffix):
         if checkFreqsMinMax(self.userFmin, self.userFmax, self.samplingFreq):
             electrodeExists = False
             electrodeIdx = 0
@@ -2211,13 +2218,22 @@ class Dialog(QDialog):
                     each_point, fmin, fmax, features.fres, class1, class2,
                     metricLabel, isLog, title)
 
-                filename = str(self.workspaceFolder + "/lastfigure.html")
-                plotly.offline.plot(fig, filename=filename, auto_open=True)
+                now = datetime.datetime.now()
+                file = str(metric_suffix + "_Comparison_" + electrodeToDisp)
+                file = str(file + "_" + str(now.year) + "." + str('%02d' % now.month) + "." + str('%02d' % now.day))
+                file = str(file + "-" + str('%02d' % now.hour) + "." + str('%02d' % now.minute) + "." + str('%02d' % now.second) + ".html")
+                fullPath = str(self.workspaceFolder + "/sessions/" + str(self.currentSessionId) + "/figures/" + file)
+                plotly.offline.plot(fig, filename=fullPath, auto_open=True)
 
     # Plot "Brain topography", using either Power Spectrum (in same pipeline)
     # or Node Strength (or similar metric) (in Connectivity pipeline)
-    def btnTopo(self, features, title):
+    def btnTopo(self, features, title, metric_suffix):
         error = True
+
+        now = datetime.datetime.now()
+        file = str(metric_suffix + "_topomap_" + str(now.year) + "." + str('%02d' % now.month) + "." + str('%02d' % now.day))
+        file = str(file + "-" + str('%02d' % now.hour) + "." + str('%02d' % now.minute) + "." + str('%02d' % now.second) + ".png")
+        fullPath = str(self.workspaceFolder + "/sessions/" + str(self.currentSessionId) + "/figures/" + file)
 
         tempR2 = features.Rsquare.copy()
         # if "consider the sign" is checked,
@@ -2240,7 +2256,8 @@ class Dialog(QDialog):
             topo_plot(tempR2, title, self.sensorMontage, self.customMontagePath,
                       features.electrodes_final, int(self.freqTopo.text()), freqMax,
                       features.fres, self.samplingFreq, self.colormapScale.isChecked(),
-                      (useSign > 0) )
+                      (useSign > 0))
+            plt.savefig(fullPath)
             plt.show()
         elif ":" in self.freqTopo.text() \
                 and len(self.freqTopo.text().split(":")) == 2:
@@ -2254,6 +2271,7 @@ class Dialog(QDialog):
                                       features.electrodes_final, int(self.freqTopo.text()), freqMax,
                                       features.fres, self.samplingFreq, self.colormapScale.isChecked(),
                                       (useSign > 0))
+                            plt.savefig(fullPath)
                             plt.show()
 
         if error:

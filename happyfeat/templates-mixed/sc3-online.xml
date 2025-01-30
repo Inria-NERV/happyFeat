@@ -1,7 +1,7 @@
 <OpenViBE-Scenario>
 	<FormatVersion>2</FormatVersion>
 	<Creator>OpenViBE Designer</Creator>
-	<CreatorVersion>3.6.0</CreatorVersion>
+	<CreatorVersion>3.5.0</CreatorVersion>
 	<Settings>
 		<Setting>
 			<Identifier>(0xcd66436a, 0xfda9a430)</Identifier>
@@ -16,6 +16,13 @@
 			<Name>ClassifWeights</Name>
 			<DefaultValue>classifier-weights.xml</DefaultValue>
 			<Value>classifier-weights.xml</Value>
+		</Setting>
+		<Setting>
+			<Identifier>(0x3e5e44c7, 0x4e2c029e)</Identifier>
+			<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
+			<Name>ExtractionIdx</Name>
+			<DefaultValue>1</DefaultValue>
+			<Value>1</Value>
 		</Setting>
 		<Setting>
 			<Identifier>(0xa86c08f6, 0x47af854f)</Identifier>
@@ -425,6 +432,77 @@
 				<Attribute>
 					<Identifier>(0xcfad85b0, 0x7c6d841c)</Identifier>
 					<Value>1</Value>
+				</Attribute>
+			</Attributes>
+		</Box>
+		<Box>
+			<Identifier>(0x000012d9, 0x00001f3d)</Identifier>
+			<Name>CSV File Writer</Name>
+			<AlgorithmClassIdentifier>(0x428375e8, 0x325f2db9)</AlgorithmClassIdentifier>
+			<Inputs>
+				<Input>
+					<TypeIdentifier>(0x544a003e, 0x6dcba5f6)</TypeIdentifier>
+					<Name>Input stream</Name>
+				</Input>
+				<Input>
+					<TypeIdentifier>(0x6f752dd0, 0x082a321e)</TypeIdentifier>
+					<Name>Stimulations stream</Name>
+				</Input>
+			</Inputs>
+			<Settings>
+				<Setting>
+					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
+					<Name>Filename</Name>
+					<DefaultValue>record-[$core{date}-$core{time}].csv</DefaultValue>
+					<Value>${Player_ScenarioDirectory}/sessions/$var{ExtractionIdx}/results/Test-[$core{date}-$core{time}]-results-classif.csv</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+				<Setting>
+					<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
+					<Name>Precision</Name>
+					<DefaultValue>10</DefaultValue>
+					<Value>10</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+				<Setting>
+					<TypeIdentifier>(0x2cdb2f0b, 0x12f231ea)</TypeIdentifier>
+					<Name>Append data</Name>
+					<DefaultValue>false</DefaultValue>
+					<Value>false</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+				<Setting>
+					<TypeIdentifier>(0x2cdb2f0b, 0x12f231ea)</TypeIdentifier>
+					<Name>Only last matrix</Name>
+					<DefaultValue>false</DefaultValue>
+					<Value>false</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+			</Settings>
+			<Attributes>
+				<Attribute>
+					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
+					<Value>832</Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
+					<Value>368</Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
+					<Value>(0xc33e47e0, 0x70e5f31b)</Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0x527ad68d, 0x16d746a0)</Identifier>
+					<Value></Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0xce18836a, 0x9c0eb403)</Identifier>
+					<Value>4</Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0xcfad85b0, 0x7c6d841c)</Identifier>
+					<Value>2</Value>
 				</Attribute>
 			</Attributes>
 		</Box>
@@ -2193,11 +2271,11 @@
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
-					<Value>784</Value>
+					<Value>768</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
-					<Value>208</Value>
+					<Value>128</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
@@ -2413,11 +2491,11 @@
 			<Attributes>
 				<Attribute>
 					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
-					<Value>848</Value>
+					<Value>832</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
-					<Value>320</Value>
+					<Value>240</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
@@ -2713,6 +2791,17 @@
 			</Target>
 		</Link>
 		<Link>
+			<Identifier>(0x0000363b, 0x000008c3)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x00005008, 0x00001e3b)</BoxIdentifier>
+				<BoxOutputIndex>2</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x000012d9, 0x00001f3d)</BoxIdentifier>
+				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
 			<Identifier>(0x00003793, 0x00006036)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x71ba6a0d, 0x3efa7d76)</BoxIdentifier>
@@ -2985,6 +3074,17 @@
 			<Target>
 				<BoxIdentifier>(0x5194b6cb, 0x7e001787)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
+			<Identifier>(0x0000736a, 0x00007e95)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x00005008, 0x00001e3b)</BoxIdentifier>
+				<BoxOutputIndex>0</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x000012d9, 0x00001f3d)</BoxIdentifier>
+				<BoxInputIndex>1</BoxInputIndex>
 			</Target>
 		</Link>
 		<Link>
