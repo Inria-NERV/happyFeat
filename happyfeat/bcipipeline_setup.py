@@ -507,8 +507,8 @@ class Dialog(QDialog):
 
         # SPECIAL CASES :
         # #   SC1 & SC3 : "GRAZ" BOX SETTINGS
-        modifyAcqScenario(os.path.join(self.workspaceFolder, settings.templateScenFilenames[0]), self.parameterDict)
-        modifyAcqScenario(os.path.join(self.workspaceFolder, settings.templateScenFilenames[3]), self.parameterDict)
+        modifyAcqScenario(self.parameterDict, os.path.join(self.workspaceFolder, settings.templateScenFilenames[0]))
+        modifyAcqScenario(self.parameterDict, os.path.join(self.workspaceFolder, settings.templateScenFilenames[3]))
 
         if launch:
             self.launchTrue = True
