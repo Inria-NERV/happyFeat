@@ -1355,10 +1355,16 @@ class RunClassifier(QtCore.QThread):
             if "ConnectivityMetric" in self.extractDict.keys():
                 modifyConnectivityMetric(self.extractDict["ConnectivityMetric"], destScenFile)
         else:
-            success = modifyTrainScenUsingSplitAndClassifiers("SPLIT POWSPECTRUM", ["Classifier processor"], selectedFeats, epochCount[0], destScenFile)
+            classifStr = None
+            if self.parameterDict["pipelineType"] == optionKeys[4]:  # 1 class BCINET
+                classifStr = ["Classifier processor MI", "Classifier processor REST"]
+            else:
+                classifStr = ["Classifier processor"]
+
+            success = modifyTrainScenUsingSplitAndClassifiers("SPLIT POWSPECTRUM", classifStr, selectedFeats, epochCount[0], destScenFile)
             if not success:
                 myMsgBox("FAILED TO MODIFY SC3-ONLINE.XML")
-            success = modifyTrainScenUsingSplitAndClassifiers("SPLIT CONNECT", ["Classifier processor"], selectedFeats2, epochCount[1], destScenFile)
+            success = modifyTrainScenUsingSplitAndClassifiers("SPLIT CONNECT", classifStr, selectedFeats2, epochCount[1], destScenFile)
             if not success:
                 myMsgBox("FAILED TO MODIFY SC3-ONLINE.XML")
             modifyConnectivityMetric(self.extractDict["ConnectivityMetric"], destScenFile)

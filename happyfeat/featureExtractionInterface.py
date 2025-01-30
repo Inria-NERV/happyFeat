@@ -1862,7 +1862,9 @@ class Dialog(QDialog):
 
             exitText += str("\n")
             exitText += str("== Best score: " + str(bestScore) + ", with attempt id " + str(bestAttempt) + "\n")
-            exitText += str("   and Features: " + str(bestFeatures))
+            exitText += str("   and Features: " + str(bestFeatures) + "\n\n")
+
+            exitText += str("Use the button \"Use selected classifier\" to edit sc3-online.xml with the classifier weights and parameters of your choice.")
 
             msg = QMessageBox()
             msg.setText(exitText)
