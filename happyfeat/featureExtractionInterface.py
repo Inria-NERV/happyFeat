@@ -1610,7 +1610,7 @@ class Dialog(QDialog):
             msg.setText(textDisplayed)
             msg.setStyleSheet("QLabel{min-width: 1200px;}")
             msg.setWindowTitle("Classifier Training Score")
-            msg.exec_()
+            msg.exec()
         else:
             myMsgBox(resultsText)
         self.enableGui(True)
@@ -1870,7 +1870,7 @@ class Dialog(QDialog):
             msg.setText(exitText)
             msg.setStyleSheet("QLabel{min-width: 1200px;}")
             msg.setWindowTitle("Classifier Training Score")
-            msg.exec_()
+            msg.exec()
 
             self.enableGui(True)
 
@@ -2890,7 +2890,7 @@ class Dialog(QDialog):
 
             msg.setStyleSheet("QLabel{min-width: 1200px;}")
             msg.setWindowTitle("Classification Score")
-            msg.exec_()
+            msg.exec()
         else:
             myMsgBox(resultsText)
 
