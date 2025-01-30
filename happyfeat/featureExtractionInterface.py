@@ -119,7 +119,7 @@ class Dialog(QDialog):
 
         # Extraction stimulations
         self.extractionStims = "OVTK_GDF_Left;OVTK_GDF_Right"  # default values
-        
+
         # Fmin and Fmax for R2map and comparison plots: default values
         # (can be set by top menu options)
         self.userFmin = 0
@@ -143,6 +143,8 @@ class Dialog(QDialog):
 
         # "Advanced mode" with more options...?
         self.advanced = False
+
+        self.useR2SignDict = {0:"No", 1:"Class2>Class1", 2:"Class1>Class2"}
 
         # GET BASIC SETTINGS FROM WORKSPACE FILE
         if self.workspaceFile:
@@ -404,12 +406,19 @@ class Dialog(QDialog):
         self.colormapScale = QCheckBox()
         self.colormapScale.setTristate(False)
         self.colormapScale.setChecked(True)
-        self.formLayoutViz.addRow('Scale Colormap (R²map and Topo) for max contrast', self.colormapScale)
+        self.formLayoutViz.addRow('Scale Colormap for max contrast', self.colormapScale)
         # Param : checkbox for considering Class2-Class1 sign for AutoFeat
-        self.autofeatUseSign = QCheckBox()
-        self.autofeatUseSign.setTristate(False)
-        self.autofeatUseSign.setChecked(False)
-        self.formLayoutViz.addRow('Use the sign of R² (colormap and AutoFeat)', self.autofeatUseSign)
+        # self.autofeatUseSign = QCheckBox()
+        # self.autofeatUseSign.setTristate(False)
+        # self.autofeatUseSign.setChecked(False)
+        # self.formLayoutViz.addRow('Class2 > class1 (Colormap and AutoFeat)', self.autofeatUseSign)
+
+        self.autofeatUseSignComboBox = QComboBox()
+        self.useSignIdx = 0
+        for idxUseSign, key in enumerate(self.useR2SignDict):
+            self.autofeatUseSignComboBox.addItem(self.useR2SignDict[key], idxUseSign)
+        self.autofeatUseSignComboBox.setCurrentIndex(0)
+        self.formLayoutViz.addRow('Consider R2 sign', self.autofeatUseSignComboBox)
 
         self.layoutViz.addLayout(self.formLayoutViz)
 
@@ -1910,7 +1919,8 @@ class Dialog(QDialog):
         self.electrodePsd.setEnabled(myBool)
         self.freqTopo.setEnabled(myBool)
         self.colormapScale.setEnabled(myBool)
-        self.autofeatUseSign.setEnabled(myBool)
+        # self.autofeatUseSign.setEnabled(myBool)
+        self.autofeatUseSignComboBox.setEnabled(myBool)
 
         self.btn_loadFilesForViz.setEnabled(myBool)
         if myBool and self.plotBtnsEnabled:
@@ -1978,14 +1988,15 @@ class Dialog(QDialog):
             # if "consider the sign of Class2-Class1" is checked,
             # modify the R2 to display
             tempR2 = features.Rsquare.copy()
-            if self.autofeatUseSign.isChecked():
-                # mask = features.Rsign_tab < 0
+
+            useSign = self.autofeatUseSignComboBox.currentIndex()
+            if useSign > 0:
                 tempRsign = features.Rsign_tab.copy()
-                # reverse the sign for the Rsquare map...
-                # tempRsign[np.where(features.Rsign_tab < 0)] = 1
-                # tempRsign[np.where(features.Rsign_tab > 0)] = -1
+                if useSign == 2:
+                    # reverse the sign for the Rsquare map...
+                    tempRsign[np.where(features.Rsign_tab < 0)] = 1
+                    tempRsign[np.where(features.Rsign_tab > 0)] = -1
                 tempR2 = tempR2 * tempRsign
-                # tempR2[np.where(mask == False)] = 0
 
             # Full map
             if not useSubselection:
@@ -1997,7 +2008,7 @@ class Dialog(QDialog):
                                           self.userFmin,
                                           self.userFmax,
                                           self.colormapScale.isChecked(),
-                                          self.autofeatUseSign.isChecked(),
+                                          (useSign > 0),
                                           title)
                 filename = str(self.workspaceFolder + "/lastfigure.html")
                 plotly.offline.plot(fig, filename=filename, auto_open=True)
@@ -2024,13 +2035,12 @@ class Dialog(QDialog):
                 fig = plot_Rsquare_plotly(subR2,
                                           np.array(subElectrodes)[:],
                                           features.freqs_array,
-                                          smoothing,
                                           features.fres,
                                           each_point,
                                           freqMin,
                                           freqMax,
                                           self.colormapScale.isChecked(),
-                                          self.autofeatUseSign.isChecked(),
+                                          (useSign > 0),
                                           title)
 
                 filename = str(self.workspaceFolder + "/lastfigure.html")
@@ -2210,13 +2220,15 @@ class Dialog(QDialog):
         error = True
 
         tempR2 = features.Rsquare.copy()
-        # if "consider the sign of Class2-Class1" is checked,
+        # if "consider the sign" is checked,
         # modify the R2 to display
-        if self.autofeatUseSign.isChecked():
+        useSign = self.autofeatUseSignComboBox.currentIndex()
+        if useSign > 0:
             tempRsign = features.Rsign_tab.copy()
-            # reverse the sign for the Rsquare map...
-            # tempRsign[np.where(features.Rsign_tab < 0)] = 1
-            # tempRsign[np.where(features.Rsign_tab > 0)] = -1
+            if useSign == 2:
+                # reverse the sign for the Rsquare map...
+                tempRsign[np.where(features.Rsign_tab < 0)] = 1
+                tempRsign[np.where(features.Rsign_tab > 0)] = -1
             tempR2 = tempR2 * tempRsign
 
         # 2 cases : 1 freq bin, or freq range
@@ -2228,7 +2240,7 @@ class Dialog(QDialog):
             topo_plot(tempR2, title, self.sensorMontage, self.customMontagePath,
                       features.electrodes_final, int(self.freqTopo.text()), freqMax,
                       features.fres, self.samplingFreq, self.colormapScale.isChecked(),
-                      self.autofeatUseSign.isChecked())
+                      (useSign > 0) )
             plt.show()
         elif ":" in self.freqTopo.text() \
                 and len(self.freqTopo.text().split(":")) == 2:
@@ -2241,7 +2253,7 @@ class Dialog(QDialog):
                             topo_plot(tempR2, title, self.sensorMontage, self.customMontagePath,
                                       features.electrodes_final, int(self.freqTopo.text()), freqMax,
                                       features.fres, self.samplingFreq, self.colormapScale.isChecked(),
-                                      self.autofeatUseSign.isChecked())
+                                      (useSign > 0))
                             plt.show()
 
         if error:
@@ -2478,12 +2490,19 @@ class Dialog(QDialog):
             if len(result.Rsquare) > 0:
                 result.autoselected = []
                 Rsquare_reduced = result.Rsquare[Index_electrode, idxFreqmin:idxFreqmax]
-                # if "Use the sign of Class2-class1" is checked
+
+                # if "Use the sign" is checked
                 # we apply the sign map to Rsquare
                 # ==> R² values corresponding to Class1 < Class2 will be negative and won't count
                 # for the search of max values
-                if self.autofeatUseSign.isChecked():
-                    Rsign_reduced = result.Rsign_tab[Index_electrode, idxFreqmin:idxFreqmax]
+                useSign = self.autofeatUseSignComboBox.currentIndex()
+                if useSign > 0:
+                    tempRsign = result.Rsign_tab.copy()
+                    if useSign == 2:
+                        # reverse the sign for the Rsquare map...
+                        tempRsign[np.where(result.Rsign_tab < 0)] = 1
+                        tempRsign[np.where(result.Rsign_tab > 0)] = -1
+                    Rsign_reduced = tempRsign[Index_electrode, idxFreqmin:idxFreqmax]
                     Rsquare_reduced = Rsquare_reduced * Rsign_reduced
 
                 Max_per_electrode = Rsquare_reduced.max(1)
