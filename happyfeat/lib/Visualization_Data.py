@@ -348,6 +348,7 @@ def plot_Rsquare_plotly(Rsquare, channel_array, freq, fres, each_point, fmin, fm
     frequencies = []
     nearest_fmin, index_fmin = find_nearest(freq, fmin)
     nearest_fmax, index_fmax = find_nearest(freq, fmax)
+    frequencies = freq[index_fmin:index_fmax+1]
 
     # Only consider the useful part of the map
     Rsquare_reshape = Rsquare[0:len(channel_array), index_fmin:index_fmax + 1]
