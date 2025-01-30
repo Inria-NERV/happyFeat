@@ -87,17 +87,23 @@ def topo_plot(Rsquare, title, montageStr, customMontage, electrodes, freqMin, fr
                 if montage.ch_names[i] == electrodes[j]:
                     sizer[i] = Rsquare[:, round(freqMin/fres):round(freqMax/fres)][j].mean()
 
-    vmin = None
-    vmax = 1
     if scaleColormap:
-        vmax = None
+        vmin = np.nanmin(Rsquare)
+        vmax = np.nanmax(Rsquare)
 
     if not useSign:
+        if not scaleColormap:
+            vmin = 0.0
+            vmax = 1.0
+        divnorm = colors.TwoSlopeNorm(vmin=vmin, vcenter=(vmax+vmin)/2, vmax=vmax)
         im, cn = plot_topomap(sizer, fake_evoked.info, sensors=False, names=montage.ch_names,
                               res=500, contours=0, image_interp='cubic', show=False,
-                              cmap='jet', axes=ax, outlines='head')
+                              cmap='jet', cnorm=divnorm, axes=ax, outlines='head')
     else:
-        divnorm = colors.TwoSlopeNorm(vmin=np.nanmin(Rsquare), vcenter=0., vmax=np.nanmax(Rsquare))
+        if not scaleColormap:
+            vmin = -1.0
+            vmax = 1.0
+        divnorm = colors.TwoSlopeNorm(vmin=vmin, vcenter=0., vmax=vmax)
         im, cn = plot_topomap(sizer, fake_evoked.info, sensors=False, names=montage.ch_names,
                               res=500, contours=0, image_interp='cubic', show=False,
                               cmap='bwr', cnorm=divnorm, axes=ax, outlines='head')
@@ -337,7 +343,7 @@ def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, eac
     # plt.show()
 
 # New version of the R² map using plotly
-def plot_Rsquare_plotly(Rsquare, channel_array, freq, smoothing, fres, each_point, fmin, fmax, colormapScale, useSign, title):
+def plot_Rsquare_plotly(Rsquare, channel_array, freq, fres, each_point, fmin, fmax, colormapScale, useSign, title):
     # Get frequencies to display
     frequencies = []
     nearest_fmin, index_fmin = find_nearest(freq, fmin)
@@ -346,20 +352,13 @@ def plot_Rsquare_plotly(Rsquare, channel_array, freq, smoothing, fres, each_poin
     # Only consider the useful part of the map
     Rsquare_reshape = Rsquare[0:len(channel_array), index_fmin:index_fmax + 1]
 
-    # scaling (not used - TODO)
+    # scaling
     vmin = 0
     vmax = 1
     if colormapScale:
         vmax = np.nanmax(abs(Rsquare_reshape))
         if np.nanmin(Rsquare_reshape) < 0:
             vmin = -np.amax(abs(Rsquare_reshape))
-
-    sizing = round(len(freq[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
-    for i in freq[index_fmin:(index_fmax + 1)]:
-        # if i % (round(sizing * 1 / fres)) == 0:
-        frequencies.append(str(round(i)))
-        # else:
-        #     frequencies.append('')
 
     # If "consider sign of Class2-Class1" btn is checked :
     # Blue (negative) to white (zero) to red (positive) colormap
@@ -368,13 +367,17 @@ def plot_Rsquare_plotly(Rsquare, channel_array, freq, smoothing, fres, each_poin
                                         y=channel_array,
                                         x=frequencies,
                                         colorscale='RdBu_r',
-                                        zmid=0))
+                                        zmin=vmin,
+                                        zmid=0,
+                                        zmax=vmax))
     # Else (normal case) : jet colormap, from zero to max value
     else:
         fig = go.Figure(data=go.Heatmap(z=Rsquare_reshape,
                                         y=channel_array,
                                         x=frequencies,
-                                        colorscale='jet'))
+                                        colorscale='jet',
+                                        zmin=vmin,
+                                        zmax=vmax))
 
     fig.update_layout(title_text=title,
                       plot_bgcolor='black',

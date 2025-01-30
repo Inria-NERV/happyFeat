@@ -117,7 +117,13 @@ class Dialog(QDialog):
         self.trainTimerStart = 0
         self.trainTimerEnd = 0
 
+        # Extraction stimulations
         self.extractionStims = "OVTK_GDF_Left;OVTK_GDF_Right"  # default values
+        
+        # Fmin and Fmax for R2map and comparison plots: default values
+        # (can be set by top menu options)
+        self.userFmin = 0
+        self.userFmax = 40
 
         # default parameters for automatic selection
         self.autoFeatChannelList = []
@@ -164,23 +170,25 @@ class Dialog(QDialog):
         self.setWindowTitle('HappyFeat - Feature Selection interface')
         self.dlgLayout = QHBoxLayout()
 
-        # Create top bar menus...
+        ## Create top bar menus...
+
+        # menu "Options"
         self.menuBar = QMenuBar(self)
         self.dlgLayout.setMenuBar(self.menuBar)
         self.menuOptions = QMenu("&Options")
         self.menuBar.addMenu(self.menuOptions)
 
-        # OpenViBE designer browser...
+        # Options / OpenViBE designer browser
         if self.parameterDict["bciPlatform"] == settings.availablePlatforms[0]:  # openvibe
             self.qActionFindOV = QAction("&Browse for OpenViBE", self)
             self.qActionFindOV.triggered.connect(lambda: self.browseForDesigner())
             self.menuOptions.addAction(self.qActionFindOV)
-        # Activate/deactivate advanced options...
+        # Options / Activate/deactivate advanced mode
         self.qActionEnableAdvancedMode = QAction("&Enable/Disable Advanced Mode", self)
         self.qActionEnableAdvancedMode.triggered.connect(lambda: self.toggleAdvanced())
         self.menuOptions.addAction(self.qActionEnableAdvancedMode)
 
-        # Menu for advanced extraction parameters
+        # Menu "Extraction"
         self.menuExtraction = QMenu("&Extraction")
         self.menuBar.addMenu(self.menuExtraction)
 
@@ -188,7 +196,18 @@ class Dialog(QDialog):
         self.qActionStimulations.triggered.connect(lambda: self.extractionSetStimulations())
         self.menuExtraction.addAction(self.qActionStimulations)
 
-        # Menu for Auto-select: select a set of channels for autoselection
+        # Menu "Visualization"
+        self.menuVizualization = QMenu("&Visualization")
+        self.menuBar.addMenu(self.menuVizualization)
+
+        self.qActionFreqMin = QAction("Set min frequency for R2 map and metric plot", self)
+        self.qActionFreqMin.triggered.connect(lambda: self.vizSetFreqMin())
+        self.menuVizualization.addAction(self.qActionFreqMin)
+        self.qActionFreqMax = QAction("Set max frequency for R2 map and metric plot", self)
+        self.qActionFreqMax.triggered.connect(lambda: self.vizSetFreqMax())
+        self.menuVizualization.addAction(self.qActionFreqMax)
+
+        # Menu "Auto-select"
         self.menuAutoSelect = QMenu("&Feature AutoSelect")
         self.menuBar.addMenu(self.menuAutoSelect)
 
@@ -373,22 +392,14 @@ class Dialog(QDialog):
         self.formLayoutViz = QFormLayout()
 
         # COMMON PARAMETERS... TODO : put those in dictionaries to make everything more flexible
-        # Param : fmin for frequency based viz
-        self.userFmin = QLineEdit()
-        self.userFmin.setText('0')
-        self.formLayoutViz.addRow('Frequency min', self.userFmin)
-        # Param : fmax for frequency based viz
-        self.userFmax = QLineEdit()
-        self.userFmax.setText('40')
-        self.formLayoutViz.addRow('Frequency max', self.userFmax)
         # Param : Electrode to use for PSD display
         self.electrodePsd = QLineEdit()
         self.electrodePsd.setText('CP3')
-        self.formLayoutViz.addRow('Sensor for PSD visualization', self.electrodePsd)
+        self.formLayoutViz.addRow('Sensor (metric comparison)', self.electrodePsd)
         # Param : Frequency to use for Topography
         self.freqTopo = QLineEdit()
         self.freqTopo.setText('12')
-        self.formLayoutViz.addRow('Topography Freq (Hz), use \":\" for freq band', self.freqTopo)
+        self.formLayoutViz.addRow('Frequency (Hz) (topomap)', self.freqTopo)
         # Param : checkbox for colormap scaling
         self.colormapScale = QCheckBox()
         self.colormapScale.setTristate(False)
@@ -1896,8 +1907,6 @@ class Dialog(QDialog):
         self.btn_loadFilesForViz.setEnabled(myBool)
         self.availableFilesForVizList.setEnabled(myBool)
 
-        self.userFmin.setEnabled(myBool)
-        self.userFmax.setEnabled(myBool)
         self.electrodePsd.setEnabled(myBool)
         self.freqTopo.setEnabled(myBool)
         self.colormapScale.setEnabled(myBool)
@@ -1963,8 +1972,7 @@ class Dialog(QDialog):
 
     # Plot R2 map using Visualization_Data functions
     def btnR2(self, features, title, useSubselection):
-        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
-            smoothing = False
+        if checkFreqsMinMax(self.userFmin, self.userFmax, self.samplingFreq):
             each_point = 1  # Todo : make parameter?
 
             # if "consider the sign of Class2-Class1" is checked,
@@ -1984,11 +1992,10 @@ class Dialog(QDialog):
                 fig = plot_Rsquare_plotly(tempR2,
                                           np.array(features.electrodes_final)[:],
                                           features.freqs_array,
-                                          smoothing,
                                           features.fres,
                                           each_point,
-                                          int(self.userFmin.text()),
-                                          int(self.userFmax.text()),
+                                          self.userFmin,
+                                          self.userFmax,
                                           self.colormapScale.isChecked(),
                                           self.autofeatUseSign.isChecked(),
                                           title)
@@ -2031,7 +2038,7 @@ class Dialog(QDialog):
 
     # Wilcoxon Map. Not used - TODO : delete?
     def btnW2(self, features, title):
-        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
+        if checkFreqsMinMax(self.userFmin, self.userFmax, self.samplingFreq):
             smoothing = False
             each_point = 1
             plot_Rsquare_calcul_welch(features.Wsigned,
@@ -2040,21 +2047,21 @@ class Dialog(QDialog):
                                       smoothing,
                                       features.fres,
                                       each_point,
-                                      int(self.userFmin.text()),
-                                      int(self.userFmax.text()),
+                                      self.userFmin,
+                                      self.userFmax,
                                       self.colormapScale.isChecked(),
                                       title)
             plt.show()
 
     # Btn callback: Plot "time-frequency analysis", in the POWER SPECTRUM pipeline ONLY.
     def btnTimeFreq(self, features, title):
-        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
+        if checkFreqsMinMax(self.userFmin, self.userFmax, self.samplingFreq):
             print("TimeFreq for sensor: " + self.electrodePsd.text())
 
             tmin = float(self.parameterDict["Sessions"][self.currentSessionId]["ExtractionParams"]['StimulationDelay'])
             tmax = float(self.parameterDict["Sessions"][self.currentSessionId]["ExtractionParams"]['StimulationEpoch'])
-            fmin = int(self.userFmin.text())
-            fmax = int(self.userFmax.text())
+            fmin = self.userFmin
+            fmax = self.userFmax
             class1 = self.parameterDict["AcquisitionParams"]["Class1"]
             class2 = self.parameterDict["AcquisitionParams"]["Class2"]
 
@@ -2107,13 +2114,13 @@ class Dialog(QDialog):
 
     # Btn Callback: Plot "time-frequency analysis", in the CONNECTIVITY pipeline ONLY.
     def btnTimeFreqConnect(self, features, title):
-        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
+        if checkFreqsMinMax(self.userFmin, self.userFmax, self.samplingFreq):
             print("TimeFreq for sensor: " + self.electrodePsd.text())
 
             tmin = float(self.parameterDict["Sessions"][self.currentSessionId]["ExtractionParams"]['StimulationDelay'])
             tmax = float(self.parameterDict["Sessions"][self.currentSessionId]["ExtractionParams"]['StimulationEpoch'])
-            fmin = int(self.userFmin.text())
-            fmax = int(self.userFmax.text())
+            fmin = self.userFmin
+            fmax = self.userFmax
             class1 = self.parameterDict["AcquisitionParams"]["Class1"]
             class2 = self.parameterDict["AcquisitionParams"]["Class2"]
 
@@ -2169,7 +2176,7 @@ class Dialog(QDialog):
 
     # Plot compared metric for 2 classes using Visualization_Data functions
     def btnMetric(self, features, metricLabel, isLog, title):
-        if checkFreqsMinMax(self.userFmin.text(), self.userFmax.text(), self.samplingFreq):
+        if checkFreqsMinMax(self.userFmin, self.userFmax, self.samplingFreq):
             electrodeExists = False
             electrodeIdx = 0
             electrodeToDisp = self.electrodePsd.text()
@@ -2182,8 +2189,8 @@ class Dialog(QDialog):
             if not electrodeExists:
                 myMsgBox("No sensor with this name found")
             else:                
-                fmin = int(self.userFmin.text())
-                fmax = int(self.userFmax.text())
+                fmin = self.userFmin
+                fmax = self.userFmax
                 class1 = self.parameterDict["AcquisitionParams"]["Class1"]
                 class2 = self.parameterDict["AcquisitionParams"]["Class2"]
                 each_point = 1
@@ -2246,17 +2253,15 @@ class Dialog(QDialog):
                                 self.parameterDict["AcquisitionParams"]["Class1"], self.parameterDict["AcquisitionParams"]["Class2"], title)
 
     def btnConnectMatrices(self, features, title):
-        if self.userFmin.text().isdigit() \
-                and 0 < int(self.userFmin.text()) < (self.samplingFreq / 2) \
-                and self.userFmax.text().isdigit() \
-                and 0 < int(self.userFmax.text()) < (self.samplingFreq / 2):
-            print("Freq connectivity matrices: " + self.userFmin.text() + " to " + self.userFmax.text())
+        if 0 < self.userFmin < (self.samplingFreq / 2) \
+                and  0 < self.userFmax < (self.samplingFreq / 2):
+            print("Freq connectivity matrices: " + str(self.userFmin) + " to " + str(self.userFmax) )
         else:
             myMsgBox("Error in frequency used for displaying connectivity matrices...")
             return
 
         qt_plot_connectMatrices(features.connect_cond1, features.connect_cond2,
-                                int(self.userFmin.text()), int(self.userFmax.text()),
+                                self.userFmin, self.userFmax,
                                 features.electrodes_orig,
                                 self.parameterDict["AcquisitionParams"]["Class1"],
                                 self.parameterDict["AcquisitionParams"]["Class2"], title)
@@ -2269,18 +2274,16 @@ class Dialog(QDialog):
             myMsgBox("Error in percentage used for displaying strongest links...")
             return
 
-        if self.userFmin.text().isdigit() \
-                and 0 < int(self.userFmin.text()) < (self.samplingFreq / 2) \
-                and self.userFmax.text().isdigit() \
-                and 0 < int(self.userFmax.text()) < (self.samplingFreq / 2):
-            print("Freq connectivity matrices: " + self.userFmin.text() + " to " + self.userFmax.text())
+        if 0 < self.userFmin < (self.samplingFreq / 2) \
+                and 0 < self.userFmax < (self.samplingFreq / 2):
+            print("Freq connectivity matrices: " + str(self.userFmin) + " to " + str(self.userFmax) )
         else:
             myMsgBox("Error in frequency used for displaying connectivity matrices...")
             return
 
         qt_plot_strongestConnectome(features.connect_cond1, features.connect_cond2,
                                     int(self.percentStrong.text()),
-                                    int(self.userFmin.text()), int(self.userFmax.text()),
+                                    self.userFmin, self.userFmax,
                                     features.electrodes_orig,
                                     self.parameterDict["AcquisitionParams"]["Class1"],
                                     self.parameterDict["AcquisitionParams"]["Class2"], title)
@@ -2341,6 +2344,42 @@ class Dialog(QDialog):
         if self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             self.enableSpeedUp.setVisible(self.advanced)
             self.speedUpLabel.setVisible(self.advanced)
+
+        return
+
+    def vizSetFreqMin(self):
+        text, ok = QInputDialog.getText(self, 'Min frequency for general R2 map and Metric comparison',
+                                        'Enter a number between 0 and (sampFreq/2)', text=str(self.userFmin))
+        if ok:
+            # Check if it's all numeric
+            for c in text:
+                if not c.isnumeric():
+                    myMsgBox("Please enter a number")
+                    return
+
+            if text == "":
+                myMsgBox("Please enter a number")
+                return
+
+            self.userFmin = int(text)
+
+        return
+
+    def vizSetFreqMax(self):
+        text, ok = QInputDialog.getText(self, 'Max frequency for general R2 map and Metric comparison',
+                                        'Enter a number between 0 and (sampFreq/2)', text=str(self.userFmax))
+        if ok:
+            # Check if it's all numeric
+            for c in text:
+                if not c.isnumeric():
+                    myMsgBox("Please enter a number")
+                    return
+
+            if text == "":
+                myMsgBox("Please enter a number")
+                return
+
+            self.userFmax = int(text)
 
         return
 
@@ -2901,13 +2940,11 @@ class Dialog(QDialog):
 # ------------------------------------------------------
 def checkFreqsMinMax(fmin, fmax, fs):
     ok = True
-    if not fmin.isdigit() or not fmax.isdigit():
+    if fmin < 0 or fmax < 0:
         ok = False
-    elif int(fmin) < 0 or int(fmax) < 0:
+    elif fmin > (fs/2)+1 or fmax > (fs/2)+1:
         ok = False
-    elif int(fmin) > (fs/2)+1 or int(fmax) > (fs/2)+1:
-        ok = False
-    elif int(fmin) >= int(fmax):
+    elif fmin >= fmax:
         ok = False
 
     if not ok:
