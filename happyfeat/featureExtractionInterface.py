@@ -1081,6 +1081,10 @@ class Dialog(QDialog):
                     os.mkdir(os.path.join(self.workspaceFolder, "sessions", newId, "extract"))
                 if not os.path.exists(os.path.join(self.workspaceFolder, "sessions", newId, "train")):
                     os.mkdir(os.path.join(self.workspaceFolder, "sessions", newId, "train"))
+                if not os.path.exists(os.path.join(self.workspaceFolder, "sessions", newId, "results")):
+                    os.mkdir(os.path.join(self.workspaceFolder, "sessions", newId, "results"))
+                if not os.path.exists(os.path.join(self.workspaceFolder, "sessions", newId, "figures")):
+                    os.mkdir(os.path.join(self.workspaceFolder, "sessions", newId, "figures"))
                 self.currentSessionId = newId
 
             # Manually refresh lists
