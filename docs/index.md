@@ -1,8 +1,12 @@
 
 # [HappyFeat](https://github.com/Inria-NERV/happyFeat) - Interactive framework for clinical BCI applications
 
+	
 <img src="img/brain_icon_vect.png" alt="HappyFeat Logo" style="width:200px;"/>
 
+!!! warning "Testers and feedback wanted!"
+	Reach out and give us your opinion, ideas for improvement, and to [open issues](https://github.com/Inria-NERV/happyFeat/issues) for bugs or missing features!
+	
 ***[HappyFeat](https://github.com/Inria-NERV/happyFeat)*** is a software aiming to to simplify the use of BCI pipelines in clinical settings. More precisely, it is a **software assistant for extracting and selecting classification features for BCI**.
 
 It gathers all necessary manipulations and analysis in a **single convenient GUI**, and **automates experimental or analytic parameters**. The resulting workflow allows for effortlessly **selecting the best features**, helping to achieve good BCI performance in time-constrained environments. Alternative features based on **Functional Connectivity** can be used and compared or combined with Power Spectral Density, allowing a network-oriented approach. 

@@ -35,6 +35,8 @@ nav:
   - More in depth:
     - Sensor Montages: user_guide/montage.md
     - Workspaces: user_guide/workspaces.md
+    - Documentation: user_guide/doc.md
+    - Contributing: user_guide/contributing.md
     
 plugins:
   - search
