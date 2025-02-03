@@ -144,9 +144,7 @@ class Dialog(QDialog):
 
         # "Advanced mode" with more options...?
         self.advanced = False
-
-        self.useR2SignDict = {0:"No", 1:"Class2>Class1", 2:"Class1>Class2"}
-
+        
         # GET BASIC SETTINGS FROM WORKSPACE FILE
         if self.workspaceFile:
             print("--- Using parameters from workspace file: " + workspaceFile)
@@ -163,6 +161,12 @@ class Dialog(QDialog):
                 self.ovScript = self.parameterDict["ovDesignerPath"]
             else:
                 self.ovScript = ""
+                
+        self.class1Label = self.parameterDict["AcquisitionParams"]["Class1"]
+        self.class2Label = self.parameterDict["AcquisitionParams"]["Class2"]
+        
+        self.useR2SignDict = {0:"No", 1:str(self.class1Label + "<" + self.class2Label), 2:str(self.class1Label + ">" + self.class2Label)}
+
 
         # -----------------------------------------------------------------------
         # CREATE INTERFACE...

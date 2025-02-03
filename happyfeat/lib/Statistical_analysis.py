@@ -40,7 +40,7 @@ def Compute_Rsquare_Map(Power_of_trials_1, Power_of_trials_2):
     trialAvg1 = Power_of_trials_1.mean(axis=0)
     trialAvg2 = Power_of_trials_2.mean(axis=0)
 
-    diffTrialAvg = np.sign(trialAvg2 - trialAvg1)
+    diffTrialAvg = np.sign(trialAvg1 - trialAvg2)
 
     # avg sur 30 trials
     # diff a et b

@@ -162,10 +162,11 @@ class Dialog(QDialog):
                         if all(success):
                             sessionList = os.listdir(os.path.join(workspaceFolder, "sessions"))
                             for session in sessionList:
-                                pathToCheck.append(os.path.join(workspaceFolder, "sessions", session, "extract"))
-                                pathToCheck.append(os.path.join(workspaceFolder, "sessions", session, "train"))
-                                pathToCheck.append(os.path.join(workspaceFolder, "sessions", session, "results"))
-                                pathToCheck.append(os.path.join(workspaceFolder, "sessions", session, "figures"))
+                                if not ".DS_Store" in session:  # Mac can add hidden things...
+                                    pathToCheck.append(os.path.join(workspaceFolder, "sessions", session, "extract"))
+                                    pathToCheck.append(os.path.join(workspaceFolder, "sessions", session, "train"))
+                                    pathToCheck.append(os.path.join(workspaceFolder, "sessions", session, "results"))
+                                    pathToCheck.append(os.path.join(workspaceFolder, "sessions", session, "figures"))
                             success = [self.checkFolder(path, True) for path in pathToCheck]
                             if all(success):
                                 validWs = True
