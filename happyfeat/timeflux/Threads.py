@@ -336,8 +336,8 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
         # Statistical Analysis
         freqs_array = np.arange(0, n_bins, fres)
 
-        Rsquare, signTab = Compute_Rsquare_Map(power_cond2_final[:, :, :(n_bins - 1)],
-                                               power_cond1_final[:, :, :(n_bins - 1)])
+        Rsquare, signTab = Compute_Rsquare_Map(power_cond1_final[:, :, :(n_bins - 1)],
+                                               power_cond2_final[:, :, :(n_bins - 1)])
 
         print(electrodeList)
         # Reordering for R map and topography...

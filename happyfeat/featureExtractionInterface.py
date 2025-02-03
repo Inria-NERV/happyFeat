@@ -165,7 +165,9 @@ class Dialog(QDialog):
         self.class1Label = self.parameterDict["AcquisitionParams"]["Class1"]
         self.class2Label = self.parameterDict["AcquisitionParams"]["Class2"]
         
-        self.useR2SignDict = {0:"No", 1:str(self.class1Label + "<" + self.class2Label), 2:str(self.class1Label + ">" + self.class2Label)}
+        self.useR2SignDict = {0: "No",
+                              1: str(self.class1Label + "<" + self.class2Label),
+                              2: str(self.class1Label + ">" + self.class2Label)}
 
 
         # -----------------------------------------------------------------------
@@ -207,10 +209,10 @@ class Dialog(QDialog):
         self.menuVizualization = QMenu("&Visualization")
         self.menuBar.addMenu(self.menuVizualization)
 
-        self.qActionFreqMin = QAction("Set min frequency for R2 map and metric plot", self)
+        self.qActionFreqMin = QAction("Set min frequency (R2 map and metric plot)", self)
         self.qActionFreqMin.triggered.connect(lambda: self.vizSetFreqMin())
         self.menuVizualization.addAction(self.qActionFreqMin)
-        self.qActionFreqMax = QAction("Set max frequency for R2 map and metric plot", self)
+        self.qActionFreqMax = QAction("Set max frequency (for R2 map and metric plot)", self)
         self.qActionFreqMax.triggered.connect(lambda: self.vizSetFreqMax())
         self.menuVizualization.addAction(self.qActionFreqMax)
 

@@ -222,6 +222,19 @@ def plot_comparison_plotly(Power_class1, Power_class2, Rsquare, freqs, channel,
     Selected_class2_STD = (STD_class2[index_fmin:index_fmax])
     Selected_class1_STD = (STD_class1[index_fmin:index_fmax])
 
+    # Try an automatic detection of MI / REST labels
+    # ==> MI in red and REST in blue
+    # otherwise we use the default class1=red class2=blue
+    class1color = str('rgba(255,0,0,1)')
+    fill1color = str('rgba(255,0,0,0.3)')
+    class2color = str('rgba(0,0,255,1)')
+    fill2color = str('rgba(0,0,255,0.3)')
+    if "rest" in class1label.lower() and "mi" in class2label.lower():
+        class1color = str('rgba(0,0,255,1)')
+        fill1color = str('rgba(0,0,255,0.3)')
+        class2color = str('rgba(255,0,0,1)')
+        fill2color = str('rgba(255,0,0,0.3)')
+
     # Define traces
     xfreqs = freqs[index_fmin:index_fmax]
 
@@ -235,20 +248,20 @@ def plot_comparison_plotly(Power_class1, Power_class2, Rsquare, freqs, channel,
                              hoverinfo='skip', showlegend=False))
     fig.add_trace(go.Scatter(y=Selected_class1 + factor*Selected_class1_STD,
                              x=xfreqs, mode='lines', line_color='rgba(0,0,0,0)',
-                             hoverinfo='skip', showlegend=False, fill='tonexty', fillcolor='rgba(0,0,255,0.3)'))
+                             hoverinfo='skip', showlegend=False, fill='tonexty', fillcolor=fill1color))
     fig.add_trace(go.Scatter(y=Selected_class2 - factor*Selected_class2_STD,
                              x=xfreqs, mode='lines', line_color='rgba(0,0,0,0)',
                              hoverinfo='skip', showlegend=False))
     fig.add_trace(go.Scatter(y=Selected_class2 + factor*Selected_class2_STD,
                              x=xfreqs, mode='lines', line_color='rgba(0,0,0,0)',
-                             hoverinfo='skip', showlegend=False, fill='tonexty', fillcolor='rgba(255,0,0,0.3)'))
+                             hoverinfo='skip', showlegend=False, fill='tonexty', fillcolor=fill2color))
 
     fig.add_trace(go.Scatter(y=Selected_class1, x=xfreqs, name=class1label,
-                             mode='lines', line_color='rgba(0,0,255,1)', line_width=5))
+                             mode='lines', line_color=class1color, line_width=5))
     fig.add_trace(go.Scatter(y=Selected_class2, x=xfreqs, name=class2label,
-                        mode='lines', line_color='rgba(255,0,0,1)', line_width=5))
+                        mode='lines', line_color=class2color, line_width=5))
     fig.add_trace(go.Scatter(y=Rsquare[channel, index_fmin:index_fmax], x=xfreqs, name="R2",
-                        mode='lines', line_color='rgba(0,0,0,1)', line_width=5, yaxis='y2'), secondary_y=True)
+                        mode='lines', line_color='rgba(0,0,0,1)', line_width=3, yaxis='y2'), secondary_y=True)
 
     fulltitle = str(title +', Sensor: ' + channel_array[channel])
     fig.update_layout(title_text=fulltitle,
