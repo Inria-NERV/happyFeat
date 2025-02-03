@@ -13,5 +13,7 @@ A subset of channels and frequencies can be determined using the top menu option
 
 The R² map corresponding to this subset can be visualized using the button "*R² map (sub select.)*"
 
+<center><img src="../../img/hf_gui_autofeat.png" alt="HappyFeat main GUI, Extraction part highlighted" style='object-fit: contain;'/></center>
+
 !!! note
     More flexibility with this mechanism (e.g. number of features extracted, metric of selection, etc.) will be included in future versions of *HappyFeat*.

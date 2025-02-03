@@ -29,7 +29,7 @@ python
 
 A GUI is displayed, allowing to select a **[workspace](workspaces.md)**. You can browse for the location of your choice, choose from a list of existing **workspaces**, or create a new one.
 
-<center><img src="../../img/hf_gui1.png" alt="HappyFeat workspace selection GUI" style='height: 50%; width: 50%; object-fit: contain;'/></center>
+<center><img src="../../img/hf_welcome2.png" alt="HappyFeat workspace selection GUI" style='height: 50%; width: 50%; object-fit: contain;'/></center>
 
 ## Setting up the workspaces location
 
@@ -39,10 +39,12 @@ First, browse for the folder in which you would like **HappyFeat** to create and
 
 Click on "Start new workspace" and enter a name for your workspace. A new assistant GUI will open, allowing you to set up the BCI experiment parameters. 
 
-<center><img src="../../img/hf_gui2.png" alt="HappyFeat BCI pipeline assistant GUI" style='height: 50%; width: 50%; object-fit: contain;'/></center>
+<center><img src="../../img/hf_setup2.png" alt="HappyFeat BCI pipeline assistant GUI" style='height: 50%; width: 50%; object-fit: contain;'/></center>
 
 In the "BCI Platform" drop-down menu, select which BCI software you want to use for processing the EEG data (OpenViBE or Timeflux). 
+
 - If you select **Timeflux**, make sure the `timeflux` and `timeflux_dsp` packages are installed in your environment.
+
 - If you select **OpenViBE**, you also need to browse for the *OpenViBE designer* application on your computer (either the .exe, .sh or .cmd file).
 
 In the "Protocol Selection" drop-down menu, select the metric(s)/feature(s) you want to work with (eg: `Power Spectrum based classification`). As of today, you can choose between **Power Spectral Density**, **Connectivity-based Node Strength**, or **mixing both**.
