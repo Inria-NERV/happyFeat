@@ -68,20 +68,26 @@ cp <happyfeatInstallFolder>/MNE-eegbci-data/files/eegmmidb/1.0.0/S001/*.edf <wor
 
 The files should appear in the list in the left panel of the application (**Feature Extraction**).
 
-<center><img src="../../img/hf_gui_new_2.png" alt="HappyFeat workspace selection GUI, list of signals highlighted" style='object-fit: contain;'/></center>
+<center><img src="../../img/hf_gui_new_2.png" alt="HappyFeat main GUI, list of signals highlighted" style='object-fit: contain;'/></center>
 
 ## Extracting the features
 
 Before extracting features from our EDF files, we still have a few more things to set up.
 
-Click on the `Extraction` menu in the top bar, and `Set Class Stimulations`. Enter **`T0;T2`** and validate.
+* Click on the `Extraction` menu in the top bar, and `Set Class Stimulations`. Enter **`T0;T2`** and validate.
+
+<center><img src="../../img/hf_set_extract_stims.png" alt="HappyFeat main GUI, extraction stimulation in top menu" style='height: 66%; width: 66%; object-fit: contain;'/></center>
 
 !!! note
 	Those are the trigger names in the EDF files for the Physionet dataset. T0 corresponds to the onset of a "Rest" trial, and T2 to a "imagine Right Hand movement" trial.
+	
+	Since we have set this HappyFeat workspace to work with "MI" as Class 1 and "REST" as Class 2 (in the BCI pipeline setup GUI), we need to set the stimulations in the order T2;T0.
 
-Then, in the `Extraction Parameters`, set `Epoch of Interest (EOI) (s)` to 3, and leave the default values for other parameters.
+* Then, in the `Extraction Parameters`, set `Epoch of Interest (EOI) (s)` to 3, and leave the default values for other parameters.
 
-Select the 3 files in the list, and click **`Extract Features and trials`**. After a few seconds of processing, the extracted files should appear in the list in the central panel of the GUI.
+* Select the 3 files in the list, and click **`Extract Features and trials`**. After a few seconds of processing, the extracted files should appear in the list in the central panel of the GUI.
+
+<center><img src="../../img/hf_gui_new_3.png" alt="HappyFeat main GUI, list of extracted files highlighted" style='object-fit: contain;'/></center>
 
 ## Visualizing metrics
 
@@ -98,6 +104,8 @@ In the top menu, click on `Feature AutoSelect` then set the channel subselection
 `C5..;C3..;C1..;Cp5.;Cp3.;Cp1.;Fc5.;Fc3.;Fc1.;Cz..;Cpz.;Fcz.;C6..;C4..;C2..;Cp6.;Cp4.;Cp2.;Fc6.;Fc4.;Fc2.`
 
 ... and the frequency range to `7:35`. 
+
+<center><img src="../../img/hf_set_subselect.png" alt="HappyFeat main GUI, top menu to set chan/freq subselections" style='height: 75%; width: 75%; object-fit: contain;'/></center>
 
 !!! note
 	For the channel sub-selection, it's important to respect the (case-sensitive)  original labels in the metadata of the recorded file. Hence the (not very practical) dots `.` and `..` in the channel names above, coming from the Physionet dataset. 
@@ -118,7 +126,9 @@ We can also visualize the *projected topographic map* of R2 values. Set `Topogra
 <center><img src="../../img/topomap.png" alt="HappyFeat's topomap of R² values mapped on the scalp, for 12Hz" style='height: 100%; width: 100%; object-fit: contain;'/></center>
 
 !!! note
-    All figures are saved in the current workspace folder, in html or png format: ```<workspaces>/<newWorkspace>/sessions/<sessionId>/figures/```
+    All figures are saved in the current workspace folder, in html or png format: 
+	
+	```<workspaces>/<newWorkspace>/sessions/<sessionId>/figures/```
 
 ##  Selecting features for training
 

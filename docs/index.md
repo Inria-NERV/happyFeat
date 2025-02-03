@@ -37,18 +37,21 @@ The focus is put on ease of use, trial-and-error training of the classifier, and
 ### Available pipelines: 
 
 * With **OpenViBE**: 
-  * Power Spectrum (Burg method)
-  * Functional Connectivity: Coherence-based Node Strength (Spectral Coherence, Imaginary part of Coherence)
-  * Mixing Both PSD and Connectivity
-  * Single-class classification
+	* Power Spectrum (Burg method)
+	* Functional Connectivity: Coherence-based Node Strength (Spectral Coherence, Imaginary part of Coherence)
+	* Mixing Both PSD and Connectivity
+	* Single-class classification
 * With **Timeflux**: 
-  * Power Spectrum (Welch method)
-  * *more coming soon...*
+	* Power Spectrum (Welch method)
+	* *more coming soon...*
 
 ### Available classifiers:
 * LDA
 
 ### *Coming soon*
+
+* *More pipelines for Timeflux (Welch-based connectivity Node Strength)*
+
 * *More feature classes, more classification algos*
 
 * *Particle swarm algorithm for determining optimal AutoRegressive model order*
