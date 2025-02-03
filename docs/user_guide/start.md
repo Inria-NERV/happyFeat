@@ -17,9 +17,10 @@ happyfeat
 If you cloned the repository from github, the application's entry point is the Python script *happyfeat_welcome.py*. Navigate to the cloned repo and type the following:
 
 ```shell
-python happyfeat/happyfeat_welcome.py
+python -m happyfeat/happyfeat_welcome
 ```
 or
+
 ```shell
 python
 >>> from happyfeat import happyfeat_welcome

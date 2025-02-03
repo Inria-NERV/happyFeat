@@ -1,5 +1,3 @@
-
-
 # Tutorial using Timeflux
 
 This tutorial showcases the main mechanisms of ***HappyFeat***, using **Timeflux** as a processing engine, and EEG data from the *[Physionet](https://physionet.org/content/eegmmidb/1.0.0/)* dataset, loaded using *[MNE](https://mne.tools/stable/generated/mne.datasets.eegbci.load_data.html)*.
@@ -22,15 +20,7 @@ happyfeat
 If you cloned the repository from github, the application's entry point is the Python script *happyfeat_welcome.py*. Navigate to the cloned repo and type the following:
 
 ```shell
-python happyfeat/happyfeat_welcome.py
-```
-
-or
-
-```shell
-python
->>> from happyfeat import happyfeat_welcome
->>> happyfeat_welcome.main()
+python -m happyfeat.happyfeat_welcome
 ```
 
 A "welcome" GUI opens, allowing you to create or load a workspace.
@@ -73,7 +63,7 @@ This will download 3 EDF signal files to the folder: `<happyfeatInstallFolder>/M
 Copy those files to your new workspace's `signals` folder:
 
 ```shell
-cp <happyfeatInstallFolder>/MNE-eegbci-data/files/eegmmidb/1.0.0/*.edf <workspaces>/<newWorkspace>/signals
+cp <happyfeatInstallFolder>/MNE-eegbci-data/files/eegmmidb/1.0.0/S001/*.edf <workspaces>/<newWorkspace>/signals
 ```
 
 The files should appear in the list in the left panel of the application (**Feature Extraction**).
@@ -84,7 +74,7 @@ The files should appear in the list in the left panel of the application (**Feat
 
 Before extracting features from our EDF files, we still have a few more things to set up.
 
-Click on the `Extraction` menu in the top bar, and `Set Class Stimulations`. Enter **`T2;T0`** and validate.
+Click on the `Extraction` menu in the top bar, and `Set Class Stimulations`. Enter **`T0;T2`** and validate.
 
 !!! note
 	Those are the trigger names in the EDF files for the Physionet dataset. T0 corresponds to the onset of a "Rest" trial, and T2 to a "imagine Right Hand movement" trial.
@@ -126,6 +116,9 @@ We can also visualize the *projected topographic map* of R2 values. Set `Topogra
 
 
 <center><img src="../../img/topomap.png" alt="HappyFeat's topomap of R² values mapped on the scalp, for 12Hz" style='height: 100%; width: 100%; object-fit: contain;'/></center>
+
+!!! note
+    All figures are saved in the current workspace folder, in html or png format: ```<workspaces>/<newWorkspace>/sessions/<sessionId>/figures/```
 
 ##  Selecting features for training
 
