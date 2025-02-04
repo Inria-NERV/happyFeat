@@ -121,10 +121,12 @@ class Dialog(QDialog):
         # Extraction stimulations
         self.extractionStims = "OVTK_GDF_Left;OVTK_GDF_Right"  # default values
 
+        # Visualization Parameters
         # Fmin and Fmax for R2map and comparison plots: default values
         # (can be set by top menu options)
         self.userFmin = 0
         self.userFmax = 40
+        self.showStandardError = False
 
         # default parameters for automatic selection
         self.autoFeatChannelList = []
@@ -209,12 +211,14 @@ class Dialog(QDialog):
         self.menuVizualization = QMenu("&Visualization")
         self.menuBar.addMenu(self.menuVizualization)
 
-        self.qActionFreqMin = QAction("Set min frequency (R2 map and metric plot)", self)
+        self.qActionFreqMin = QAction("Set min frequency (R2 map and freq. profile)", self)
         self.qActionFreqMin.triggered.connect(lambda: self.vizSetFreqMin())
         self.menuVizualization.addAction(self.qActionFreqMin)
-        self.qActionFreqMax = QAction("Set max frequency (for R2 map and metric plot)", self)
+        self.qActionFreqMax = QAction("Set max frequency (R2 map and freq. profile)", self)
         self.qActionFreqMax.triggered.connect(lambda: self.vizSetFreqMax())
         self.menuVizualization.addAction(self.qActionFreqMax)
+        self.qActionShowSem = QAction("Show Standard Error in Freq. Profile", self, checkable=True)
+        self.menuVizualization.addAction(self.qActionShowSem)
 
         # Menu "Auto-select"
         self.menuAutoSelect = QMenu("&Feature AutoSelect")
@@ -404,28 +408,32 @@ class Dialog(QDialog):
         # Param : Electrode to use for PSD display
         self.electrodePsd = QLineEdit()
         self.electrodePsd.setText('CP3')
-        self.formLayoutViz.addRow('Sensor (metric comparison)', self.electrodePsd)
+        self.formLayoutViz.addRow('Sensor (freq. profile)', self.electrodePsd)
         # Param : Frequency to use for Topography
         self.freqTopo = QLineEdit()
         self.freqTopo.setText('12')
-        self.formLayoutViz.addRow('Frequency (Hz) (topomap)', self.freqTopo)
+        self.formLayoutViz.addRow('Topomap Frequency (Hz)', self.freqTopo)
         # Param : checkbox for colormap scaling
         self.colormapScale = QCheckBox()
         self.colormapScale.setTristate(False)
         self.colormapScale.setChecked(True)
         self.formLayoutViz.addRow('Scale Colormap for max contrast', self.colormapScale)
-        # Param : checkbox for considering Class2-Class1 sign for AutoFeat
-        # self.autofeatUseSign = QCheckBox()
-        # self.autofeatUseSign.setTristate(False)
-        # self.autofeatUseSign.setChecked(False)
-        # self.formLayoutViz.addRow('Class2 > class1 (Colormap and AutoFeat)', self.autofeatUseSign)
 
-        self.autofeatUseSignComboBox = QComboBox()
-        self.useSignIdx = 0
-        for idxUseSign, key in enumerate(self.useR2SignDict):
-            self.autofeatUseSignComboBox.addItem(self.useR2SignDict[key], idxUseSign)
-        self.autofeatUseSignComboBox.setCurrentIndex(0)
-        self.formLayoutViz.addRow('Consider R2 sign', self.autofeatUseSignComboBox)
+        # Consider sign of class2-class1 (R2map/topomap colors, NOT AutoFeat selection)
+        # Not the same options given between pipelines 1-2-3 and 4 (BCINET)
+        useSignLabel = str(self.class1Label + ' vs ' + self.class2Label + " (signed R2)")
+        if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+            self.autofeatUseSign = QCheckBox()
+            self.autofeatUseSign.setTristate(False)
+            self.autofeatUseSign.setChecked(False)
+            self.formLayoutViz.addRow(useSignLabel, self.autofeatUseSign)
+        else:
+            self.autofeatUseSignComboBox = QComboBox()
+            self.useSignIdx = 0
+            for idxUseSign, key in enumerate(self.useR2SignDict):
+                self.autofeatUseSignComboBox.addItem(self.useR2SignDict[key], idxUseSign)
+            self.autofeatUseSignComboBox.setCurrentIndex(0)
+            self.formLayoutViz.addRow(useSignLabel, self.autofeatUseSignComboBox)
 
         self.layoutViz.addLayout(self.formLayoutViz)
 
@@ -437,11 +445,11 @@ class Dialog(QDialog):
 
         if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
             # Viz options for "Spectral Power" pipeline...
-            self.btn_r2map = QPushButton("Display Frequency-channel R² map")
-            self.btn_timefreq = QPushButton("Display Time-Frequency ERD/ERS analysis")
-            self.btn_psd = QPushButton("Display PSD comparison between classes")
-            self.btn_topo = QPushButton("Display Brain Topography")
-            titleR2 = "Freq.-chan. map of R² values of spectral power between classes"
+            self.btn_r2map = QPushButton("Freq.-channel R² map")
+            self.btn_timefreq = QPushButton("Time-Freq. ERD/ERS analysis")
+            self.btn_psd = QPushButton("Frequency profile")
+            self.btn_topo = QPushButton("Brain Topography")
+            titleR2 = "Freq.-chan. map of R² values of PSD"
             titleTimeFreq = "Time-Frequency ERD/ERS analysis"
             titlePsd = "Power Spectrum "
             metricPsd = "Power Spectral Density (dB)"
@@ -466,10 +474,10 @@ class Dialog(QDialog):
 
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             # Viz options for "Connectivity" pipeline...
-            self.btn_r2map = QPushButton("Display Frequency-channel R² map (NODE STRENGTH)")
-            self.btn_timefreq = QPushButton("Display Time-Frequency ERD/ERS analysis")
-            self.btn_metric = QPushButton("Display NODE STRENGTH comparison between classes")
-            self.btn_topo = QPushButton("Display NODE STRENGTH Brain Topography")
+            self.btn_r2map = QPushButton("Freq.-chan. R² map")
+            self.btn_timefreq = QPushButton("Time-Freq. ERD/ERS analysis")
+            self.btn_metric = QPushButton("Frequency profile")
+            self.btn_topo = QPushButton("Brain Topography")
             titleR2 = "R² values of node strength"
             titleTimeFreq = "Time-Frequency ERD/ERS analysis"
             titleMetric = "Connectivity-based node strength, "
@@ -506,9 +514,9 @@ class Dialog(QDialog):
 
             # Viz options for "Spectral Power" pipeline...
             self.btn_r2map = QPushButton("Freq.-chan. R² map")
-            self.btn_psd = QPushButton("PSD for the 2 classes")
+            self.btn_psd = QPushButton("Frequency profile")
             self.btn_topo = QPushButton("Brain Topography")
-            titleR2 = "Freq.-chan. map of R² values of spectral power between classes"
+            titleR2 = "Freq.-chan. map of R² values of PSD"
             titleTimeFreq = "Time-Frequency ERD/ERS analysis"
             titlePsd = "Power Spectrum "
             metricPsd = "Power Spectral Density (dB)"
@@ -528,7 +536,7 @@ class Dialog(QDialog):
 
             # Viz options for "Connectivity" pipeline...
             self.btn_r2map2 = QPushButton("Freq.-chan. R² map")
-            self.btn_metric = QPushButton("NodeStr. for the 2 classes")
+            self.btn_metric = QPushButton("Frequency profile")
             self.btn_topo2 = QPushButton("Brain Topography")
             titleR2_c = "Freq.-chan. map of R² values of node strength"
             titleTimeFreq_c = "Time-Frequency ERD/ERS analysis"
@@ -1930,8 +1938,11 @@ class Dialog(QDialog):
         self.electrodePsd.setEnabled(myBool)
         self.freqTopo.setEnabled(myBool)
         self.colormapScale.setEnabled(myBool)
-        # self.autofeatUseSign.setEnabled(myBool)
-        self.autofeatUseSignComboBox.setEnabled(myBool)
+
+        if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+            self.autofeatUseSign.setEnabled(myBool)
+        else:
+            self.autofeatUseSignComboBox.setEnabled(myBool)
 
         self.btn_loadFilesForViz.setEnabled(myBool)
         if myBool and self.plotBtnsEnabled:
@@ -1996,14 +2007,19 @@ class Dialog(QDialog):
         if checkFreqsMinMax(self.userFmin, self.userFmax, self.samplingFreq):
             each_point = 1  # Todo : make parameter?
 
-            # if "consider the sign of Class2-Class1" is checked,
+            # if "consider the sign" is checked,
             # modify the R2 to display
             tempR2 = features.Rsquare.copy()
 
-            useSign = self.autofeatUseSignComboBox.currentIndex()
+            if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+                # if BCINET: only a checkbox, and if checked we reverse the sign
+                useSign = 1 if self.autofeatUseSign.isChecked() else 0
+            else:
+                useSign = self.autofeatUseSignComboBox.currentIndex()
+
             if useSign > 0:
                 tempRsign = features.Rsign_tab.copy()
-                if useSign == 2:
+                if useSign == 1:
                     # reverse the sign for the Rsquare map...
                     tempRsign[np.where(features.Rsign_tab < 0)] = 1
                     tempRsign[np.where(features.Rsign_tab > 0)] = -1
@@ -2221,12 +2237,13 @@ class Dialog(QDialog):
                 class1 = self.parameterDict["AcquisitionParams"]["Class1"]
                 class2 = self.parameterDict["AcquisitionParams"]["Class2"]
                 each_point = 1
+                showSem = self.qActionShowSem.isChecked()
                 fig = plot_comparison_plotly(
                     features.power_cond1, features.power_cond2,
                     features.Rsquare, features.freqs_array,
                     electrodeIdx, features.electrodes_final,
                     each_point, fmin, fmax, features.fres, class1, class2,
-                    metricLabel, isLog, title)
+                    metricLabel, isLog, showSem, title)
 
                 now = datetime.datetime.now()
                 file = str(metric_suffix + "_Comparison_" + electrodeToDisp)
@@ -2248,10 +2265,15 @@ class Dialog(QDialog):
         tempR2 = features.Rsquare.copy()
         # if "consider the sign" is checked,
         # modify the R2 to display
-        useSign = self.autofeatUseSignComboBox.currentIndex()
+        if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+            # if BCINET: only a checkbox, and if checked we reverse the sign
+            useSign = 2 if self.autofeatUseSign.isChecked() else 0
+        else:
+            useSign = self.autofeatUseSignComboBox.currentIndex()
+
         if useSign > 0:
             tempRsign = features.Rsign_tab.copy()
-            if useSign == 2:
+            if useSign == 1:
                 # reverse the sign for the Rsquare map...
                 tempRsign[np.where(features.Rsign_tab < 0)] = 1
                 tempRsign[np.where(features.Rsign_tab > 0)] = -1
@@ -2523,10 +2545,21 @@ class Dialog(QDialog):
                 # we apply the sign map to Rsquare
                 # ==> R² values corresponding to Class1 < Class2 will be negative and won't count
                 # for the search of max values
-                useSign = self.autofeatUseSignComboBox.currentIndex()
+                # if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+                #     # if BCINET: only a checkbox, and if checked we DON'T reverse the sign
+                #     # (result.Rsign_tab = class2 - class1 = REST - MI)
+                #     # ==> we want to select the highest REST>MI features
+                #     useSign = 1 if self.autofeatUseSign.isChecked() else 0
+                # else:
+                #     useSign = self.autofeatUseSignComboBox.currentIndex()
+
+                # WARNING This mechanism is disabled for now.
+                # "consider sign" is only used to change the way the R2 map is displayed
+                useSign = 0
+
                 if useSign > 0:
                     tempRsign = result.Rsign_tab.copy()
-                    if useSign == 2:
+                    if useSign == 1:
                         # reverse the sign for the Rsquare map...
                         tempRsign[np.where(result.Rsign_tab < 0)] = 1
                         tempRsign[np.where(result.Rsign_tab > 0)] = -1

@@ -190,9 +190,9 @@ def time_frequency_map(time_freq, time, freqs, channel, fmin, fmax, fres, each_p
     # plt.show()
 
 # Plot the two class comparison of PSDs, plus the R2 value for each freq, on the same graph
-def plot_comparison_plotly(Power_class1, Power_class2, Rsquare, freqs, channel,
-                           channel_array, each_point, fmin, fmax, fres,
-                           class1label, class2label, metricLabel, isLog, title):
+def plot_comparison_plotly(Power_class1, Power_class2, Rsquare,
+                           freqs, channel, channel_array, each_point, fmin, fmax, fres,
+                           class1label, class2label, metricLabel, isLog, showSem, title):
 
     STD_class2 = sem(Power_class2[:, channel, :], axis=0)
     STD_class1 = sem(Power_class1[:, channel, :], axis=0)
@@ -241,28 +241,31 @@ def plot_comparison_plotly(Power_class1, Power_class2, Rsquare, freqs, channel,
      # Create plot and add traces one after the other, + the "variance" areas for class 1 & 2
     fig = make_subplots(specs=[[{"secondary_y": True}]])
 
-    # "Variance" traces
-    factor = 1  # make it more visible
-    fig.add_trace(go.Scatter(y=Selected_class1 - factor*Selected_class1_STD,
-                             x=xfreqs, mode='lines', line_color='rgba(0,0,0,0)',
-                             hoverinfo='skip', showlegend=False))
-    fig.add_trace(go.Scatter(y=Selected_class1 + factor*Selected_class1_STD,
-                             x=xfreqs, mode='lines', line_color='rgba(0,0,0,0)',
-                             hoverinfo='skip', showlegend=False, fill='tonexty', fillcolor=fill1color))
-    fig.add_trace(go.Scatter(y=Selected_class2 - factor*Selected_class2_STD,
-                             x=xfreqs, mode='lines', line_color='rgba(0,0,0,0)',
-                             hoverinfo='skip', showlegend=False))
-    fig.add_trace(go.Scatter(y=Selected_class2 + factor*Selected_class2_STD,
-                             x=xfreqs, mode='lines', line_color='rgba(0,0,0,0)',
-                             hoverinfo='skip', showlegend=False, fill='tonexty', fillcolor=fill2color))
+    if showSem:
+        # "Standard error" traces
+        factor = 1  # make it more visible
+        fig.add_trace(go.Scatter(y=Selected_class1 - factor*Selected_class1_STD,
+                                 x=xfreqs, mode='lines', line_color='rgba(0,0,0,0)',
+                                 hoverinfo='skip', showlegend=False))
+        fig.add_trace(go.Scatter(y=Selected_class1 + factor*Selected_class1_STD,
+                                 x=xfreqs, mode='lines', line_color='rgba(0,0,0,0)',
+                                 hoverinfo='skip', showlegend=False, fill='tonexty', fillcolor=fill1color))
+        fig.add_trace(go.Scatter(y=Selected_class2 - factor*Selected_class2_STD,
+                                 x=xfreqs, mode='lines', line_color='rgba(0,0,0,0)',
+                                 hoverinfo='skip', showlegend=False))
+        fig.add_trace(go.Scatter(y=Selected_class2 + factor*Selected_class2_STD,
+                                 x=xfreqs, mode='lines', line_color='rgba(0,0,0,0)',
+                                 hoverinfo='skip', showlegend=False, fill='tonexty', fillcolor=fill2color))
 
+    # Normal traces
     fig.add_trace(go.Scatter(y=Selected_class1, x=xfreqs, name=class1label,
                              mode='lines', line_color=class1color, line_width=5))
     fig.add_trace(go.Scatter(y=Selected_class2, x=xfreqs, name=class2label,
                         mode='lines', line_color=class2color, line_width=5))
     fig.add_trace(go.Scatter(y=Rsquare[channel, index_fmin:index_fmax], x=xfreqs, name="R2",
-                        mode='lines', line_color='rgba(0,0,0,1)', line_width=3, yaxis='y2'), secondary_y=True)
+                        mode='lines', line_color='rgba(0,0,0,1)', line_width=2, yaxis='y2'), secondary_y=True)
 
+    # Title, layout, etc.
     fulltitle = str(title +', Sensor: ' + channel_array[channel])
     fig.update_layout(title_text=fulltitle,
                       plot_bgcolor='white',
@@ -356,9 +359,10 @@ def plot_Rsquare_calcul_welch(Rsquare, channel_array, freq, smoothing, fres, eac
     # plt.show()
 
 # New version of the R² map using plotly
-def plot_Rsquare_plotly(Rsquare, channel_array, freq, fres, each_point, fmin, fmax, colormapScale, useSign, title):
+def plot_Rsquare_plotly(Rsquare, channel_array, freq, fres, each_point,
+                        fmin, fmax, colormapScale, useSign, title):
+
     # Get frequencies to display
-    frequencies = []
     nearest_fmin, index_fmin = find_nearest(freq, fmin)
     nearest_fmax, index_fmax = find_nearest(freq, fmax)
     frequencies = freq[index_fmin:index_fmax+1]
@@ -374,7 +378,7 @@ def plot_Rsquare_plotly(Rsquare, channel_array, freq, fres, each_point, fmin, fm
         if np.nanmin(Rsquare_reshape) < 0:
             vmin = -np.amax(abs(Rsquare_reshape))
 
-    # If "consider sign of Class2-Class1" btn is checked :
+    # If we consider sign:
     # Blue (negative) to white (zero) to red (positive) colormap
     if useSign:
         fig = go.Figure(data=go.Heatmap(z=Rsquare_reshape,
