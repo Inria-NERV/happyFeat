@@ -1353,6 +1353,9 @@ class RunClassifier(QtCore.QThread):
         trainingpath = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train")
         modifyScenarioGeneralSettings(str(destScenFile), self.extractDict)
 
+        # Make sure we use the correct Acquisition parameters
+        modifyAcqScenario(self.parameterDict["AcquisitionParams"], str(destScenFile))
+
         # Update the session ID (to write the results in the correct place
         modifySessionId(self.currentSessionId, destScenFile)
 
