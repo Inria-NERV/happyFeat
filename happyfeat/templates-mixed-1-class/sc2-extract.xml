@@ -1,7 +1,7 @@
 <OpenViBE-Scenario>
 	<FormatVersion>2</FormatVersion>
 	<Creator>OpenViBE Designer</Creator>
-	<CreatorVersion>3.6.0</CreatorVersion>
+	<CreatorVersion>3.5.0</CreatorVersion>
 	<Settings>
 		<Setting>
 			<Identifier>(0xd84e1a1e, 0x3991fc6e)</Identifier>
@@ -857,11 +857,15 @@
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
-					<Value>480</Value>
+					<Value>320</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x30a4e5c9, 0x83502953)</Identifier>
 					<Value></Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0x341d3912, 0x1478de86)</Identifier>
+					<Value>1</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
@@ -917,11 +921,15 @@
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
-					<Value>480</Value>
+					<Value>320</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x30a4e5c9, 0x83502953)</Identifier>
 					<Value></Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0x341d3912, 0x1478de86)</Identifier>
+					<Value>1</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
@@ -2410,11 +2418,11 @@
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
-					<Value>96</Value>
+					<Value>80</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
-					<Value>320</Value>
+					<Value>336</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x30a4e5c9, 0x83502953)</Identifier>
@@ -2557,17 +2565,6 @@
 	</Boxes>
 	<Links>
 		<Link>
-			<Identifier>(0x000003c6, 0x00005435)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x00003bcb, 0x00001ea5)</BoxIdentifier>
-				<BoxOutputIndex>0</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x1f046833, 0x21a8a876)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
 			<Identifier>(0x000003d3, 0x0000261b)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x000065af, 0x0000612d)</BoxIdentifier>
@@ -2597,6 +2594,17 @@
 			</Source>
 			<Target>
 				<BoxIdentifier>(0x00002a3c, 0x00005dfe)</BoxIdentifier>
+				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
+			<Identifier>(0x00000a4f, 0x00004a3a)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x11a6038b, 0x7157c283)</BoxIdentifier>
+				<BoxOutputIndex>1</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x1f046833, 0x21a8a876)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>
@@ -3112,15 +3120,18 @@ baseline in one file, actual trial in another</Text>
 		<Comment>
 			<Identifier>(0x000008e3, 0x0000290d)</Identifier>
 			<Text>Keep only the sub selection of channels
-set by the user</Text>
+set by the user
+
+BCINET : DISABLED AS WE DIRECTLY USE 
+CHANNEL NAMES PROVIDED BY BRAINVISION RECORDER</Text>
 			<Attributes>
 				<Attribute>
 					<Identifier>(0x473d9a43, 0x97fc0a97)</Identifier>
-					<Value>192</Value>
+					<Value>256</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x7234b86b, 0x2b8651a5)</Identifier>
-					<Value>240</Value>
+					<Value>224</Value>
 				</Attribute>
 			</Attributes>
 		</Comment>

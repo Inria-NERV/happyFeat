@@ -1,7 +1,7 @@
 <OpenViBE-Scenario>
 	<FormatVersion>2</FormatVersion>
 	<Creator>OpenViBE Designer</Creator>
-	<CreatorVersion>3.6.0</CreatorVersion>
+	<CreatorVersion>3.5.0</CreatorVersion>
 	<Settings>
 		<Setting>
 			<Identifier>(0x1c0e7c81, 0x94da0a11)</Identifier>
@@ -1204,15 +1204,19 @@
 			<Attributes>
 				<Attribute>
 					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
-					<Value>288</Value>
+					<Value>304</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
-					<Value>496</Value>
+					<Value>464</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x30a4e5c9, 0x83502953)</Identifier>
 					<Value></Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0x341d3912, 0x1478de86)</Identifier>
+					<Value>1</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
@@ -3067,6 +3071,17 @@
 	</Boxes>
 	<Links>
 		<Link>
+			<Identifier>(0x00000021, 0x00004d1c)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x000016ab, 0x0000392e)</BoxIdentifier>
+				<BoxOutputIndex>0</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x1f046833, 0x21a8a876)</BoxIdentifier>
+				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
 			<Identifier>(0x0000019c, 0x000025d8)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x00002746, 0x000038d4)</BoxIdentifier>
@@ -3151,17 +3166,6 @@
 			</Source>
 			<Target>
 				<BoxIdentifier>(0x00006c51, 0x000077b7)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
-			<Identifier>(0x00003573, 0x00002475)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x00004756, 0x00003403)</BoxIdentifier>
-				<BoxOutputIndex>0</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x1f046833, 0x21a8a876)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>
@@ -3618,6 +3622,24 @@
 		</Link>
 	</Links>
 	<Comments>
+		<Comment>
+			<Identifier>(0x000008e3, 0x0000290d)</Identifier>
+			<Text>Keep only the sub selection of channels
+set by the user
+
+BCINET : DISABLED AS WE DIRECTLY USE 
+CHANNEL NAMES PROVIDED BY BRAINVISION RECORDER</Text>
+			<Attributes>
+				<Attribute>
+					<Identifier>(0x473d9a43, 0x97fc0a97)</Identifier>
+					<Value>256</Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0x7234b86b, 0x2b8651a5)</Identifier>
+					<Value>288</Value>
+				</Attribute>
+			</Attributes>
+		</Comment>
 		<Comment>
 			<Identifier>(0x00001cbc, 0x00001777)</Identifier>
 			<Text>For debug purposes...</Text>
