@@ -126,7 +126,7 @@ class Dialog(QDialog):
         # (can be set by top menu options)
         self.userFmin = 0
         self.userFmax = 40
-        self.showStandardError = False
+        self.showStandardError = True
 
         # default parameters for automatic selection
         self.autoFeatChannelList = []
@@ -218,6 +218,7 @@ class Dialog(QDialog):
         self.qActionFreqMax.triggered.connect(lambda: self.vizSetFreqMax())
         self.menuVizualization.addAction(self.qActionFreqMax)
         self.qActionShowSem = QAction("Show Standard Error in Freq. Profile", self, checkable=True)
+        self.qActionShowSem.setChecked(True)
         self.menuVizualization.addAction(self.qActionShowSem)
 
         # Menu "Auto-select"
