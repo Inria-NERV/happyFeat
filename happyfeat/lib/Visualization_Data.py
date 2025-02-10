@@ -194,15 +194,18 @@ def plot_comparison_plotly(Power_class1, Power_class2, Rsquare,
                            freqs, channel, channel_array, each_point, fmin, fmax, fres,
                            class1label, class2label, metricLabel, isLog, showSem, title):
 
-    STD_class2 = sem(Power_class2[:, channel, :], axis=0)
-    STD_class1 = sem(Power_class1[:, channel, :], axis=0)
-    
     if isLog:
         class2 = 10.0 * np.log10(Power_class2[:, channel, :])
         class1 = 10.0 * np.log10(Power_class1[:, channel, :])
+        # STD_class2 = class2.std(axis=0)
+        # STD_class1 = class1.std(axis=0)
+        STD_class2 = sem(class2, axis=0)
+        STD_class1 = sem(class1, axis=0)
     else:
         class2 = Power_class2[:, channel, :]
         class1 = Power_class1[:, channel, :]
+        STD_class2 = sem(Power_class2[:, channel, :], axis=0)
+        STD_class1 = sem(Power_class1[:, channel, :], axis=0)
 
     Aver_class2 = class2.mean(axis=0)
     Aver_class1 = class1.mean(axis=0)
@@ -238,56 +241,64 @@ def plot_comparison_plotly(Power_class1, Power_class2, Rsquare,
     # Define traces
     xfreqs = freqs[index_fmin:index_fmax]
 
-     # Create plot and add traces one after the other, + the "variance" areas for class 1 & 2
-    fig = make_subplots(specs=[[{"secondary_y": True}]])
+    # Create plot and add traces one after the other, + the "variance" areas for class 1 & 2
+    # fig = make_subplots(specs=[[{"secondary_y": True}]])
+    subTitle1 = str("Compared " + metricLabel)
+    subTitle2 = str("R2 values")
+    fig = make_subplots(rows=2, cols=1,  # subplot_titles=(None, None),
+                        x_title="Frequency (Hz)", shared_xaxes=False,
+                        row_heights=[0.75, 0.25],
+                        vertical_spacing=0.025)
 
     if showSem:
         # "Standard error" traces
         factor = 1  # make it more visible
         fig.add_trace(go.Scatter(y=Selected_class1 - factor*Selected_class1_STD,
                                  x=xfreqs, mode='lines', line_color='rgba(0,0,0,0)',
-                                 hoverinfo='skip', showlegend=False))
+                                 hoverinfo='skip', showlegend=False), row=1, col=1)
         fig.add_trace(go.Scatter(y=Selected_class1 + factor*Selected_class1_STD,
                                  x=xfreqs, mode='lines', line_color='rgba(0,0,0,0)',
-                                 hoverinfo='skip', showlegend=False, fill='tonexty', fillcolor=fill1color))
+                                 hoverinfo='skip', showlegend=False, fill='tonexty', fillcolor=fill1color),
+                                 row=1, col=1)
         fig.add_trace(go.Scatter(y=Selected_class2 - factor*Selected_class2_STD,
                                  x=xfreqs, mode='lines', line_color='rgba(0,0,0,0)',
-                                 hoverinfo='skip', showlegend=False))
+                                 hoverinfo='skip', showlegend=False), row=1, col=1)
         fig.add_trace(go.Scatter(y=Selected_class2 + factor*Selected_class2_STD,
                                  x=xfreqs, mode='lines', line_color='rgba(0,0,0,0)',
-                                 hoverinfo='skip', showlegend=False, fill='tonexty', fillcolor=fill2color))
+                                 hoverinfo='skip', showlegend=False, fill='tonexty', fillcolor=fill2color),
+                                 row=1, col=1)
 
     # Normal traces
     fig.add_trace(go.Scatter(y=Selected_class1, x=xfreqs, name=class1label,
-                             mode='lines', line_color=class1color, line_width=5))
+                             mode='lines', line_color=class1color, line_width=5), row=1, col=1)
     fig.add_trace(go.Scatter(y=Selected_class2, x=xfreqs, name=class2label,
-                        mode='lines', line_color=class2color, line_width=5))
-    fig.add_trace(go.Scatter(y=Rsquare[channel, index_fmin:index_fmax], x=xfreqs, name="R2",
-                        mode='lines', line_color='rgba(0,0,0,1)', line_width=2, yaxis='y2'), secondary_y=True)
+                             mode='lines', line_color=class2color, line_width=5), row=1, col=1)
+    fig.add_trace(go.Scatter(y=Rsquare[channel, index_fmin:index_fmax], x=xfreqs, name="R2", showlegend=False,
+                             mode='lines', line_color='rgba(0,0,0,1)', line_width=2, yaxis='y2'), row=2, col=1)
 
     # Title, layout, etc.
-    fulltitle = str(title +', Sensor: ' + channel_array[channel])
+    fulltitle = str(metricLabel +', Sensor: ' + channel_array[channel])
     fig.update_layout(title_text=fulltitle,
                       plot_bgcolor='white',
+                      legend=dict(font=dict(size=18))
                       )
-    fig.update_xaxes(title_text="Frequency (Hz)",
-                     ticks='outside',
+
+    fig.update_xaxes(ticks='outside',
                      showline=True,
                      linecolor='black',
                      gridcolor='lightgrey')
-    fig.update_yaxes(title_text=str(metricLabel),
-                     ticks='outside',
+
+    fig.update_yaxes(ticks='outside',
                      showline=True,
                      linecolor='black',
                      gridcolor='lightgrey',
-                     secondary_y=False)
-    fig.update_yaxes(title_text="R2 value",
-                     showgrid=False,
-                     ticks='outside',
-                     showline=True,
-                     linecolor='black',
-                     range=[0, 1],
-                     secondary_y=True)
+                     title_font=dict(size=16))
+
+    # edit axis labels
+    fig['layout']['yaxis']['title'] = str(metricLabel)
+    fig['layout']['yaxis2']['title'] = str('R2 value')
+    fig.update_yaxes(showticklabels=True, row=1, col=1, title_font=dict(size=16))
+    fig.update_yaxes(showticklabels=True, row=2, col=1, title_font=dict(size=16))
 
     return fig
 
