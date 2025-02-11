@@ -2268,7 +2268,7 @@ class Dialog(QDialog):
         # modify the R2 to display
         if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
             # if BCINET: only a checkbox, and if checked we reverse the sign
-            useSign = 2 if self.autofeatUseSign.isChecked() else 0
+            useSign = 1 if self.autofeatUseSign.isChecked() else 0
         else:
             useSign = self.autofeatUseSignComboBox.currentIndex()
 
