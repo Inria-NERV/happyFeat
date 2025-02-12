@@ -132,6 +132,7 @@ class Dialog(QDialog):
         # default parameters for automatic selection
         self.autoFeatChannelList = []
         self.autoFeatFreqRange = ""
+        self.autoFeatNb = 3  # default
 
         # Work Threads & Progress bars
         self.acquisitionThread = None
@@ -153,25 +154,66 @@ class Dialog(QDialog):
             print("--- Using parameters from workspace file: " + workspaceFile)
             with open(self.workspaceFile) as jsonfile:
                 self.parameterDict = json.load(jsonfile)
-            self.bciPlatform = self.parameterDict["bciPlatform"]
-            self.sensorMontage = self.parameterDict["sensorMontage"]
-            self.customMontagePath = self.parameterDict["customMontagePath"]
-            self.currentSessionId = self.parameterDict["currentSessionId"]
-            self.extractionStims = self.parameterDict["extractionStims"]
-            self.autoFeatFreqRange = self.parameterDict["autoFeatFreqRange"]
-            self.autoFeatChannelList = self.parameterDict["autoFeatChannelList"]
+
+            self.bciPlatform = self.parameterDict.get("bciPlatform")
+            self.sensorMontage = self.parameterDict.get("sensorMontage")
+            self.customMontagePath = self.parameterDict.get("customMontagePath")
+            self.currentSessionId = self.parameterDict.get("currentSessionId")
+            self.extractionStims = self.parameterDict.get("extractionStims")
+            self.autoFeatFreqRange = self.parameterDict.get("autoFeatFreqRange")
+            self.autoFeatChannelList = self.parameterDict.get("autoFeatChannelList")
+            self.autoFeatNb = self.parameterDict.get("autoFeatNb")
             if self.bciPlatform == settings.availablePlatforms[0]:  # openvibe
-                self.ovScript = self.parameterDict["ovDesignerPath"]
+                self.ovScript = self.parameterDict.get("ovDesignerPath")
+                if not self.ovScript:
+                    myMsgBox(str("Error loading " + workspaceFile + ":\n\tkey \"ovScript\" is missing"))
+                    return
             else:
                 self.ovScript = ""
-                
+
+            # check the obtained values
+            if not self.bciPlatform:
+                myMsgBox(str("Error loading " + workspaceFile + ":\n\tkey \"bciPlatform\" is missing"))
+                return
+            if not self.sensorMontage:
+                myMsgBox(str("Error loading " + workspaceFile + ":\n\tkey \"sensorMontage\" is missing"))
+                return
+            if self.sensorMontage == "custom" \
+                and (self.customMontagePath == "" or not self.customMontagePath):
+                myMsgBox(str("Error loading " + workspaceFile + ":\n\tkey \"customMontagePath\" is missing"))
+                return
+            if not self.currentSessionId:
+                # use default
+                self.currentSessionId = 1
+                setKeyValue(self.workspaceFile, "currentSessionId", 1)
+                myMsgBox(str("Warning: missing key \"currentSessionId\" in " + workspaceFile + ". Using default value (1) (and writing it in the .hfw file"))
+            if not self.extractionStims:
+                # use default
+                self.extractionStims = "OVTK_GDF_Left;OVTK_GDF_Right"
+                setKeyValue(self.workspaceFile, "extractionStims", "OVTK_GDF_Left;OVTK_GDF_Right")
+                myMsgBox(str("Warning: missing key \"extractionStims\" in " + workspaceFile + ". Using default value (and writing it in the .hfw file"))
+            if not self.autoFeatFreqRange:
+                # use default
+                self.autoFeatFreqRange = ""
+                setKeyValue(self.workspaceFile, "autoFeatFreqRange", "")
+                myMsgBox(str("Warning: missing key \"autoFeatFreqRange\" in " + workspaceFile + ". Adding (empty) default entry in the .hfw file"))
+            if not self.autoFeatChannelList:
+                # use default
+                self.autoFeatChannelList = []
+                setKeyValue(self.workspaceFile, "autoFeatChannelList", [])
+                myMsgBox(str("Warning: missing key \"autoFeatChannelList\" in " + workspaceFile + ". Adding (empty) default entry in the .hfw file"))
+            if not self.autoFeatNb:
+                # use default
+                self.autoFeatNb = 3
+                setKeyValue(self.workspaceFile, "autoFeatNb", 3)
+                myMsgBox(str("Warning: missing key \"autoFeatNb\" in " + workspaceFile + ". Adding default entry (3) in the .hfw file"))
+
         self.class1Label = self.parameterDict["AcquisitionParams"]["Class1"]
         self.class2Label = self.parameterDict["AcquisitionParams"]["Class2"]
         
         self.useR2SignDict = {0: "No",
                               1: str(self.class1Label + "<" + self.class2Label),
                               2: str(self.class1Label + ">" + self.class2Label)}
-
 
         # -----------------------------------------------------------------------
         # CREATE INTERFACE...
@@ -225,14 +267,15 @@ class Dialog(QDialog):
         # Menu "Auto-select"
         self.menuAutoSelect = QMenu("&Feature AutoSelect")
         self.menuBar.addMenu(self.menuAutoSelect)
-
         self.qActionChanList = QAction("Set &Channel sub-selection", self)
         self.qActionChanList.triggered.connect(lambda: self.autoFeatSetChannelSubselection())
         self.menuAutoSelect.addAction(self.qActionChanList)
-
         self.qActionFreqRange = QAction("Set frequency &Range", self)
         self.qActionFreqRange.triggered.connect(lambda: self.autoFeatSetFreqRange())
         self.menuAutoSelect.addAction(self.qActionFreqRange)
+        self.qActionSetNbFeatAutoSelect = QAction("Set nb. of &Auto-selected features", self)
+        self.qActionSetNbFeatAutoSelect.triggered.connect(lambda: self.autoFeatSetNb())
+        self.menuAutoSelect.addAction(self.qActionSetNbFeatAutoSelect)
 
         # -----------------------------------------------------------------------
         # NEW! LEFT-MOST PART: Signal acquisition & Online classification parts
@@ -2576,7 +2619,7 @@ class Dialog(QDialog):
                     Rsquare_reduced = Rsquare_reduced * Rsign_reduced
 
                 Max_per_electrode = Rsquare_reduced.max(1)
-                indices_max = list(reversed(np.argsort(Max_per_electrode)))[0:3]  # indices of 3 max values within the scope of Index_electrodes
+                indices_max = list(reversed(np.argsort(Max_per_electrode)))[0:self.autoFeatNb]  # indices of [autoFeatNb] max values within the scope of Index_electrodes
                 indices_max_final = [Index_electrode[i] for i in indices_max]
 
                 for idx in indices_max_final:
@@ -2708,6 +2751,34 @@ class Dialog(QDialog):
             # Save in workspace file
             setKeyValue(self.workspaceFile, "autoFeatFreqRange", self.autoFeatFreqRange)
             self.parameterDict["autoFeatFreqRange"] = self.autoFeatFreqRange
+        return
+
+    def autoFeatSetNb(self):
+        # ----------
+        # Set the number of features (channel/freq pairs) automatically selected
+        # ----------
+        text, ok = QInputDialog.getText(self, 'Number of features picked by auto-selection',
+                                        'Enter one number (no value = 3 by default)',
+                                        text=str(self.autoFeatNb))
+        if ok:
+            # Check if it's all alphanumeric
+            for c in text:
+                if not c.isalnum():
+                    myMsgBox("Please use digits [0:9]")
+                    return
+
+            if text == "":
+                self.autoFeatNb = 3
+                return
+
+            if int(text) > 5:
+                myMsgBox("Warning: using more than 5 features may slow down the training process")
+
+            self.autoFeatNb = int(text)
+            # Save in workspace file
+            setKeyValue(self.workspaceFile, "autoFeatNb", self.autoFeatNb)
+            self.parameterDict["autoFeatNb"] = self.autoFeatNb
+
         return
 
     def checkExistenceExtractFiles(self, file):
