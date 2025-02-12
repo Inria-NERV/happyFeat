@@ -377,10 +377,19 @@ class Dialog(QDialog):
                         connectIdx = idxMetric
 
                 metricCombo.setCurrentIndex(connectIdx)
+
+                if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+                    metricCombo.setEnabled(False)
+                    metricCombo.setObjectName("ConnectivityMetric")
                 self.layoutExtractLineEdits.addWidget(metricCombo)
+
             else:
                 lineEditExtractTemp = QLineEdit()
                 lineEditExtractTemp.setText(str(self.extractParamsDict[paramId]))
+                # Add widget, set disabled if we're using the BCINET pipeline...
+                if (paramId == "FreqRes" and self.parameterDict["pipelineType"] == settings.optionKeys[4]):
+                    lineEditExtractTemp.setEnabled(False)
+                    lineEditExtractTemp.setObjectName("FreqRes")
                 self.layoutExtractLineEdits.addWidget(lineEditExtractTemp)
 
         # Label + un-editable list of parameters for reminder
@@ -390,7 +399,7 @@ class Dialog(QDialog):
 
         self.expParamListWidget = QPlainTextEdit()
         self.expParamListWidget.setReadOnly(True)
-        self.expParamListWidget.setStyleSheet("background-color: rgb(200,200,200)")
+        self.expParamListWidget.setStyleSheet("background-color: rgb(100,100,100)")
         self.experimentParamsDict = self.getExperimentalParameters()
         minHeight = 0
         for idx, (paramId, paramVal) in enumerate(self.experimentParamsDict.items()):
@@ -2004,6 +2013,12 @@ class Dialog(QDialog):
         # Extraction part...
         for idx in range(self.layoutExtractLabels.count()):
             self.layoutExtractLineEdits.itemAt(idx).widget().setEnabled(myBool)
+            # special case for BCINET pipeline
+            if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+                objName = self.layoutExtractLineEdits.itemAt(idx).widget().objectName()
+                if objName in ["FreqRes", "ConnectivityMetric"]:
+                    self.layoutExtractLineEdits.itemAt(idx).widget().setEnabled(False)
+
         self.btn_runExtractionScenario.setEnabled(myBool)
         self.btn_updateExtractParams.setEnabled(myBool)
         self.fileListWidget.setEnabled(myBool)
