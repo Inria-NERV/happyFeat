@@ -1,7 +1,6 @@
 import sys
 import os
 import time
-import datetime
 import subprocess
 import platform
 import json
@@ -107,6 +106,8 @@ class Dialog(QDialog):
         self.currentSessionId = None
         self.currentAttempt = []
         self.currentTrainCombination = None
+
+        self.filenameBaseForPlot = None
 
         self.nbThreadsViz = 1
         self.vizThreadStatus = []
@@ -1262,6 +1263,17 @@ class Dialog(QDialog):
             suffix = "-SPECTRUM-CONNECT"
 
         analysisFiles = []
+
+        # Setting filename for future plots...
+        listOfFiles = self.availableFilesForVizList.selectedItems()
+        firstFile = listOfFiles[0].text().replace("-SPECTRUM", "").replace("-CONNECT", "")
+        file = str(firstFile)
+        if len(listOfFiles) > 1:
+            file = str(file + " (plus " + str(len(listOfFiles) - 1) + ") - ")
+        self.filenameBaseForPlot = str(self.workspaceFolder + "/sessions/" + str(self.currentSessionId) + "/figures/" + file)
+
+
+
         for selectedItem in self.availableFilesForVizList.selectedItems():
             analysisFiles.append(selectedItem.text().removesuffix(suffix))
         workingFolder = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "extract")
@@ -2039,11 +2051,9 @@ class Dialog(QDialog):
                                           (useSign > 0),
                                           title)
 
-                now = datetime.datetime.now()
-                file = str(metric_suffix + "_R2map_" + str(now.year) + "." + str('%02d' % now.month) + "." + str('%02d' % now.day))
-                file = str(file + "-" + str('%02d' % now.hour) + "." + str('%02d' % now.minute) + "." + str('%02d' % now.second) + ".html")
-                fullPath = str(self.workspaceFolder + "/sessions/" + str(self.currentSessionId) + "/figures/" + file)
-                plotly.offline.plot(fig, filename=fullPath, auto_open=True)
+                filename = self.filenameBaseForPlot
+                filename = str(filename + metric_suffix + " R2map.html")
+                plotly.offline.plot(fig, filename=filename, auto_open=True)
 
             # Map subselection
             else:
@@ -2074,11 +2084,9 @@ class Dialog(QDialog):
                                           (useSign > 0),
                                           title)
 
-                now = datetime.datetime.now()
-                file = str(metric_suffix + "_R2map_sub_" + str(now.year) + "." + str('%02d' % now.month) + "." + str('%02d' % now.day))
-                file = str(file + "-" + str('%02d' % now.hour) + "." + str('%02d' % now.minute) + "." + str('%02d' % now.second) + ".html")
-                fullPath = str(self.workspaceFolder + "/sessions/" + str(self.currentSessionId) + "/figures/" + file)
-                plotly.offline.plot(fig, filename=fullPath, auto_open=True)
+                filename = self.filenameBaseForPlot
+                filename = str(filename + metric_suffix + " R2map (subselection).html")
+                plotly.offline.plot(fig, filename=filename, auto_open=True)
 
     # Wilcoxon Map. Not used - TODO : delete?
     def btnW2(self, features, title):
@@ -2246,22 +2254,14 @@ class Dialog(QDialog):
                     each_point, fmin, fmax, features.fres, class1, class2,
                     metricLabel, isLog, showSem, title)
 
-                now = datetime.datetime.now()
-                file = str(metric_suffix + "_Comparison_" + electrodeToDisp)
-                file = str(file + "_" + str(now.year) + "." + str('%02d' % now.month) + "." + str('%02d' % now.day))
-                file = str(file + "-" + str('%02d' % now.hour) + "." + str('%02d' % now.minute) + "." + str('%02d' % now.second) + ".html")
-                fullPath = str(self.workspaceFolder + "/sessions/" + str(self.currentSessionId) + "/figures/" + file)
-                plotly.offline.plot(fig, filename=fullPath, auto_open=True)
+                filename = self.filenameBaseForPlot
+                filename = str(filename + metric_suffix + " " + electrodeToDisp + " FreqProfile.html")
+                plotly.offline.plot(fig, filename=filename, auto_open=True)
 
     # Plot "Brain topography", using either Power Spectrum (in same pipeline)
     # or Node Strength (or similar metric) (in Connectivity pipeline)
     def btnTopo(self, features, title, metric_suffix):
         error = True
-
-        now = datetime.datetime.now()
-        file = str(metric_suffix + "_topomap_" + str(now.year) + "." + str('%02d' % now.month) + "." + str('%02d' % now.day))
-        file = str(file + "-" + str('%02d' % now.hour) + "." + str('%02d' % now.minute) + "." + str('%02d' % now.second) + ".png")
-        fullPath = str(self.workspaceFolder + "/sessions/" + str(self.currentSessionId) + "/figures/" + file)
 
         tempR2 = features.Rsquare.copy()
         # if "consider the sign" is checked,
@@ -2290,7 +2290,11 @@ class Dialog(QDialog):
                       features.electrodes_final, int(self.freqTopo.text()), freqMax,
                       features.fres, self.samplingFreq, self.colormapScale.isChecked(),
                       (useSign > 0))
-            plt.savefig(fullPath)
+
+            fullpath = self.filenameBaseForPlot
+            fullpath = str(fullpath + metric_suffix + " " + self.freqTopo.text() + " Topomap.png")
+
+            plt.savefig(fullpath)
             plt.show()
         elif ":" in self.freqTopo.text() \
                 and len(self.freqTopo.text().split(":")) == 2:
@@ -2299,12 +2303,16 @@ class Dialog(QDialog):
                         freqMin = int(self.freqTopo.text().split(":")[0])
                         freqMax = int(self.freqTopo.text().split(":")[1])
                         if 0 < freqMin < freqMax < (self.samplingFreq / 2):
+
+                            fullpath = self.filenameBaseForPlot
+                            fullpath = str(fullpath + metric_suffix + " " + self.freqTopo.text() + " Topomap.png")
+
                             error = False
                             topo_plot(tempR2, title, self.sensorMontage, self.customMontagePath,
                                       features.electrodes_final, int(self.freqTopo.text()), freqMax,
                                       features.fres, self.samplingFreq, self.colormapScale.isChecked(),
                                       (useSign > 0))
-                            plt.savefig(fullPath)
+                            plt.savefig(fullpath)
                             plt.show()
 
         if error:
