@@ -354,6 +354,7 @@ class Dialog(QDialog):
                                                          'CP2', 'FC6', 'FC4', 'FC2']
             self.parameterDict["autoFeatFreqRange"] = "8:30"
             self.parameterDict["autoFeatNb"] = 3
+            self.parameterDict["combiTrainingRange"] = "1:3"
 
             # Acquisition parameters, set in this GUI...
             self.parameterDict["AcquisitionParams"] = {}
@@ -383,6 +384,7 @@ class Dialog(QDialog):
                 workspaceMgmt.setKeyValue(self.workspace, "autoFeatChannelList", self.parameterDict["autoFeatChannelList"])
                 workspaceMgmt.setKeyValue(self.workspace, "autoFeatFreqRange", self.parameterDict["autoFeatFreqRange"])
                 workspaceMgmt.setKeyValue(self.workspace, "autoFeatNb", self.parameterDict["autoFeatNb"])
+                workspaceMgmt.setKeyValue(self.workspace, "combiTrainingRange", self.parameterDict["combiTrainingRange"])
                 workspaceMgmt.setKeyValue(self.workspace, "AcquisitionParams", self.parameterDict["AcquisitionParams"])
                 workspaceMgmt.setKeyValue(self.workspace, "currentSessionId", self.parameterDict["currentSessionId"])
                 workspaceMgmt.newSession(self.workspace, self.parameterDict, "1", extractParamDict)
@@ -457,6 +459,7 @@ class Dialog(QDialog):
                                                   'CP2', 'FC6', 'FC4', 'FC2']
         self.parameterDict["autoFeatFreqRange"] = "7:35"
         self.parameterDict["autoFeatNb"] = 3
+        self.parameterDict["combiTrainingRange"] = "1:3"
 
         # Acquisition parameters, set in this GUI...
         self.parameterDict["AcquisitionParams"] = {}
@@ -487,6 +490,7 @@ class Dialog(QDialog):
             workspaceMgmt.setKeyValue(self.workspace, "autoFeatChannelList", self.parameterDict["autoFeatChannelList"])
             workspaceMgmt.setKeyValue(self.workspace, "autoFeatFreqRange", self.parameterDict["autoFeatFreqRange"])
             workspaceMgmt.setKeyValue(self.workspace, "autoFeatNb", self.parameterDict["autoFeatNb"])
+            workspaceMgmt.setKeyValue(self.workspace, "combiTrainingRange", self.parameterDict["combiTrainingRange"])
             workspaceMgmt.setKeyValue(self.workspace, "AcquisitionParams", self.parameterDict["AcquisitionParams"])
             workspaceMgmt.setKeyValue(self.workspace, "currentSessionId", self.parameterDict["currentSessionId"])
             workspaceMgmt.newSession(self.workspace, self.parameterDict, "1", extractParamDict)

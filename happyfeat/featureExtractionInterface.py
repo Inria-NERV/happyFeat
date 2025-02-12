@@ -133,6 +133,7 @@ class Dialog(QDialog):
         self.autoFeatChannelList = []
         self.autoFeatFreqRange = ""
         self.autoFeatNb = 3  # default
+        self.combiTrainingRange = "1:3"  # default
 
         # Work Threads & Progress bars
         self.acquisitionThread = None
@@ -163,6 +164,7 @@ class Dialog(QDialog):
             self.autoFeatFreqRange = self.parameterDict.get("autoFeatFreqRange")
             self.autoFeatChannelList = self.parameterDict.get("autoFeatChannelList")
             self.autoFeatNb = self.parameterDict.get("autoFeatNb")
+            self.combiTrainingRange = self.parameterDict.get("combiTrainingRange")
             if self.bciPlatform == settings.availablePlatforms[0]:  # openvibe
                 self.ovScript = self.parameterDict.get("ovDesignerPath")
                 if not self.ovScript:
@@ -182,31 +184,32 @@ class Dialog(QDialog):
                 and (self.customMontagePath == "" or not self.customMontagePath):
                 myMsgBox(str("Error loading " + workspaceFile + ":\n\tkey \"customMontagePath\" is missing"))
                 return
+
+            # For other parameters, use default (and create entry)  if the entry doesn't exist
             if not self.currentSessionId:
-                # use default
                 self.currentSessionId = 1
                 setKeyValue(self.workspaceFile, "currentSessionId", 1)
                 myMsgBox(str("Warning: missing key \"currentSessionId\" in " + workspaceFile + ". Using default value (1) (and writing it in the .hfw file"))
             if not self.extractionStims:
-                # use default
                 self.extractionStims = "OVTK_GDF_Left;OVTK_GDF_Right"
                 setKeyValue(self.workspaceFile, "extractionStims", "OVTK_GDF_Left;OVTK_GDF_Right")
                 myMsgBox(str("Warning: missing key \"extractionStims\" in " + workspaceFile + ". Using default value (and writing it in the .hfw file"))
             if not self.autoFeatFreqRange:
-                # use default
                 self.autoFeatFreqRange = ""
                 setKeyValue(self.workspaceFile, "autoFeatFreqRange", "")
                 myMsgBox(str("Warning: missing key \"autoFeatFreqRange\" in " + workspaceFile + ". Adding (empty) default entry in the .hfw file"))
             if not self.autoFeatChannelList:
-                # use default
                 self.autoFeatChannelList = []
                 setKeyValue(self.workspaceFile, "autoFeatChannelList", [])
                 myMsgBox(str("Warning: missing key \"autoFeatChannelList\" in " + workspaceFile + ". Adding (empty) default entry in the .hfw file"))
             if not self.autoFeatNb:
-                # use default
                 self.autoFeatNb = 3
                 setKeyValue(self.workspaceFile, "autoFeatNb", 3)
                 myMsgBox(str("Warning: missing key \"autoFeatNb\" in " + workspaceFile + ". Adding default entry (3) in the .hfw file"))
+            if not self.combiTrainingRange:
+                self.combiTrainingRange = "1:3"
+                setKeyValue(self.workspaceFile, "combiTrainingRange", "1:3")
+                myMsgBox(str("Warning: missing key \"combiTrainingRange\" in " + workspaceFile + ". Adding default entry (1:3) in the .hfw file"))
 
         self.class1Label = self.parameterDict["AcquisitionParams"]["Class1"]
         self.class2Label = self.parameterDict["AcquisitionParams"]["Class2"]
@@ -233,7 +236,7 @@ class Dialog(QDialog):
         self.menuBar.addMenu(self.menuOptions)
 
         # Options / OpenViBE designer browser
-        if self.parameterDict["bciPlatform"] == settings.availablePlatforms[0]:  # openvibe
+        if self.parameterDict.get("bciPlatform") == settings.availablePlatforms[0]:  # openvibe
             self.qActionFindOV = QAction("&Browse for OpenViBE", self)
             self.qActionFindOV.triggered.connect(lambda: self.browseForDesigner())
             self.menuOptions.addAction(self.qActionFindOV)
@@ -276,6 +279,9 @@ class Dialog(QDialog):
         self.qActionSetNbFeatAutoSelect = QAction("Set nb. of &Auto-selected features", self)
         self.qActionSetNbFeatAutoSelect.triggered.connect(lambda: self.autoFeatSetNb())
         self.menuAutoSelect.addAction(self.qActionSetNbFeatAutoSelect)
+        self.qActionSetCombiTrainingRange = QAction("Set range for &Combination training", self)
+        self.qActionSetCombiTrainingRange.triggered.connect(lambda: self.setCombiTrainingRange())
+        self.menuAutoSelect.addAction(self.qActionSetCombiTrainingRange)
 
         # -----------------------------------------------------------------------
         # NEW! LEFT-MOST PART: Signal acquisition & Online classification parts
@@ -1762,11 +1768,21 @@ class Dialog(QDialog):
                     myMsgBox("Error in training: missing BASELINE file. Check your workspace folder and extraction scenario")
                     return
 
+        # Check if the current number of features and the "feature range for combination" are coherent
+        rangeBoundsStr = self.combiTrainingRange.split(":")
+        rangeBounds = [int(rangeBoundsStr[0]), int(rangeBoundsStr[1])]
+        if (rangeBounds[1] > len(self.selectedFeats[0])) or (rangeBounds[0] > len(self.selectedFeats[0])):
+            myMsgBox(
+                "Error: invalid range for combination training. Check the range and the number of selected features.")
+            return
+
+        nbComb = len(range(rangeBounds[0], rangeBounds[1]) ) + 1
+
         # Initialize structure for reporting results in workspace file...
         tempAttempt = {"SignalFiles": self.trainingFiles,
                        "CompositeFile": None, "Features": None, "Score": ""}
         self.currentAttempt = [] 
-        for comb in range(len(self.selectedFeats[0])):
+        for comb in range(nbComb):
             self.currentAttempt.append(tempAttempt.copy())
 
         # LOAD TRAINING FEATURES
@@ -1779,9 +1795,10 @@ class Dialog(QDialog):
         if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
                 or self.parameterDict["pipelineType"] == settings.optionKeys[2]:
             for featWidget in self.selectedFeats[0]:
-                listFeats.append(featWidget.text())
+                if len(listFeats) < rangeBounds[1]:
+                    listFeats.append(featWidget.text())
             listFeatsTemp = listFeats.copy()  # copy the list so that we don't lose it when exiting the scope...
-            for comb in range(len(self.selectedFeats[0])):
+            for comb in range(nbComb):
                 self.currentAttempt[comb]["Features"] = {self.parameterDict["pipelineType"]: list(listFeatsTemp)}
                 listFeatsTemp.pop()  # remove last element. Next iteration has 1 less element, etc.
 
@@ -1791,9 +1808,10 @@ class Dialog(QDialog):
             listFeatsTemp = [[], []]
             for metric in [0, 1]:
                 for featWidget in self.selectedFeats[metric]:
-                    listFeats[metric].append(featWidget.text())
+                    if len(listFeats[metric]) < rangeBounds[1]:
+                        listFeats[metric].append(featWidget.text())
                 listFeatsTemp[metric] = listFeats[metric].copy()
-            for comb in range(len(self.selectedFeats[0])):
+            for comb in range(nbComb):
                 self.currentAttempt[comb]["Features"] = {settings.optionKeys[1]: list(listFeatsTemp[0]),
                                                          settings.optionKeys[2]: list(listFeatsTemp[1])}
                 listFeatsTemp[0].pop()
@@ -1829,7 +1847,7 @@ class Dialog(QDialog):
         #     if self.enableSpeedUp.isChecked():
         #         enableSpeedUp = True
 
-        for comb in range(len(self.selectedFeats[0])):
+        for comb in range(nbComb):
 
             # Load the specific set of features for this combination
             if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
@@ -1881,8 +1899,14 @@ class Dialog(QDialog):
         # and make the training Gui available again
 
         lastCombination = False
+
+        # Check if the current number of features and the "feature range for combination" are coherent
+        rangeBoundsStr = self.combiTrainingRange.split(":")
+        rangeBounds = [int(rangeBoundsStr[0]), int(rangeBoundsStr[1])]
+        nbComb = len(range(rangeBounds[0], rangeBounds[1])) + 1
+
         # Update or kill the progress bar, and the global training timer
-        if(self.currentTrainCombination < len(self.selectedFeats[0])-1):
+        if self.currentTrainCombination < (nbComb-1):
             self.progressBarTrainCombination.increment()
         else:
             self.progressBarTrainCombination.finish()
@@ -1936,7 +1960,7 @@ class Dialog(QDialog):
             bestScore = 0.0
             bestAttempt = 0
             bestFeatures = ""
-            for comb in range(len(self.selectedFeats[0])):
+            for comb in range(nbComb):
                 if float(self.currentAttempt[comb]["Score"]) > bestScore:
                     bestScore = float(self.currentAttempt[comb]["Score"])
                     alreadyDone, attemptId, dummy = \
@@ -2041,6 +2065,7 @@ class Dialog(QDialog):
             # todo : ask user to use GUI 1 ! it's not normal that
             # todo (cont): ... experimental parameters are missing at this point
 
+        print("=== Acquisition/experimental parameters:")
         print(newDict)
         return newDict
 
@@ -2055,7 +2080,6 @@ class Dialog(QDialog):
         elif self.parameterDict["bciPlatform"] == settings.availablePlatforms[1]:  # timeflux
             newDict = settings.pipelineExtractSettings_tf[pipelineKey].copy()
 
-        print(newDict)
         return newDict
 
     # Plot R2 map using Visualization_Data functions
@@ -2780,6 +2804,43 @@ class Dialog(QDialog):
             self.parameterDict["autoFeatNb"] = self.autoFeatNb
 
         return
+
+    def setCombiTrainingRange(self):
+        # ----------
+        # Set the range of features combinations to use in "Combination training"
+        # ----------
+        text, ok = QInputDialog.getText(self, 'Range for finding best training combination',
+                                        'Enter two numbers separated with \":\"', text=self.combiTrainingRange)
+        if ok:
+            # Check if it's all alphanumeric, except for ":"...
+            for c in text:
+                if not c.isalnum():
+                    if c != ":":
+                        myMsgBox("Please respect formatting: two numbers separated with \":\"")
+                        return
+
+            if text == "":
+                self.combiTrainingRange = "1:3"
+                myMsgBox("No values entered. Using default value [1:3]")
+                return
+
+            range = text.split(":")
+            if len(range) != 2:
+                myMsgBox("Please respect formatting: two numbers separated with \":\"")
+                return
+            elif int(range[0]) > int(range[1]):
+                myMsgBox("First number should be inferior...")
+                return
+            elif int(range[1])-int(range[0]) > 4:
+                myMsgBox("Warning: using more than 4 different combinations might result in long processing times")
+
+            self.combiTrainingRange = text
+
+            # Save in workspace file
+            setKeyValue(self.workspaceFile, "combiTrainingRange", self.combiTrainingRange)
+            self.parameterDict["combiTrainingRange"] = self.combiTrainingRange
+        return
+
 
     def checkExistenceExtractFiles(self, file):
         extractFolder = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "extract")
