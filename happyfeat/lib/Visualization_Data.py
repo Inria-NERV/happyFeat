@@ -143,7 +143,7 @@ def time_frequency_map(time_freq, time, freqs, channel, fmin, fmax, fres, each_p
     frequencies = []
 
     time_seres = []
-    print(time)
+    #print(time)
     for i in range(len(freqs)):
         if freqs[i] == fmin:
             index_fmin = i
@@ -465,10 +465,10 @@ def Reorder_plusplus(Rsquare, signTab, electrodes_orig, powerLeft, powerRight, t
                     electrode_array_final.append(electrodes_orig[i])
                     break
 
-    print(index_elec)
+    #print(index_elec)
 
     Rsquare_final = np.zeros([Rsquare.shape[0], Rsquare.shape[1]])
-    print(powerLeft.shape)
+    #print(powerLeft.shape)
     signTab_final = np.zeros([signTab.shape[0], signTab.shape[1]])
     powerLeft_final = np.zeros([powerLeft.shape[0], powerLeft.shape[1], powerLeft.shape[2]])
     powerRight_final = np.zeros([powerRight.shape[0], powerRight.shape[1], powerRight.shape[2]])
@@ -504,10 +504,10 @@ def Reorder_custom(Rsquare, customPath, electrodes_orig, powerLeft, powerRight):
                 index_elec.append(i)
                 break
 
-    print(index_elec)
+    #print(index_elec)
 
     Rsquare_final = np.zeros([Rsquare.shape[0], Rsquare.shape[1]])
-    print(powerLeft.shape)
+    #print(powerLeft.shape)
     powerLeft_final = np.zeros([powerLeft.shape[0], powerLeft.shape[1], powerLeft.shape[2]])
     powerRight_final = np.zeros([powerRight.shape[0], powerRight.shape[1], powerRight.shape[2]])
 
@@ -535,10 +535,10 @@ def Reorder_custom_plus(Rsquare, signTab, customPath, electrodes_orig, powerLeft
                 index_elec.append(i)
                 break
 
-    print(index_elec)
+    #print(index_elec)
 
     Rsquare_final = np.zeros([Rsquare.shape[0], Rsquare.shape[1]])
-    print(powerLeft.shape)
+    #print(powerLeft.shape)
     signTab_final = np.zeros([signTab.shape[0], signTab.shape[1]])
     powerLeft_final = np.zeros([powerLeft.shape[0], powerLeft.shape[1], powerLeft.shape[2]])
     powerRight_final = np.zeros([powerRight.shape[0], powerRight.shape[1], powerRight.shape[2]])
@@ -617,10 +617,10 @@ def Reorder_Rsquare(Rsquare, electrodes_orig, powerLeft, powerRight):
                 print("Electrode " + electrodes_target[k] + " not found in original list!")
 
 
-    print(index_elec)
+    #print(index_elec)
 
     Rsquare_final = np.zeros([Rsquare.shape[0], Rsquare.shape[1]])
-    print(powerLeft.shape)
+    #print(powerLeft.shape)
     powerLeft_final = np.zeros([powerLeft.shape[0], powerLeft.shape[1], powerLeft.shape[2]])
     powerRight_final = np.zeros([powerRight.shape[0], powerRight.shape[1], powerRight.shape[2]])
 
@@ -708,7 +708,7 @@ def time_frequency_map_between_cond(time_freq, time, freqs, channel, fmin, fmax,
     frequencies = []
 
     time_seres = []
-    print(time)
+    #print(time)
     for i in range(len(freqs)):
         if freqs[i] == fmin:
             index_fmin = i

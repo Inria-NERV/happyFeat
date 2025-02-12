@@ -375,6 +375,7 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
 
         self.info2.emit("Computing statistics")
 
+        print("PowerCond1 and PowerCond2 shapes:")
         print(np.shape(power_cond1_final))
         print(np.shape(power_cond2_final))
 
