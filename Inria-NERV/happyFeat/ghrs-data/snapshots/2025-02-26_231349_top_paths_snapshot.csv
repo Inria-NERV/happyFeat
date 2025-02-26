@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/Inria-NERV/happyFeat,11,8
+/Inria-NERV/happyFeat/tree/main/happyfeat,3,1
+/Inria-NERV/happyFeat/actions,1,1
+/Inria-NERV/happyFeat/blob/332b8beb2c62d41766e7674c68533900d5873c6d/happyfeat/templates-mixed-1-class/sc1-monitor-acq.xml,1,1
+/Inria-NERV/happyFeat/blob/BCINET_version/happyfeat/featureExtractionInterface.py,1,1
+/Inria-NERV/happyFeat/blob/BCINET_version/happyfeat/happyfeat_welcome.py,1,1
+/Inria-NERV/happyFeat/blob/BCINET_version/happyfeat/lib/extractMetaData.py,1,1
+/Inria-NERV/happyFeat/blob/BCINET_version/happyfeat/lib/featureExtractUtils.py,1,1
+/Inria-NERV/happyFeat/blob/BCINET_version/happyfeat/lib/workThreads.py,1,1
+/Inria-NERV/happyFeat/blob/main/happyfeat/lib/Visualization_Data.py,1,1
