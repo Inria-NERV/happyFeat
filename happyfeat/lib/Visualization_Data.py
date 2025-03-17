@@ -197,15 +197,17 @@ def plot_comparison_plotly(Power_class1, Power_class2, Rsquare,
     if isLog:
         class2 = 10.0 * np.log10(Power_class2[:, channel, :])
         class1 = 10.0 * np.log10(Power_class1[:, channel, :])
-        # STD_class2 = class2.std(axis=0)
-        # STD_class1 = class1.std(axis=0)
-        STD_class2 = sem(class2, axis=0)
-        STD_class1 = sem(class1, axis=0)
+        STD_class2 = np.std(class2[:, :], axis=0)
+        STD_class1 = np.std(class1[:, :], axis=0)
+        # STD_class2 = sem(class2, axis=0)
+        # STD_class1 = sem(class1, axis=0)
     else:
         class2 = Power_class2[:, channel, :]
         class1 = Power_class1[:, channel, :]
-        STD_class2 = sem(Power_class2[:, channel, :], axis=0)
-        STD_class1 = sem(Power_class1[:, channel, :], axis=0)
+        STD_class2 = np.std(Power_class2[:, channel, :], axis=0)
+        STD_class1 = np.std(Power_class1[:, channel, :], axis=0)
+        # STD_class2 = sem(Power_class2[:, channel, :], axis=0)
+        # STD_class1 = sem(Power_class1[:, channel, :], axis=0)
 
     Aver_class2 = class2.mean(axis=0)
     Aver_class1 = class1.mean(axis=0)
@@ -229,14 +231,14 @@ def plot_comparison_plotly(Power_class1, Power_class2, Rsquare,
     # ==> MI in red and REST in blue
     # otherwise we use the default class1=red class2=blue
     class1color = str('rgba(255,0,0,1)')
-    fill1color = str('rgba(255,0,0,0.3)')
+    fill1color = str('rgba(255,0,0,0.2)')
     class2color = str('rgba(0,0,255,1)')
-    fill2color = str('rgba(0,0,255,0.3)')
+    fill2color = str('rgba(0,0,255,0.2)')
     if "rest" in class1label.lower() and "mi" in class2label.lower():
         class1color = str('rgba(0,0,255,1)')
-        fill1color = str('rgba(0,0,255,0.3)')
+        fill1color = str('rgba(0,0,255,0.2)')
         class2color = str('rgba(255,0,0,1)')
-        fill2color = str('rgba(255,0,0,0.3)')
+        fill2color = str('rgba(255,0,0,0.2)')
 
     # Define traces
     xfreqs = freqs[index_fmin:index_fmax]
@@ -392,8 +394,8 @@ def plot_Rsquare_plotly(Rsquare, channel_array, freq, fres, each_point,
     # If we consider sign:
     # Blue (negative) to white (zero) to red (positive) colormap
     if useSign:
-        fig = go.Figure(data=go.Heatmap(z=Rsquare_reshape,
-                                        y=channel_array,
+        fig = go.Figure(data=go.Heatmap(z=np.flip(Rsquare_reshape, axis=0),
+                                        y=np.flip(channel_array),
                                         x=frequencies,
                                         colorscale='RdBu_r',
                                         zmin=vmin,
@@ -401,8 +403,8 @@ def plot_Rsquare_plotly(Rsquare, channel_array, freq, fres, each_point,
                                         zmax=vmax))
     # Else (normal case) : jet colormap, from zero to max value
     else:
-        fig = go.Figure(data=go.Heatmap(z=Rsquare_reshape,
-                                        y=channel_array,
+        fig = go.Figure(data=go.Heatmap(z=np.flip(Rsquare_reshape, axis=0),
+                                        y=np.flip(channel_array),
                                         x=frequencies,
                                         colorscale='jet',
                                         zmin=vmin,
