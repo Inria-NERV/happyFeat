@@ -736,14 +736,6 @@ class TrainClassifier(QtCore.QThread):
             listElectrodeList.append(header[2:-3])
             trainingSigList.append(path)
 
-            if self.parameterDict["pipelineType"] == optionKeys[4]:
-                baselineFile = trainingFile.replace('TRIALS', 'BASELINE')
-                path = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", baselineFile)
-                header = pd.read_csv(path, nrows=0).columns.tolist()
-                listSampFreq.append(int(header[0].split(':')[1].removesuffix('Hz')))
-                listElectrodeList.append(header[2:-3])
-                trainingSigList.append(path)
-
         if not all(freqsamp == listSampFreq[0] for freqsamp in listSampFreq):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Sampling frequency mismatch (" + str(listSampFreq) + ")")
@@ -787,7 +779,8 @@ class TrainClassifier(QtCore.QThread):
             if selectedFeats2:
                 for feat in selectedFeats2:
                     feat[1] = str( int(float(feat[1]) /self.freqRes))
-
+                    
+        # Compute the "Epoch Average" count, important in the classification scenario.
         epochCount = [0, 0]
         stimEpochLength = float(self.extractDict["StimulationEpoch"])
         if self.parameterDict["pipelineType"] == optionKeys[1]:
@@ -1271,6 +1264,7 @@ class RunClassifier(QtCore.QThread):
         self.parameterDict = parameterDict.copy()
         self.currentSessionId = self.parameterDict["currentSessionId"]
         self.extractDict = parameterDict["Sessions"][self.parameterDict["currentSessionId"]]["ExtractionParams"].copy()
+        self.freqRes = float(self.extractDict["FreqRes"])
         self.samplingFreq = sampFreq
         self.electrodeList = electrodeList
         self.shouldRun = shouldRun
@@ -1300,8 +1294,18 @@ class RunClassifier(QtCore.QThread):
             if not selectedFeats2:
                 self.over.emit(False, errMsg)
                 return
+                
+        # if freqRes != 1, modify the frequency indices of all features
+        if self.freqRes != 1.0:
+            if selectedFeats:
+                for feat in selectedFeats:
+                    feat[1] = str( int(float(feat[1]) /self.freqRes))
 
-        # Computing the "Epoch Average" count, important in the classification scenario.
+            if selectedFeats2:
+                for feat in selectedFeats2:
+                    feat[1] = str( int(float(feat[1]) /self.freqRes))
+
+        # Compute the "Epoch Average" count, important in the classification scenario.
         epochCount = [0, 0]
         stimEpochLength = float(self.extractDict["StimulationEpoch"])
         if self.parameterDict["pipelineType"] == optionKeys[1]:

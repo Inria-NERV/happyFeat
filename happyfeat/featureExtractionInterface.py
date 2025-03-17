@@ -386,10 +386,6 @@ class Dialog(QDialog):
             else:
                 lineEditExtractTemp = QLineEdit()
                 lineEditExtractTemp.setText(str(self.extractParamsDict[paramId]))
-                # Add widget, set disabled if we're using the BCINET pipeline...
-                if (paramId == "FreqRes" and self.parameterDict["pipelineType"] == settings.optionKeys[4]):
-                    lineEditExtractTemp.setEnabled(False)
-                    lineEditExtractTemp.setObjectName("FreqRes")
                 self.layoutExtractLineEdits.addWidget(lineEditExtractTemp)
 
         # Label + un-editable list of parameters for reminder
@@ -1527,14 +1523,6 @@ class Dialog(QDialog):
         for selectedItem in self.fileListWidgetTrain.selectedItems():
             self.trainingFiles.append(selectedItem.text())
 
-        # 1-class specific case: check if "baseline" files also exist
-        if self.parameterDict["pipelineType"] == optionKeys[4]:
-            for trainingFile in self.trainingFiles:
-                baselineFile = trainingFile.replace("TRIALS", "BASELINE")
-                if not os.path.exists(os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", baselineFile)):
-                    myMsgBox("Error in training: missing BASELINE file. Check your workspace folder and extraction scenario")
-                    return
-
         # Initialize structure for reporting results in workspace file...
         self.currentAttempt = {"SignalFiles": self.trainingFiles,
                                   "CompositeFile": None, "Features": None, "Score": ""}
@@ -1768,14 +1756,6 @@ class Dialog(QDialog):
         self.trainingFiles = []
         for selectedItem in self.fileListWidgetTrain.selectedItems():
             self.trainingFiles.append(selectedItem.text())
-
-        # 1-class specific case: check if "baseline" files also exist
-        if self.parameterDict["pipelineType"] == optionKeys[4]:
-            for trainingFile in self.trainingFiles:
-                baselineFile = trainingFile.replace("TRIALS", "BASELINE")
-                if not os.path.exists(os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "train", baselineFile)):
-                    myMsgBox("Error in training: missing BASELINE file. Check your workspace folder and extraction scenario")
-                    return
 
         # Check if the current number of features and the "feature range for combination" are coherent
         rangeBoundsStr = self.combiTrainingRange.split(":")
@@ -2013,11 +1993,6 @@ class Dialog(QDialog):
         # Extraction part...
         for idx in range(self.layoutExtractLabels.count()):
             self.layoutExtractLineEdits.itemAt(idx).widget().setEnabled(myBool)
-            # special case for BCINET pipeline
-            if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
-                objName = self.layoutExtractLineEdits.itemAt(idx).widget().objectName()
-                if objName in ["FreqRes", "ConnectivityMetric"]:
-                    self.layoutExtractLineEdits.itemAt(idx).widget().setEnabled(False)
 
         self.btn_runExtractionScenario.setEnabled(myBool)
         self.btn_updateExtractParams.setEnabled(myBool)
@@ -2630,7 +2605,7 @@ class Dialog(QDialog):
         for result in [results1, results2]:
             if len(result.Rsquare) > 0:
                 result.autoselected = []
-                Rsquare_reduced = result.Rsquare[Index_electrode, idxFreqmin:idxFreqmax]
+                Rsquare_reduced = result.Rsquare[Index_electrode, idxFreqmin:idxFreqmax+1]
 
                 # if "Use the sign" is checked
                 # we apply the sign map to Rsquare
@@ -2654,7 +2629,7 @@ class Dialog(QDialog):
                         # reverse the sign for the Rsquare map...
                         tempRsign[np.where(result.Rsign_tab < 0)] = 1
                         tempRsign[np.where(result.Rsign_tab > 0)] = -1
-                    Rsign_reduced = tempRsign[Index_electrode, idxFreqmin:idxFreqmax]
+                    Rsign_reduced = tempRsign[Index_electrode, idxFreqmin:idxFreqmax+1]
                     Rsquare_reduced = Rsquare_reduced * Rsign_reduced
 
                 Max_per_electrode = Rsquare_reduced.max(1)
@@ -2662,7 +2637,7 @@ class Dialog(QDialog):
                 indices_max_final = [Index_electrode[i] for i in indices_max]
 
                 for idx in indices_max_final:
-                    r2Vals = result.Rsquare[idx, idxFreqmin:idxFreqmax]
+                    r2Vals = result.Rsquare[idx, idxFreqmin:idxFreqmax+1]
                     idxMaxValue = idxFreqmin + np.argmax(r2Vals)
                     # The selected frequency is in "index" mode, we need to translate it to a human-readable format
                     result.autoselected.append((result.electrodes_final[idx], int(freqsArray[idxMaxValue])))

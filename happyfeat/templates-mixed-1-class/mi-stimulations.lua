@@ -43,7 +43,7 @@ function process(box)
 		
 		-- add 1 s of delay before moving on to the actual trial
 		
-		t = t + 1
+		t = t + 2
 
 		-- display cue
 
@@ -55,10 +55,10 @@ function process(box)
 		
 		box:send_stimulation(1, OVTK_GDF_Feedback_Continuous, t, 0)
 		t = t + feedback_duration
-
+		
 		-- ends trial
-
 		box:send_stimulation(1, OVTK_GDF_End_Of_Trial, t, 0)
+		
 		t = t + math.random(end_of_trial_min_duration, end_of_trial_max_duration)
 
 	end
