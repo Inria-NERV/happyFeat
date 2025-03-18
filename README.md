@@ -1,6 +1,6 @@
 # HappyFeat - Interactive framework for clinical BCI applications
 
-[![docs status](https://readthedocs.org/projects/happyfeat/badge/?version=latest)](https://happyfeat.readthedocs.io/en/latest/) [![test: status](https://github.com/Inria-NERV/happyFeat/actions/workflows/test.yaml/badge.svg)](https://github.com/Inria-NERV/happyFeat/actions/workflows/test.yaml) [![PyPI version](https://img.shields.io/pypi/v/medkit-lib.svg?logo=pypi&label=PyPI&logoColor=gold)](https://pypi.org/project/medkit-lib/)  [![License: BSD-3](https://img.shields.io/badge/license-BSD--3--Clause-green.svg)](https://spdx.org/licenses/MIT.html) 
+[![docs status](https://readthedocs.org/projects/happyfeat/badge/?version=latest)](https://happyfeat.readthedocs.io/en/latest/) [![test: status](https://github.com/Inria-NERV/happyFeat/actions/workflows/test.yaml/badge.svg)](https://github.com/Inria-NERV/happyFeat/actions/workflows/test.yaml) [![PyPI version](https://img.shields.io/pypi/v/happyfeat.svg?logo=pypi&label=PyPI&logoColor=gold)](https://pypi.org/project/happyfeat/)  [![License: BSD-3](https://img.shields.io/badge/license-BSD--3--Clause-green.svg)](https://spdx.org/licenses/MIT.html) 
 
 HappyFeat is a software aiming to to simplify the use of BCI pipelines in clinical settings. More precisely, it is a **software assitant for extracting and selecting classification features for BCI**.
 
