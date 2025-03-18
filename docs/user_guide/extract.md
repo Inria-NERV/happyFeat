@@ -23,7 +23,7 @@ Available signal files are shown in the top list of this panel. This list is aut
 !!! tip 
     You can either manually add signal files in your OS file system, or use the generated OpenViBE scenario `sc1-monitor-acq.xml` in the current workspace folder, if in the context of a BCI experiment. This scenario is automatically set up (in the workspace creation step) to write EEG signal files in the correct `signals` folder.
 
-From this list, select one or multiple signal files you're interested in analyzing. Enter the extraction parameters (Epoch of interest, epoch offset from stimulation, autoregressive model order...). 
+From this list, select one or multiple signal files you're interested in analyzing. Enter the extraction parameters (Epoch of interest, epoch offset from stimulation, autoregressive model order...). See [this page](extract_params.md) for more explanation on the extraction parameters. 
 
 Click on **"Extract Feature and Trials"**. EEG signal files (or **runs**) for which the extraction step has been performed appear in the lists of the central and right part of the GUI, meaning they are now available for the analysis ([visualization](visualize.md) and [training](train.md) steps).
 

@@ -1,7 +1,8 @@
 
 # [HappyFeat](https://github.com/Inria-NERV/happyFeat) - Interactive framework for clinical BCI applications
 
-	
+[![docs status](https://readthedocs.org/projects/happyfeat/badge/?version=latest)](https://happyfeat.readthedocs.io/en/latest/) [![test: status](https://github.com/Inria-NERV/happyFeat/actions/workflows/test.yaml/badge.svg)](https://github.com/Inria-NERV/happyFeat/actions/workflows/test.yaml) [![PyPI version](https://img.shields.io/pypi/v/happyfeat.svg?logo=pypi&label=PyPI&logoColor=gold)](https://pypi.org/project/happyfeat/)  [![License: BSD-3](https://img.shields.io/badge/license-BSD--3--Clause-green.svg)](https://spdx.org/licenses/MIT.html) 
+
 <img src="img/brain_icon_vect.png" alt="HappyFeat Logo" style="width:200px;"/>
 
 !!! warning "Testers and feedback wanted!"

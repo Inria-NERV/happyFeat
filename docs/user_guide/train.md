@@ -10,12 +10,13 @@ First, select the relevant sensor/frequency pair(s):
   - A frequency range can be entered, using a colon symbol(`:`) as such: `C4;13:16`
   - If you want to use more than one feature, click `Add Feature` to add a field. 
   - You can remove the last field using `Remove Last Feat`
+  - Alternatively, you can automatically fill these fields by using the [Automatic Feat. Selection](autofeat.md) mechanism. 
   - *Note: If you have setup your workspace to allow for using two metrics, you can choose to use training features for only one of the metrics or for both metrics* 
 
 !!! note
 	These features can be automatically entered using the ["AutoFeat" mechanism](autofeat.md). Note that you can still add/remove training features after using this mechanism.
 
-The number of k-fold partitions to use for the training step can be set. Trials used for training will be segmented using this number of partitions.
+- The **number of k-fold partitions** to use for the cross-validation step can be set.
 
 The list of runs available for training is updated with runs which have undergone feature extraction in this *session* (see paragraph on *sessions* in [workspaces](workspaces.md))
 
