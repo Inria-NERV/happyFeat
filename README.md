@@ -4,6 +4,8 @@
 
 HappyFeat is a software aiming to to simplify the use of BCI pipelines in clinical settings. More precisely, it is a **software assitant for extracting and selecting classification features for BCI**.
 
+[Get started!](https://happyfeat.readthedocs.io/en/latest/)
+
 It gathers all necessary manipulations and analysis in a single convenient GUI, and automates experimental or analytic parameters. The resulting workflow allows for effortlessly selecting the best features, helping to achieve good BCI performance in time-constrained environments. Alternative features based on Functional Connectivity can be used and compared or combined with Power Spectral Density, allowing a network-oriented approach. 
 
 It consists of Qt-based GUIs and Python toolboxes, allowing to realize all steps for customizing and fine-tuning a BCI system: feature extraction & selection, classifier training.
@@ -21,9 +23,10 @@ The focus is put on ease of use, trial-and-error training of the classifier, and
 
 # Requirements
 
-* Python 3.9 or more recent
-* Python packages : shutils / PySide2 / numpy / MNE / matplotlib / scipy / spectrum / statsmodel / pandas
+* Python 3.12.8
+* Python packages : shutils / PySide6 / numpy / MNE / matplotlib / scipy / spectrum / statsmodel / pandas
 * OpenViBE Version 3.6.0: http://openvibe.inria.fr/downloads/
+* ... or [Timeflux](https://timeflux.io)
 
 # Installation & Full documentation
 
