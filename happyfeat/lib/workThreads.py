@@ -1400,16 +1400,16 @@ class RunClassifier(QtCore.QThread):
                 textOut += str("(" + self.parameterDict["pipelineType"] + "):\n")
                 for i in range(len(selectedFeats)):
                     textOut += str(
-                        "\t\t" + "Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+                        "\t\t" + "Channel " + str(selectedFeats[i][0]) + " at " + str(float(selectedFeats[i][1])*self.freqRes) + " Hz\n")
             else:
                 textOut += str("\n\t- Feature(s) for PowSpectrum:\n")
                 for i in range(len(selectedFeats)):
                     textOut += str(
-                        "\t\t" + "Channel " + str(selectedFeats[i][0]) + " at " + str(selectedFeats[i][1]) + " Hz\n")
+                        "\t\t" + "Channel " + str(selectedFeats[i][0]) + " at " + str(float(selectedFeats[i][1])*self.freqRes) + " Hz\n")
                 textOut += str("\n\t- Feature(s) for Connectivity:\n")
                 for i in range(len(selectedFeats2)):
                     textOut += str(
-                        "\t\t" + "Channel " + str(selectedFeats2[i][0]) + " at " + str(selectedFeats2[i][1]) + " Hz\n")
+                        "\t\t" + "Channel " + str(selectedFeats2[i][0]) + " at " + str(float(selectedFeats2[i][1])*self.freqRes) + " Hz\n")
 
             self.exitText = textOut
             self.stop = True
