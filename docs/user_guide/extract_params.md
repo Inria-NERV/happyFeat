@@ -99,7 +99,4 @@ These estimations are then averaged across all windows when performing the [stat
 
     *See above, in the PSD part*
 
-<center><img src="../../img/hf_gui_new_extract.png" alt="HappyFeat main GUI, Extraction part highlighted" style='object-fit: contain;'/></center>
-
-
 ## Next up... 
