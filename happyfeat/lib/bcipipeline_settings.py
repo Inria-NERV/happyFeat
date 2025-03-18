@@ -17,15 +17,15 @@ global optionsComboText
 optionsComboText = {optionKeys[0]: "",
                     optionKeys[1]: "GrazBCI - Power Spectrum Features (2 classes)",
                     optionKeys[2]: "GrazBCI - Connectivity Features (2 classes)",
-                    optionKeys[3]: "GrazBCI - Pow.Spect. + Connectivity Features (2 classes)",
-                    optionKeys[4]: "BCINET - Pow.Spect. + Connectivity (1 class, auto selection)"}
+                    optionKeys[3]: "GrazBCI - Pow.Spect. + Connectivity (2 classes)",
+                    optionKeys[4]: "BCINET - Pow.Spect. + Connectivity (2 classes)"}
 
 global optionsTemplatesDir
 optionsTemplatesDir = {optionKeys[0]: None,
                        optionKeys[1]: "templates-spectralpower",
                        optionKeys[2]: "templates-connectivity",
                        optionKeys[3]: "templates-mixed",
-                       optionKeys[4]: "templates-mixed-1-class"}
+                       optionKeys[4]: "templates-mixed-bcinet"}
 
 global templateScenFilenames
 templateScenFilenames = ["sc1-monitor-acq.xml",
