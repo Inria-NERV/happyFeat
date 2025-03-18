@@ -15,6 +15,12 @@ markdown_extensions:
   - admonition
   - pymdownx.details
   - pymdownx.superfences
+  - pymdownx.arithmatex:
+        generic: true
+    
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
   
 nav:
   - Home: index.md
@@ -34,6 +40,7 @@ nav:
     - Using HappyFeat in BCI experiments: user_guide/bci_hf.md
   - More in depth:
     - Sensor Montages: user_guide/montage.md
+    - Extraction parameters: user_guide/extract_params.md
     - Workspaces: user_guide/workspaces.md
     - Documentation: user_guide/doc.md
     - Contributing: user_guide/contributing.md
