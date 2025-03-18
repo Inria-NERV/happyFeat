@@ -2,6 +2,23 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## 0.3.0
+- [feature] [Timeflux](https://timeflux.io/) can be used as an alternative BCI software to use. For now a single pipeline is available (2-class MI, with PSD using Welch's method)
+- [tutorial] Tutorial & [associated documentation](https://happyfeat.readthedocs.io/en/latest/user_guide/tutorial/), using Timeflux
+- [dependencies] Python 3.12.8, PySide6, updated some packages
+- [install] Environment setup & package installation can be done using conda
+- [workspace] Autofeat parameters now saved in the workspace file
+- [feature] Most viz use [plotly](https://plotly.com/), rendering in a browser with added functionalities and interactivity
+- [feature] Autofeat parameters can be set in a menu in the main GUI, and are now saved in the workspace
+- [feature] Figures generated in HappyFeat are now saved in the workspace (html and png formats) 
+- [feature] Added a mechanism to display the "signed" R2 map
+- [doc] Updated with additional figures 
+- [bugfix] Lots of minor fixes
+
+
+## 0.2.2
+- [pkg] package upload fixup for PyPi
+
 ## 0.2.1
 - [feature] AutoFeat: added option to only consider R2 cases satisfying [class2-class1 > 0] (available via a checkbox in the "visualization" part of the GUI)
 - [bugfix] reviewed/fixed how frequencies are propagated in the app (bugs appeared when using fres != 0): topomap, training, autofeat
