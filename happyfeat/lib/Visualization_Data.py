@@ -393,6 +393,8 @@ def plot_Rsquare_plotly(Rsquare, channel_array, freq, fres, each_point,
 
     # If we consider sign:
     # Blue (negative) to white (zero) to red (positive) colormap
+    # (we flip arrays because plotly displays matrix lines from bottom to top,
+    # but we need our channels to be ordered from top to bottom)
     if useSign:
         fig = go.Figure(data=go.Heatmap(z=np.flip(Rsquare_reshape, axis=0),
                                         y=np.flip(channel_array),
@@ -415,8 +417,8 @@ def plot_Rsquare_plotly(Rsquare, channel_array, freq, fres, each_point,
                       yaxis_nticks=len(channel_array),
                       autosize=True
                       )
-    fig.update_xaxes(title_text="Frequency (Hz)", showgrid=False)
-    fig.update_yaxes(title_text="Channel", showgrid=False)
+    fig.update_xaxes(title_text="Frequency (Hz)", title_font=dict(size=16), showgrid=False)
+    fig.update_yaxes(title_text="Channel", title_font=dict(size=16), showgrid=False)
 
     return fig
 
