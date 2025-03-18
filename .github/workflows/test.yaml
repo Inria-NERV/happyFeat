@@ -20,6 +20,9 @@ jobs:
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
       
+      - name: init conda
+        run: conda init
+        
       - name: Install dependencies
         run: conda env create --name test -f conda_env.yaml
       
