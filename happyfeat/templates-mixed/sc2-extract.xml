@@ -1,7 +1,7 @@
 <OpenViBE-Scenario>
 	<FormatVersion>2</FormatVersion>
 	<Creator>OpenViBE Designer</Creator>
-	<CreatorVersion>3.5.0</CreatorVersion>
+	<CreatorVersion>3.6.0</CreatorVersion>
 	<Settings>
 		<Setting>
 			<Identifier>(0xd84e1a1e, 0x3991fc6e)</Identifier>
@@ -169,7 +169,7 @@
 	<Outputs></Outputs>
 	<Boxes>
 		<Box>
-			<Identifier>(0x000006a3, 0x00005dba)</Identifier>
+			<Identifier>(0x000006a3, 0x00005dbc)</Identifier>
 			<Name>Matrix 3D to 2D</Name>
 			<AlgorithmClassIdentifier>(0x3ab2b81e, 0x73ef01a5)</AlgorithmClassIdentifier>
 			<Inputs>
@@ -196,7 +196,7 @@
 					<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
 					<Name>Dimension to work on</Name>
 					<DefaultValue>0</DefaultValue>
-					<Value>2</Value>
+					<Value>1</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
@@ -232,7 +232,7 @@
 			</Attributes>
 		</Box>
 		<Box>
-			<Identifier>(0x000006a3, 0x00005dbb)</Identifier>
+			<Identifier>(0x000006a3, 0x00005dbd)</Identifier>
 			<Name>Matrix 3D to 2D</Name>
 			<AlgorithmClassIdentifier>(0x3ab2b81e, 0x73ef01a5)</AlgorithmClassIdentifier>
 			<Inputs>
@@ -259,7 +259,7 @@
 					<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
 					<Name>Dimension to work on</Name>
 					<DefaultValue>0</DefaultValue>
-					<Value>2</Value>
+					<Value>1</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
@@ -1378,6 +1378,216 @@
 			</Attributes>
 		</Box>
 		<Box>
+			<Identifier>(0x00005e03, 0x00007cee)</Identifier>
+			<Name>Connectivity Measure : Burg</Name>
+			<AlgorithmClassIdentifier>(0x994a9a45, 0x4181a048)</AlgorithmClassIdentifier>
+			<Inputs>
+				<Input>
+					<TypeIdentifier>(0x5ba36127, 0x195feae1)</TypeIdentifier>
+					<Name>Input signal</Name>
+				</Input>
+			</Inputs>
+			<Outputs>
+				<Output>
+					<TypeIdentifier>(0x544a003e, 0x6dcba5f6)</TypeIdentifier>
+					<Name>Connectivity Matrix</Name>
+				</Output>
+			</Outputs>
+			<Settings>
+				<Setting>
+					<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
+					<Name>Channel subselection</Name>
+					<DefaultValue></DefaultValue>
+					<Value></Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+				<Setting>
+					<TypeIdentifier>(0x9188339d, 0x5da83a84)</TypeIdentifier>
+					<Name>Metric</Name>
+					<DefaultValue>Coherence</DefaultValue>
+					<Value>MagnitudeSquaredCoherence</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+				<Setting>
+					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
+					<Name>Connectivity Measure Length (in sec)</Name>
+					<DefaultValue>0.5</DefaultValue>
+					<Value>$var{ConnectivityLength}</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+				<Setting>
+					<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
+					<Name>Connectivity Measure Overlap (in %)</Name>
+					<DefaultValue>50</DefaultValue>
+					<Value>0</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+				<Setting>
+					<TypeIdentifier>(0x2cdb2f0b, 0x12f231ea)</TypeIdentifier>
+					<Name>DC removal</Name>
+					<DefaultValue>false</DefaultValue>
+					<Value>true</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+				<Setting>
+					<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
+					<Name>FFT size (frequency taps)</Name>
+					<DefaultValue>128</DefaultValue>
+					<Value>$var{PsdSize}</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+				<Setting>
+					<TypeIdentifier>(0x93459018, 0xf3ae39d7)</TypeIdentifier>
+					<Name>psd Method</Name>
+					<DefaultValue>Burg</DefaultValue>
+					<Value>Burg</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+				<Setting>
+					<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
+					<Name>Auto-regressive model order</Name>
+					<DefaultValue>11</DefaultValue>
+					<Value>$var{AutoRegressiveOrder}</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+			</Settings>
+			<Attributes>
+				<Attribute>
+					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
+					<Value>624</Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
+					<Value>1152</Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
+					<Value>(0x78fe4cf1, 0x76633698)</Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0x666fffff, 0x666fffff)</Identifier>
+					<Value></Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0xc80ce8af, 0xf699f813)</Identifier>
+					<Value>1</Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0xce18836a, 0x9c0eb403)</Identifier>
+					<Value>8</Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0xcfad85b0, 0x7c6d841c)</Identifier>
+					<Value>1</Value>
+				</Attribute>
+			</Attributes>
+		</Box>
+		<Box>
+			<Identifier>(0x00005e03, 0x00007cef)</Identifier>
+			<Name>Connectivity Measure : Burg</Name>
+			<AlgorithmClassIdentifier>(0x994a9a45, 0x4181a048)</AlgorithmClassIdentifier>
+			<Inputs>
+				<Input>
+					<TypeIdentifier>(0x5ba36127, 0x195feae1)</TypeIdentifier>
+					<Name>Input signal</Name>
+				</Input>
+			</Inputs>
+			<Outputs>
+				<Output>
+					<TypeIdentifier>(0x544a003e, 0x6dcba5f6)</TypeIdentifier>
+					<Name>Connectivity Matrix</Name>
+				</Output>
+			</Outputs>
+			<Settings>
+				<Setting>
+					<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
+					<Name>Channel subselection</Name>
+					<DefaultValue></DefaultValue>
+					<Value></Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+				<Setting>
+					<TypeIdentifier>(0x9188339d, 0x5da83a84)</TypeIdentifier>
+					<Name>Metric</Name>
+					<DefaultValue>Coherence</DefaultValue>
+					<Value>MagnitudeSquaredCoherence</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+				<Setting>
+					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
+					<Name>Connectivity Measure Length (in sec)</Name>
+					<DefaultValue>0.5</DefaultValue>
+					<Value>$var{ConnectivityLength}</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+				<Setting>
+					<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
+					<Name>Connectivity Measure Overlap (in %)</Name>
+					<DefaultValue>50</DefaultValue>
+					<Value>0</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+				<Setting>
+					<TypeIdentifier>(0x2cdb2f0b, 0x12f231ea)</TypeIdentifier>
+					<Name>DC removal</Name>
+					<DefaultValue>false</DefaultValue>
+					<Value>true</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+				<Setting>
+					<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
+					<Name>FFT size (frequency taps)</Name>
+					<DefaultValue>128</DefaultValue>
+					<Value>$var{PsdSize}</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+				<Setting>
+					<TypeIdentifier>(0x93459018, 0xf3ae39d7)</TypeIdentifier>
+					<Name>psd Method</Name>
+					<DefaultValue>Burg</DefaultValue>
+					<Value>Burg</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+				<Setting>
+					<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
+					<Name>Auto-regressive model order</Name>
+					<DefaultValue>11</DefaultValue>
+					<Value>$var{AutoRegressiveOrder}</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+			</Settings>
+			<Attributes>
+				<Attribute>
+					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
+					<Value>624</Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
+					<Value>1328</Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
+					<Value>(0x78fe4cf1, 0x76633698)</Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0x666fffff, 0x666fffff)</Identifier>
+					<Value></Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0xc80ce8af, 0xf699f813)</Identifier>
+					<Value>1</Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0xce18836a, 0x9c0eb403)</Identifier>
+					<Value>8</Value>
+				</Attribute>
+				<Attribute>
+					<Identifier>(0xcfad85b0, 0x7c6d841c)</Identifier>
+					<Value>1</Value>
+				</Attribute>
+			</Attributes>
+		</Box>
+		<Box>
 			<Identifier>(0x000065af, 0x0000612b)</Identifier>
 			<Name>Stimulation based epoching</Name>
 			<AlgorithmClassIdentifier>(0x426163d1, 0x324237b0)</AlgorithmClassIdentifier>
@@ -1900,202 +2110,6 @@
 				<Attribute>
 					<Identifier>(0xcfad85b0, 0x7c6d841c)</Identifier>
 					<Value>2</Value>
-				</Attribute>
-			</Attributes>
-		</Box>
-		<Box>
-			<Identifier>(0x0000664e, 0x00007cef)</Identifier>
-			<Name>Connectivity Measure : Burg</Name>
-			<AlgorithmClassIdentifier>(0x994a9a45, 0x4181a048)</AlgorithmClassIdentifier>
-			<Inputs>
-				<Input>
-					<TypeIdentifier>(0x5ba36127, 0x195feae1)</TypeIdentifier>
-					<Name>Input signal</Name>
-				</Input>
-			</Inputs>
-			<Outputs>
-				<Output>
-					<TypeIdentifier>(0x544a003e, 0x6dcba5f6)</TypeIdentifier>
-					<Name>Connectivity Matrix</Name>
-				</Output>
-			</Outputs>
-			<Settings>
-				<Setting>
-					<TypeIdentifier>(0x9188339d, 0x5da83a84)</TypeIdentifier>
-					<Name>Metric</Name>
-					<DefaultValue>Coherence</DefaultValue>
-					<Value>MagnitudeSquaredCoherence</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-				<Setting>
-					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
-					<Name>Connectivity Measure Length (in sec)</Name>
-					<DefaultValue>0.5</DefaultValue>
-					<Value>$var{ConnectivityLength}</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-				<Setting>
-					<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
-					<Name>Connectivity Measure Overlap (in %)</Name>
-					<DefaultValue>50</DefaultValue>
-					<Value>0</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-				<Setting>
-					<TypeIdentifier>(0x2cdb2f0b, 0x12f231ea)</TypeIdentifier>
-					<Name>DC removal</Name>
-					<DefaultValue>true</DefaultValue>
-					<Value>true</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-				<Setting>
-					<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
-					<Name>FFT size (frequency taps)</Name>
-					<DefaultValue>128</DefaultValue>
-					<Value>$var{PsdSize}</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-				<Setting>
-					<TypeIdentifier>(0x93459018, 0xf3ae39d7)</TypeIdentifier>
-					<Name>psd Method</Name>
-					<DefaultValue>Burg</DefaultValue>
-					<Value>Burg</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-				<Setting>
-					<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
-					<Name>Auto-regressive model order</Name>
-					<DefaultValue>11</DefaultValue>
-					<Value>$var{AutoRegressiveOrder}</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-			</Settings>
-			<Attributes>
-				<Attribute>
-					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
-					<Value>624</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
-					<Value>1152</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
-					<Value>(0xfb57a132, 0x853e70a4)</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x666fffff, 0x666fffff)</Identifier>
-					<Value></Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xc80ce8af, 0xf699f813)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xce18836a, 0x9c0eb403)</Identifier>
-					<Value>7</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xcfad85b0, 0x7c6d841c)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-			</Attributes>
-		</Box>
-		<Box>
-			<Identifier>(0x0000664e, 0x00007cf3)</Identifier>
-			<Name>Connectivity Measure : Burg</Name>
-			<AlgorithmClassIdentifier>(0x994a9a45, 0x4181a048)</AlgorithmClassIdentifier>
-			<Inputs>
-				<Input>
-					<TypeIdentifier>(0x5ba36127, 0x195feae1)</TypeIdentifier>
-					<Name>Input signal</Name>
-				</Input>
-			</Inputs>
-			<Outputs>
-				<Output>
-					<TypeIdentifier>(0x544a003e, 0x6dcba5f6)</TypeIdentifier>
-					<Name>Connectivity Matrix</Name>
-				</Output>
-			</Outputs>
-			<Settings>
-				<Setting>
-					<TypeIdentifier>(0x9188339d, 0x5da83a84)</TypeIdentifier>
-					<Name>Metric</Name>
-					<DefaultValue>Coherence</DefaultValue>
-					<Value>MagnitudeSquaredCoherence</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-				<Setting>
-					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
-					<Name>Connectivity Measure Length (in sec)</Name>
-					<DefaultValue>0.5</DefaultValue>
-					<Value>$var{ConnectivityLength}</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-				<Setting>
-					<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
-					<Name>Connectivity Measure Overlap (in %)</Name>
-					<DefaultValue>50</DefaultValue>
-					<Value>0</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-				<Setting>
-					<TypeIdentifier>(0x2cdb2f0b, 0x12f231ea)</TypeIdentifier>
-					<Name>DC removal</Name>
-					<DefaultValue>true</DefaultValue>
-					<Value>true</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-				<Setting>
-					<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
-					<Name>FFT size (frequency taps)</Name>
-					<DefaultValue>128</DefaultValue>
-					<Value>$var{PsdSize}</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-				<Setting>
-					<TypeIdentifier>(0x93459018, 0xf3ae39d7)</TypeIdentifier>
-					<Name>psd Method</Name>
-					<DefaultValue>Burg</DefaultValue>
-					<Value>Burg</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-				<Setting>
-					<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
-					<Name>Auto-regressive model order</Name>
-					<DefaultValue>11</DefaultValue>
-					<Value>$var{AutoRegressiveOrder}</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-			</Settings>
-			<Attributes>
-				<Attribute>
-					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
-					<Value>624</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
-					<Value>1328</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
-					<Value>(0xfb57a132, 0x853e70a4)</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x666fffff, 0x666fffff)</Identifier>
-					<Value></Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xc80ce8af, 0xf699f813)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xce18836a, 0x9c0eb403)</Identifier>
-					<Value>7</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xcfad85b0, 0x7c6d841c)</Identifier>
-					<Value>1</Value>
 				</Attribute>
 			</Attributes>
 		</Box>
@@ -2728,6 +2742,17 @@
 	</Boxes>
 	<Links>
 		<Link>
+			<Identifier>(0x000001e1, 0x00002a2e)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x000006a3, 0x00005dbc)</BoxIdentifier>
+				<BoxOutputIndex>0</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x00002a3c, 0x00005dfb)</BoxIdentifier>
+				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
 			<Identifier>(0x000003c6, 0x00005435)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x00003bcb, 0x00001ea5)</BoxIdentifier>
@@ -2783,13 +2808,13 @@
 			</Target>
 		</Link>
 		<Link>
-			<Identifier>(0x0000142f, 0x00001d21)</Identifier>
+			<Identifier>(0x00000b93, 0x00007b85)</Identifier>
 			<Source>
-				<BoxIdentifier>(0x000006a3, 0x00005dbb)</BoxIdentifier>
+				<BoxIdentifier>(0x00005705, 0x000070cb)</BoxIdentifier>
 				<BoxOutputIndex>0</BoxOutputIndex>
 			</Source>
 			<Target>
-				<BoxIdentifier>(0x00002a3c, 0x00005dfd)</BoxIdentifier>
+				<BoxIdentifier>(0x00005e03, 0x00007cee)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>
@@ -2802,17 +2827,6 @@
 			<Target>
 				<BoxIdentifier>(0x000065af, 0x0000612f)</BoxIdentifier>
 				<BoxInputIndex>1</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
-			<Identifier>(0x00001554, 0x00006fb9)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x0000664e, 0x00007cef)</BoxIdentifier>
-				<BoxOutputIndex>0</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x000006a3, 0x00005dba)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>
 		<Link>
@@ -2845,17 +2859,6 @@
 			</Source>
 			<Target>
 				<BoxIdentifier>(0x000065af, 0x00006130)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
-			<Identifier>(0x00002096, 0x000018e0)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x0000664e, 0x00007cf3)</BoxIdentifier>
-				<BoxOutputIndex>0</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x000006a3, 0x00005dbb)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>
@@ -2970,17 +2973,6 @@
 			</Target>
 		</Link>
 		<Link>
-			<Identifier>(0x0000440c, 0x00002cb0)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x00005705, 0x000070cc)</BoxIdentifier>
-				<BoxOutputIndex>0</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x0000664e, 0x00007cf3)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
 			<Identifier>(0x000044ee, 0x00007949)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x11a6038b, 0x7157c283)</BoxIdentifier>
@@ -2988,6 +2980,17 @@
 			</Source>
 			<Target>
 				<BoxIdentifier>(0x00004756, 0x00003402)</BoxIdentifier>
+				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
+			<Identifier>(0x0000477d, 0x00000038)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x00005e03, 0x00007cef)</BoxIdentifier>
+				<BoxOutputIndex>0</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x000006a3, 0x00005dbd)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>
@@ -3010,6 +3013,17 @@
 			</Source>
 			<Target>
 				<BoxIdentifier>(0x00005705, 0x000070cb)</BoxIdentifier>
+				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
+			<Identifier>(0x0000499d, 0x0000269d)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x00005e03, 0x00007cee)</BoxIdentifier>
+				<BoxOutputIndex>0</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x000006a3, 0x00005dbc)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>
@@ -3054,6 +3068,17 @@
 			</Source>
 			<Target>
 				<BoxIdentifier>(0x00003bcb, 0x00001ea5)</BoxIdentifier>
+				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
+			<Identifier>(0x00004cbb, 0x0000468d)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x00005705, 0x000070cc)</BoxIdentifier>
+				<BoxOutputIndex>0</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x00005e03, 0x00007cef)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>
@@ -3168,17 +3193,6 @@
 			</Target>
 		</Link>
 		<Link>
-			<Identifier>(0x00006105, 0x0000268e)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x00005705, 0x000070cb)</BoxIdentifier>
-				<BoxOutputIndex>0</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x0000664e, 0x00007cef)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
 			<Identifier>(0x00006613, 0x00002bb4)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x000065af, 0x00006130)</BoxIdentifier>
@@ -3186,6 +3200,17 @@
 			</Source>
 			<Target>
 				<BoxIdentifier>(0x00005705, 0x000070ca)</BoxIdentifier>
+				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
+			<Identifier>(0x00006b16, 0x000048a5)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x000006a3, 0x00005dbd)</BoxIdentifier>
+				<BoxOutputIndex>0</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x00002a3c, 0x00005dfd)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>
@@ -3208,17 +3233,6 @@
 			</Source>
 			<Target>
 				<BoxIdentifier>(0x00006c51, 0x000077b6)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
-			<Identifier>(0x00007ac1, 0x000010d3)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x000006a3, 0x00005dba)</BoxIdentifier>
-				<BoxOutputIndex>0</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x00002a3c, 0x00005dfb)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>

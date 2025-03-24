@@ -65,7 +65,7 @@ def checkIfTrainingAlreadyDone(jsonFile, sessionId, listFiles, listFeatures):
                     return True, idx, score
     return False, str(int(idx)+1), None
 
-def addTrainingAttempt(jsonFile, sessionId, listFiles, compositeFile, listFeatures, score):
+def addTrainingAttempt(jsonFile, sessionId, listFiles, compositeFile, listFeatures, score, spec, sens):
     currentDict = {}
     with open(jsonFile, "r") as myjson:
         currentDict = json.load(myjson)
@@ -77,16 +77,21 @@ def addTrainingAttempt(jsonFile, sessionId, listFiles, compositeFile, listFeatur
             lastIdx = idx
         lastIdx = str(int(lastIdx)+1)
 
-    newTrainAttempt = {"SignalFiles": listFiles, "CompositeFile": compositeFile, "Features": listFeatures, "Score": str(score)}
+    newTrainAttempt = {"SignalFiles": listFiles, "CompositeFile": compositeFile, "Features": listFeatures,
+                       "Score": str(score), "Sensitivity": str(sens), "Specificity": str(spec)}
     currentDict["Sessions"][sessionId]["TrainingAttempts"][lastIdx] = newTrainAttempt
     writeJson(jsonFile, currentDict)
 
-def replaceTrainingAttempt(jsonFile, sessionId, attemptId, listFiles, compositeFile, listFeatures, score):
+def replaceTrainingAttempt(jsonFile, sessionId, attemptId, listFiles, compositeFile, listFeatures, score, sens, spec):
     currentDict = {}
     with open(jsonFile, "r") as myjson:
         currentDict = json.load(myjson)
-    newTrainAttempt = {"SignalFiles": listFiles, "CompositeFile": compositeFile, "Features": listFeatures,
-                       "Score": str(score)}
+    newTrainAttempt = {"SignalFiles": listFiles,
+                       "CompositeFile": compositeFile,
+                       "Features": listFeatures,
+                       "Score": str(score),
+                       "Sensitivity": str(sens),
+                       "Specificity": str(spec)}
     currentDict["Sessions"][sessionId]["TrainingAttempts"][attemptId] = newTrainAttempt
     writeJson(jsonFile, currentDict)
 

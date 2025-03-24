@@ -277,6 +277,17 @@ def modifyTrainScenUsingSplitAndClassifiers(splitStr, classifStr, chanFreqPairs,
                             print("            with " + xmlVal.text)
                             break
 
+            if box.find('Name').text == 'Connectivity Measure':
+                print("-- CONNECTIVITY BOX ")
+                for settings in box.findall('Settings'):
+                    for setting in settings.findall('Setting'):
+                        if setting.find('Name').text == "Channel subselection":
+                            xmlVal = setting.find('Value')
+                            print("       replacing " + xmlVal.text)
+                            xmlVal.text = chanFreqPairs[0][0]
+                            print("            with " + xmlVal.text)
+                            break
+
             if box.find('Name').text == 'Frequency Band Selector':
                 print("-- FREQ SELECTION BOX ")
                 for settings in box.findall('Settings'):
@@ -967,6 +978,17 @@ def copyBoxList(root, boxIdList, locOffset, chanFreqPair, nbDiscardTop, nbDiscar
                                 xmlVal.text = chanFreqPair[0]
                                 print("            with " + xmlVal.text)
                                 continue
+
+                if newBox.find('Name').text == "Connectivity Measure":
+                    for settings in box.findall('Settings'):
+                        for setting in settings.findall('Setting'):
+                            if setting.find('Name').text == "Channel subselection":
+                                xmlVal = setting.find('Value')
+                                print("       replacing " + xmlVal.text)
+                                xmlVal.text = chanFreqPair[0]
+                                print("            with " + xmlVal.text)
+                                continue
+
                 elif newBox.find('Name').text == "Frequency Band Selector":
                     for settings in box.findall('Settings'):
                         for setting in settings.findall('Setting'):
