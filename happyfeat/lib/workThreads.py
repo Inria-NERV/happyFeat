@@ -1048,8 +1048,8 @@ class TrainClassifier(QtCore.QThread):
 
             self.info2.emit("Finalizing Training...")
             scenXml = os.path.join(self.workspaceFolder, templateScenFilenames[5])
-            oneClass = False  # TODO: watch out and change that in the future, when speed-up is available.
-            success, classifierOutputStr, accuracy = self.playClassifierScenario(scenXml, oneClass)
+            # oneClass = False  # TODO: watch out and change that in the future, when speed-up is available.
+            success, classifierOutputStr, acc, se1, se2  = self.playTrainClassifierScenario(scenXml)
             if not success:
                 successGlobal = False
                 self.errorMessageTrainer()
@@ -1061,7 +1061,9 @@ class TrainClassifier(QtCore.QThread):
                 origFilename = os.path.join(self.workspaceFolder, "classifier-weights.xml")
                 copyfile(newWeights, origFilename)
 
-                self.currentAttempt["Score"] = accuracy
+                self.currentAttempt["Score"] = acc
+                self.currentAttempt["Sensitivity"] = se1
+                self.currentAttempt["Specificity"] = se2
 
                 # PREPARE GOODBYE MESSAGE...
                 textFeats = str("")
@@ -1116,8 +1118,8 @@ class TrainClassifier(QtCore.QThread):
 
             # RUN THE CLASSIFIER TRAINING SCENARIO
             scenXml = os.path.join(self.workspaceFolder, templateScenFilenames[2])
-            oneClass = (self.parameterDict["pipelineType"] == optionKeys[4])
-            success, classifierOutputStr, accuracy = self.playClassifierScenario(scenXml, oneClass)
+            # oneClass = (self.parameterDict["pipelineType"] == optionKeys[4])
+            success, classifierOutputStr, acc, se1, se2 = self.playTrainClassifierScenario(scenXml)
 
             if not success:
                 self.errorMessageTrainer()
@@ -1130,7 +1132,9 @@ class TrainClassifier(QtCore.QThread):
                 copyfile(newWeights, origFilename)
 
                 # write score in workspace structure for future reporting
-                self.currentAttempt["Score"] = accuracy
+                self.currentAttempt["Score"] = acc
+                self.currentAttempt["Sensitivity"] = se1
+                self.currentAttempt["Specificity"] = se2
 
                 # PREPARE GOODBYE MESSAGE...
                 textFeats = str("")
@@ -1210,7 +1214,7 @@ class TrainClassifier(QtCore.QThread):
 
         return selectedFeats, errMsg
 
-    def playClassifierScenario(self, scenFile, oneClass):
+    def playTrainClassifierScenario(self, scenFile):
         # ----------
         # Run the provided training scenario, and check the console output for termination, errors, and
         # classification results
@@ -1271,19 +1275,18 @@ class TrainClassifier(QtCore.QThread):
         if activateScoreMsgBox:
             lines = classifierOutputStr.splitlines()
 
-            target_1_True_Negative = float(lines[2].split()[2])
-            target_1_False_Positive = float(lines[2].split()[3])
-            target_2_False_Negative = float(lines[3].split()[2])
-            target_2_True_Positive = float(lines[3].split()[3])
+            true1 = float(lines[2].split()[2])
+            false1 = float(lines[2].split()[3])
+            false2 = float(lines[3].split()[2])
+            true2 = float(lines[3].split()[3])
 
-            precision_Class_1 = round(target_1_True_Negative / (target_1_True_Negative + target_2_False_Negative), 2)
-            sensitivity_Class_1 = round(target_1_True_Negative / (target_1_True_Negative + target_1_False_Positive), 2)
-            precision_Class_2 = round(target_2_True_Positive / (target_2_True_Positive + target_1_False_Positive), 2)
-            sensitivity_Class_2 = round(target_2_True_Positive / (target_2_True_Positive + target_2_False_Negative), 2)
+            precision_Class_1 = round(true1 / (true1 + false2), 2)
+            sensitivity_Class_1 = round(true1 / (true1 + false1), 2)
+            precision_Class_2 = round(true2 / (true2 + false1), 2)
+            sensitivity_Class_2 = round(true2 / (true2 + false2), 2)  # = specificity
 
-            accuracy = round(100.0 * (target_1_True_Negative + target_2_True_Positive) / (
-                    target_1_True_Negative + target_1_False_Positive + target_2_False_Negative + target_2_True_Positive),
-                             2)
+            accuracy = round(100.0 * (true1 + true2) / (true1 + false1 + false2 + true2), 2)
+            # note that here, (true1 + false1 + false2 + true2) is always = 2.0
 
             if (precision_Class_1 + sensitivity_Class_1) != 0:
                 F_1_Score_Class_1 = round(
@@ -1296,22 +1299,22 @@ class TrainClassifier(QtCore.QThread):
             else:
                 F_1_Score_Class_2 = 1.0
 
-            if not oneClass:
-                messageClassif = "Overall accuracy : " + str(accuracy) + "%\n"
-                messageClassif += "Class 1 | Precision  : " + str(precision_Class_1) + " | " + "Sensitivity : " + str(
-                    sensitivity_Class_1)
-                messageClassif += " | F_1 Score : " + str(F_1_Score_Class_1) + "\n"
-                messageClassif += "Class 2 | Precision  : " + str(precision_Class_2) + " | " + "Sensitivity : " + str(
-                    sensitivity_Class_2)
-                messageClassif += " | F_1 Score : " + str(F_1_Score_Class_2)
+            # if not oneClass:
+            messageClassif = "Overall accuracy : " + str(accuracy) + "%\n"
+            messageClassif += "Class 1 | Precision  : " + str(precision_Class_1) + " | " + "Sensitivity : " + str(
+                sensitivity_Class_1)
+            messageClassif += " | F_1 Score : " + str(F_1_Score_Class_1) + "\n"
+            messageClassif += "Class 2 | Precision  : " + str(precision_Class_2) + " | " + "Sensitivity : " + str(
+                sensitivity_Class_2)
+            messageClassif += " | F_1 Score : " + str(F_1_Score_Class_2)
 
-                return success, messageClassif, accuracy
+            return success, messageClassif, accuracy, sensitivity_Class_1, sensitivity_Class_2
 
-            if oneClass:
-                messageClassif = "Precision  : " + str(precision_Class_2) + " | " + "Sensitivity : " + str(
-                    sensitivity_Class_2)
-
-                return success, messageClassif, (precision_Class_2*100.0)
+            # if oneClass:
+            #     messageClassif = "Precision  : " + str(precision_Class_2) + " | " + "Sensitivity : " + str(
+            #         sensitivity_Class_2)
+            #
+            # return success, messageClassif, (precision_Class_2*100.0)
 
         else:
             return success
@@ -1577,7 +1580,7 @@ class RunClassifier(QtCore.QThread):
 
             # change scenario IO
             modifyOneGeneralSetting(destScenFile, "EEGData", sigFile)
-            success, targetListTemp, classifiedListTemp = self.playClassifierScenario(destScenFile)
+            success, targetListTemp, classifiedListTemp = self.playTestClassifierScenario(destScenFile)
             targetList.extend(targetListTemp)
             classifiedList.extend(classifiedListTemp)
 
@@ -1683,7 +1686,7 @@ class RunClassifier(QtCore.QThread):
 
         return selectedFeats, errMsg
 
-    def playClassifierScenario(self, scenFile):
+    def playTestClassifierScenario(self, scenFile):
         # ----------
         # Run the provided run/replay scenario, and check the console output for termination, errors, and
         # classification results

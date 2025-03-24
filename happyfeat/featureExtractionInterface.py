@@ -774,9 +774,9 @@ class Dialog(QDialog):
         # Select files + apply selected classifier
         self.classifLayoutH = QHBoxLayout()
         self.btn_selectFilesClassif = QPushButton("Browse for files...")
-        self.btn_selectFilesClassif.setVisible(False) # advanced option
+        self.btn_selectFilesClassif.setVisible(False)  # advanced option
         self.btn_runClassif = QPushButton("RUN CLASSIFIER")
-        self.btn_runClassif.setVisible(False) # advanced option
+        self.btn_runClassif.setVisible(False)  # advanced option
         self.btn_selectFilesClassif.clicked.connect(lambda: self.btnSelectFilesClassif())
 
         self.btn_runClassif.clicked.connect(lambda: self.btnRunClassif())
@@ -1589,7 +1589,11 @@ class Dialog(QDialog):
 
         # Initialize structure for reporting results in workspace file...
         self.currentAttempt = {"SignalFiles": self.trainingFiles,
-                                  "CompositeFile": None, "Features": None, "Score": ""}
+                                  "CompositeFile": None,
+                               "Features": None,
+                               "Score": "",
+                               "Sensitivity": "",
+                               "Specificity": ""}
 
         # LOAD TRAINING FEATURES
         # /!\ IMPORTANT !
@@ -1752,12 +1756,14 @@ class Dialog(QDialog):
                 print("=== replaceTrainingAttempt...")
                 replaceTrainingAttempt(self.workspaceFile, self.currentSessionId, attemptId,
                                        self.currentAttempt["SignalFiles"], self.currentAttempt["CompositeFile"],
-                                       self.currentAttempt["Features"], self.currentAttempt["Score"])
+                                       self.currentAttempt["Features"], self.currentAttempt["Score"],
+                                       self.currentAttempt["Sensitivity"], self.currentAttempt["Specificity"])
             else:
                 print("=== addTrainingAttempt...")
                 addTrainingAttempt(self.workspaceFile, self.currentSessionId,
                                        self.currentAttempt["SignalFiles"], self.currentAttempt["CompositeFile"],
-                                       self.currentAttempt["Features"], self.currentAttempt["Score"])
+                                       self.currentAttempt["Features"], self.currentAttempt["Score"],
+                                       self.currentAttempt["Sensitivity"], self.currentAttempt["Specificity"])
             print("=== updateTrainingAttemptsTree...")
             self.updateTrainingAttemptsTree()
 
@@ -1926,6 +1932,8 @@ class Dialog(QDialog):
                                self.currentAttempt[comb]["SignalFiles"],
                                None,
                                self.currentAttempt[comb]["Features"],
+                               "0.0",
+                               "0.0",
                                "0.0")
 
             # Instantiate the thread...
@@ -1982,13 +1990,17 @@ class Dialog(QDialog):
                                        self.currentAttempt[comb]["SignalFiles"],
                                        self.currentAttempt[comb]["CompositeFile"],
                                        self.currentAttempt[comb]["Features"],
-                                       self.currentAttempt[comb]["Score"])
+                                       self.currentAttempt[comb]["Score"],
+                                       self.currentAttempt[comb]["Sensitivity"],
+                                       self.currentAttempt[comb]["Specificity"])
             else:
                 addTrainingAttempt(self.workspaceFile, self.currentSessionId,
                                    self.currentAttempt[comb]["SignalFiles"],
                                    self.currentAttempt[comb]["CompositeFile"],
                                    self.currentAttempt[comb]["Features"],
-                                   self.currentAttempt[comb]["Score"])
+                                   self.currentAttempt[comb]["Score"],
+                                   self.currentAttempt[comb]["Sensitivity"],
+                                   self.currentAttempt[comb]["Specificity"])
 
             self.updateTrainingAttemptsTree()
 
@@ -2949,11 +2961,37 @@ class Dialog(QDialog):
         attempts = []
         if resultsDict:
             for attemptId in resultsDict.keys():
+
+                # Add general info in main item of list
                 attempts.append(attemptId)
                 attemptItem = QTreeWidgetItem(self.lastTrainingResults)
                 attemptItem.setFlags(attemptItem.flags() | Qt.ItemIsSelectable)
                 attemptItem.setText(0, attemptId)
-                attemptItem.setText(1, resultsDict[attemptId]["Score"])
+
+                acc = resultsDict[attemptId].get("Score")
+                attemptItem.setText(1, acc)
+
+                # add accuracy again in the expandable list
+                accItem = QTreeWidgetItem(None)
+                accItem.setText(1, str(acc))
+                accItem.setText(2, str("Accuracy"))
+                attemptItem.addChild(accItem)
+
+                # add sens and spec to expandable results
+                sens = resultsDict[attemptId].get("Sensitivity")
+                if sens:
+                    sensItem = QTreeWidgetItem(None)
+                    sensItem.setText(1, str(float(sens)*100.0))
+                    sensItem.setText(2, str("Sensitivity"))
+                    attemptItem.addChild(sensItem)
+                spec = resultsDict[attemptId].get("Specificity")
+                if spec:
+                    specItem = QTreeWidgetItem(None)
+                    specItem.setText(1, str(float(spec)*100.0))
+                    specItem.setText(2, str("Specificity"))
+                    attemptItem.addChild(specItem)
+
+                # Add list of features and files used for training attempt, in expandable list
                 firstFeatWritten = False
                 for metricType in resultsDict[attemptId]["Features"]:
                     for featPair in resultsDict[attemptId]["Features"][metricType]:
