@@ -112,19 +112,26 @@ class Extraction_Timeflux(QtCore.QThread):
                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE)  # add cwd if needed
 
             # Print console output, and detect end of process...
+            success = True
             while True:
                 output = p.stdout.readline()
                 if p.poll() is not None:
                     break
                 if output:
                     print(str(output))
+                    if "Could not find stimulation" in str(output):
+                        errMsg = str(str(output) + "\n\nPlease check you entered the correct stimulations in the top menu, or that your file has the stimulations required.")
+                        success = False
                     if "Terminated" in str(output):
                         p.kill()
                         break
-
-            self.info.emit(True)    # send "info" signal to increment progressbar
-            tstop = time.perf_counter()
-            print("= Extraction from file " + filename + " finished in " + str(tstop-tstart))
+            if success:
+                self.info.emit(True)    # send "info" signal to increment progressbar
+                tstop = time.perf_counter()
+                print("= Extraction from file " + filename + " finished in " + str(tstop - tstart))
+            else:
+                self.stop = True
+                self.over.emit(False, errMsg)
 
         self.stop = True
         self.over.emit(True, "")

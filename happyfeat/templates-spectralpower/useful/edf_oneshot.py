@@ -64,6 +64,7 @@ class Replay(Node):
                 id = self.event_id[stim]
                 stimkeys[stim] = id
         except KeyError as e:
+            print("===\n===\n======== ERROR ==== Could not find stimulation ", e, " in file ", filename, "\n===\n===")
             raise WorkerInterrupt(e)
 
         # create events dataframes, using only specified stimulations
