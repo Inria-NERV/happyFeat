@@ -37,8 +37,8 @@ def Compute_Rsquare_Map(Power_of_trials_1, Power_of_trials_2):
     #print(a)
     #print(b)
 
-    trialAvg1 = Power_of_trials_1.mean(axis=0)
-    trialAvg2 = Power_of_trials_2.mean(axis=0)
+    trialAvg1 = np.nanmean(Power_of_trials_1, axis=0)
+    trialAvg2 = np.nanmean(Power_of_trials_2, axis=0)
 
     diffTrialAvg = np.sign(trialAvg2 - trialAvg1)
 
@@ -58,12 +58,12 @@ def Compute_Rsquare_Map(Power_of_trials_1, Power_of_trials_2):
                 concat_tab_1.append(Power_of_trials_1[i, k, l])
                 concat_tab_2.append(Power_of_trials_2[i, k, l])
             #correlation_matrix = np.corrcoef(concat_tab_MI, concat_tab_Rest)
-            Sum_q = sum(concat_tab_1)
-            Sum_r = sum(concat_tab_2)
+            Sum_q = np.nansum(concat_tab_1)
+            Sum_r = np.nansum(concat_tab_2)
             n1 = len(concat_tab_1)
             n2 = len(concat_tab_2)
-            sumsqu1 = sum(np.multiply(concat_tab_1, concat_tab_1))
-            sumsqu2 = sum(np.multiply(concat_tab_2, concat_tab_2))
+            sumsqu1 = np.nansum(np.multiply(concat_tab_1, concat_tab_1))
+            sumsqu2 = np.nansum(np.multiply(concat_tab_2, concat_tab_2))
 
             G = ((Sum_q+Sum_r)**2)/(n1+n2)
 

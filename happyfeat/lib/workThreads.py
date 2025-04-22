@@ -181,7 +181,7 @@ class Extraction(QtCore.QThread):
 class LoadFilesForVizPowSpectrum(QtCore.QThread):
     info = Signal(bool)
     info2 = Signal(str)
-    over = Signal(bool, str, list, list, list)
+    over = Signal(bool, str, int, list, list, list, list)
 
     def __init__(self, analysisFiles, workingFolder, parameterDict, Features, sampFreq, parent=None):
 
@@ -209,9 +209,10 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
 
         self.useBaselineFiles = self.parameterDict["pipelineType"] == optionKeys[1]
 
-        validFiles = []
-        initSizes = []
-        validSizes = []
+        invalidTrialsList1 = []
+        invalidTrialsList2 = []
+        invalidElec1 = {}
+        invalidElec2 = {}
         for selectedFilesForViz in self.analysisFiles:
             idxFile += 1
             pipelineLabel = "SPECTRUM"
@@ -267,22 +268,6 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
 
             listElectrodeList.append(electrodeList1)
 
-            # check for invalid values...
-            initSize1 = 0
-            validSize1 = 0
-            initSize2 = 0
-            validSize2 = 0
-            newData1, valid1, initSize1, validSize1 = check_valid_np(data1)
-            newData2, valid2, initSize2, validSize2 = check_valid_np(data2)
-
-            if valid1 and valid2:
-                validFiles.append(True)
-            else:
-                validFiles.append(False)
-
-            initSizes.append(initSize1 + initSize2)
-            validSizes.append(validSize1 + validSize2)
-
             self.dataNp1.append(data1)
             self.dataNp2.append(data2)
             if self.useBaselineFiles:
@@ -330,15 +315,18 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         # For multiple runs (ie. multiple selected CSV files), we just concatenate
         # the trials from all files. Then the displayed spectral features (R²map, PSD, topography)
         # will be computed as averages over all the trials.
-        power_cond1_final = None
-        power_cond2_final = None
-        power_cond1_baseline_final = None
-        power_cond2_baseline_final = None
-        timefreq_cond1_final = None
-        timefreq_cond2_final = None
-        timefreq_cond1_baseline_final = None
-        timefreq_cond2_baseline_final = None
+        power_cond1_final = np.array([])
+        power_cond2_final = np.array([])
+        power_cond1_baseline_final = np.array([])
+        power_cond2_baseline_final = np.array([])
+        timefreq_cond1_final = np.array([])
+        timefreq_cond2_final = np.array([])
+        timefreq_cond1_baseline_final = np.array([])
+        timefreq_cond2_baseline_final = np.array([])
         idxFile = 0
+
+        threshInvalid = int(nbElectrodes / 4)  # (TODO: make parameter)
+
         for run in range(len(self.dataNp1)):
             idxFile += 1
             self.info2.emit(str("Processing data for file " + str(idxFile)))
@@ -352,27 +340,80 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
                 power_cond2_baseline, timefreq_cond2_baseline = \
                     Extract_CSV_Data(self.dataNp2baseline[run], trialLength, nbElectrodes, n_bins, winLen, winShift)
 
-            if power_cond1_final is None:
-                power_cond1_final = power_cond1
-                power_cond2_final = power_cond2
-                timefreq_cond1_final = timefreq_cond1
-                timefreq_cond2_final = timefreq_cond2
-                if self.useBaselineFiles:
-                    power_cond1_baseline_final = power_cond1_baseline
-                    power_cond2_baseline_final = power_cond2_baseline
-                    timefreq_cond1_baseline_final = timefreq_cond1_baseline
-                    timefreq_cond2_baseline_final = timefreq_cond2_baseline
-            else:
-                power_cond1_final = np.concatenate((power_cond1_final, power_cond1))
-                power_cond2_final = np.concatenate((power_cond2_final, power_cond2))
-                timefreq_cond1_final = np.concatenate((timefreq_cond1_final, timefreq_cond1))
-                timefreq_cond2_final = np.concatenate((timefreq_cond2_final, timefreq_cond2))
-                if self.useBaselineFiles:
-                    power_cond1_baseline_final = np.concatenate((power_cond1_baseline_final, power_cond1_baseline))
-                    power_cond2_baseline_final = np.concatenate((power_cond2_baseline_final, power_cond2_baseline))
-                    timefreq_cond1_baseline_final = np.concatenate((timefreq_cond1_baseline_final, timefreq_cond1_baseline))
-                    timefreq_cond2_baseline_final = np.concatenate((timefreq_cond2_baseline_final, timefreq_cond2_baseline))
+            # Check if trial contains more than a quarter  of bad electrodes
+            invalid1 = check_invalid_trials_in_run(power_cond1)
+            invalid2 = check_invalid_trials_in_run(power_cond2)
+            invalidTrialsList1.append(invalid1)
+            invalidTrialsList2.append(invalid2)
 
+            deleteTrial1 = []
+            for idx, nbNan in enumerate(invalid1):
+                if nbNan > threshInvalid:
+                    dispStr = str("-- WARNING -- PowSpectrum Cond1 : Trial " + str(
+                        idx) + " in selected file idx " + str(run) +
+                                  " is mostly composed of electrodes containing NaN values ("
+                                  + str(nbNan) + ")")
+                    dispStr += str("\nDiscarding it for the current analysis")
+                    print(dispStr)
+                    deleteTrial1.append(idx)  # create a list, otherwise deleting elements in this loop can get messy
+
+            deleteTrial2 = []
+            for idx, nbNan in enumerate(invalid2):
+                if nbNan > threshInvalid:
+                    dispStr = str("-- WARNING -- PowSpectrum Cond2 : Trial " + str(
+                        idx) + " in selected file idx " + str(run) +
+                                  " is mostly composed of electrodes containing NaN values ("
+                                  + str(nbNan) + ")")
+                    dispStr += str("\n  -- Discarding it for the current analysis")
+                    print(dispStr)
+                    deleteTrial2.append(idx)  # create a list, otherwise deleting elements in this loop can get messy
+
+            # Remove invalid trials
+            deleteTrial = list(set(deleteTrial1 + deleteTrial2))  # set is used to remove duplicates
+            if len(deleteTrial) > 0:
+                power_cond1 = np.delete(power_cond1, deleteTrial, axis=0)
+                power_cond2 = np.delete(power_cond2, deleteTrial, axis=0)
+
+            # Concatenate into "final" arrays...
+            power_cond1_final = np.concatenate((power_cond1_final, power_cond1)) if power_cond1_final.size else power_cond1
+            power_cond2_final = np.concatenate((power_cond2_final, power_cond2)) if power_cond2_final.size else power_cond2
+            timefreq_cond1_final = np.concatenate((timefreq_cond1_final, timefreq_cond1)) if timefreq_cond1_final.size else timefreq_cond1
+            timefreq_cond2_final = np.concatenate((timefreq_cond2_final, timefreq_cond2)) if timefreq_cond2_final.size else timefreq_cond1
+            if self.useBaselineFiles:
+                power_cond1_baseline_final = np.concatenate((power_cond1_baseline_final, power_cond1_baseline)) if power_cond1_baseline_final.size else power_cond1_baseline
+                power_cond2_baseline_final = np.concatenate((power_cond2_baseline_final, power_cond2_baseline)) if power_cond2_baseline_final.size else power_cond2_baseline
+                timefreq_cond1_baseline_final = np.concatenate((timefreq_cond1_baseline_final, timefreq_cond1_baseline)) if timefreq_cond1_baseline_final.size else timefreq_cond1_baseline
+                timefreq_cond2_baseline_final = np.concatenate((timefreq_cond2_baseline_final, timefreq_cond2_baseline)) if timefreq_cond2_baseline_final.size else timefreq_cond1_baseline
+
+        # ----------
+        # Detect invalid values & inform user
+        # ----------
+        invalidElec1 = check_nan_elec(power_cond1_final)
+        invalidElec2 = check_nan_elec(power_cond2_final)
+        discardElecs = True  # TODO : make parameter
+        nanVector = np.empty(np.shape(power_cond1_final)[2])  # used to force all values of a given channel to NaN, hence "disabling" it in the R2 map
+        nanVector[:] = np.nan
+
+        for idx, v in enumerate(invalidElec1):
+            dispStr = str("-- WARNING -- PowSpectrum Cond1: Electrode idx " + str(v) + " (" + electrodeList[v] + ") is full of NaNs in " + str(invalidElec1[v]) + " trials")
+            dispStr += str("\n  -- Discarding it for the current analysis")
+            print(dispStr)
+            if discardElecs:
+                for trial in range(np.shape(power_cond1_final)[0]):
+                    power_cond1_final[trial, v, :] = nanVector
+                    power_cond2_final[trial, v, :] = nanVector
+        for idx, v in enumerate(invalidElec2):
+            dispStr = str("-- WARNING -- PowSpectrum Cond2: Electrode idx " + str(v) + " (" + electrodeList[v] + ") is full of NaNs in " + str(invalidElec1[v]) + " trials")
+            dispStr += str("\n  -- Discarding it for the current analysis")
+            print(dispStr)
+            if discardElecs:
+                for trial in range(np.shape(power_cond2_final)[0]):
+                    power_cond1_final[trial, v, :] = nanVector
+                    power_cond2_final[trial, v, :] = nanVector
+
+        # ----------
+        # Actual statistical Analysis...
+        # ----------
         self.info2.emit("Computing statistics")
 
         print("PowerCond1 and PowerCond2 shapes:")
@@ -444,7 +485,20 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         self.Features.samplingFreq = self.samplingFreq
 
         self.stop = True
-        self.over.emit(True, "", validFiles, initSizes, validSizes)
+
+        # PySide6 signals cannot transmit "dict" (they rely on C++ QMap which don't exist in python)
+        # ==> we convert to serialized lists...
+        # [invalidElectrode; nbOfTrialsWithInvalidData; invalidElectrode; nbOfTrialsWithInvalidData; etc.]
+        invalidElecList1 = []
+        invalidElecList2 = []
+        for idx, v in enumerate(invalidElec1):
+            invalidElecList1.append(electrodeList[v])
+            invalidElecList1.append(invalidElec1[v])
+        for idx, v in enumerate(invalidElec2):
+            invalidElecList2.append(electrodeList[v])
+            invalidElecList2.append(invalidElec2[v])
+
+        self.over.emit(True, "", len(electrodeList), invalidTrialsList1, invalidTrialsList2, invalidElecList1, invalidElecList2)
 
     def stopThread(self):
         self.stop = True
@@ -455,7 +509,7 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
 class LoadFilesForVizConnectivity(QtCore.QThread):
     info = Signal(bool)
     info2 = Signal(str)
-    over = Signal(bool, str, list, list, list)
+    over = Signal(bool, str, int, list, list, list, list)
 
     def __init__(self, analysisFiles, workingFolder, metaFolder, parameterDict, Features, sampFreq, parent=None):
 
@@ -479,9 +533,10 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         listElectrodeList = []
         idxFile = 0
 
-        validFiles = []
-        initSizes = []
-        validSizes = []
+        invalidTrialsList1 = []
+        invalidTrialsList2 = []
+        invalidElec1 = {}
+        invalidElec2 = {}
         for selectedFilesForViz in self.analysisFiles:
             idxFile += 1
             pipelineLabel = "CONNECT"
@@ -512,7 +567,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
                 errMsg = str("Error when loading " + path1 + "\n" + " and " + path2)
                 errMsg = str(errMsg + "\nfrequency bins mismatch")
                 errMsg = str(errMsg + "\n(" + str(freqBins1) + " vs " + str(freqBins2) + ")")
-                self.over.emit(False, errMsg, None, None, None)
+                self.over.emit(False, errMsg, None, None, None, None)
                 return
 
             listFreqs.append(freqBins1)
@@ -531,29 +586,13 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
             if electrodeList1 != electrodeList2:
                 errMsg = str("Error when loading " + path1 + "\n" + " and " + path2)
                 errMsg = str(errMsg + "\nElectrode List mismatch")
-                self.over.emit(False, errMsg, None, None, None)
+                self.over.emit(False, errMsg, None, None, None, None)
                 return
 
             listElectrodeList.append(electrodeList1)
 
-            # check that the data is valid, and doesn't contain NaN
-            initSize1 = 0
-            validSize1 = 0
-            initSize2 = 0
-            validSize2 = 0
-            newData1, valid1, initSize1, validSize1 = check_valid_np(data1)
-            newData2, valid2, initSize2, validSize2 = check_valid_np(data2)
-
-            if valid1 and valid2:
-                validFiles.append(True)
-            else:
-                validFiles.append(False)
-
-            initSizes.append(initSize1 + initSize2)
-            validSizes.append(validSize1 + validSize2)
-
-            self.dataNp1.append(newData1)
-            self.dataNp2.append(newData2)
+            self.dataNp1.append(data1)
+            self.dataNp2.append(data2)
 
             self.info.emit(True)
 
@@ -561,7 +600,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         if not all(nbfreqs == listFreqs[0] for nbfreqs in listFreqs):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "nb of frequency mismatch (" + str(listFreqs) + ")")
-            self.over.emit(False, errMsg, None, None, None)
+            self.over.emit(False, errMsg, None, None, None, None)
             return
         else:
             print("Nb of Frequency bins for selected files : " + str(listFreqs[0]))
@@ -569,7 +608,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         if not all(electrodeList == listElectrodeList[0] for electrodeList in listElectrodeList):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Sensor List mismatch")
-            self.over.emit(False, errMsg, None, None, None)
+            self.over.emit(False, errMsg, None, None, None, None)
             return
         else:
             print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
@@ -577,7 +616,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         if not all(sampFreq == listSamplingFreqs[0] for sampFreq in listSamplingFreqs):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Sampling Freq mismatch")
-            self.over.emit(False, errMsg, None, None, None)
+            self.over.emit(False, errMsg, None, None, None, None)
             return
         else:
             print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
@@ -598,13 +637,16 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         # For multiple runs (ie. multiple selected CSV files), we just concatenate
         # the trials from all files. Then the displayed spectral features (R²map, PSD, topography)
         # will be computed as averages over all the trials.
-        connect_cond1_final = None
-        connect_cond2_final = None
-        timefreq_cond1_final = None
-        timefreq_cond2_final = None
-        timefreq_cond1_baseline_final = None
-        timefreq_cond2_baseline_final = None
+        connect_cond1_final = np.array([])
+        connect_cond2_final = np.array([])
+        timefreq_cond1_final = np.array([])
+        timefreq_cond2_final = np.array([])
+        timefreq_cond1_baseline_final = np.array([])
+        timefreq_cond2_baseline_final = np.array([])
         idxFile = 0
+
+        threshInvalid = int(nbElectrodes / 4)  # (TODO: make parameter)
+
         for run in range(len(self.dataNp1)):
             idxFile += 1
             self.info2.emit(str("Processing data for file " + str(idxFile)))
@@ -619,32 +661,86 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
             timefreq_cond1_transp = timefreq_cond1.transpose(0, 3, 1, 2)
             timefreq_cond2_transp = timefreq_cond2.transpose(0, 3, 1, 2)
 
-            if connect_cond1_final is None:
-                connect_cond1_final = connect_cond1
-                connect_cond2_final = connect_cond2
+            # Check if trial contains more than a quarter  of bad electrodes (TODO: make parameter)
+            invalid1 = check_invalid_trials_in_run(connect_cond1)
+            invalid2 = check_invalid_trials_in_run(connect_cond2)
+            invalidTrialsList1.append(invalid1)
+            invalidTrialsList2.append(invalid2)
 
-                timefreq_cond1_final = timefreq_cond1_transp
-                timefreq_cond2_final = timefreq_cond2_transp
+            deleteTrial1 = []
+            for idx, nbNan in enumerate(invalid1):
+                if nbNan > threshInvalid:
+                    dispStr = str("-- WARNING -- Connectivity Cond1 : Trial " + str(
+                        idx) + " in selected file idx " + str(run) +
+                        " is mostly composed of electrodes containing NaN values ("
+                        + str(nbNan) + ")")
+                    dispStr += str("\nDiscarding it for the current analysis")
+                    print(dispStr)
+                    deleteTrial1.append(idx)  # create a list, otherwise deleting elements in this loop can get messy
 
-            else:
-                connect_cond1_final = np.concatenate((connect_cond1_final, connect_cond1))
-                connect_cond2_final = np.concatenate((connect_cond2_final, connect_cond2))
+            deleteTrial2 = []
+            for idx, nbNan in enumerate(invalid2):
+                if nbNan > threshInvalid:
+                    dispStr = str("-- WARNING -- Connectivity Cond2 : Trial " + str(
+                        idx) + " in selected file idx " + str(run) +
+                                  " is mostly composed of electrodes containing NaN values ("
+                                  + str(nbNan) + ")")
+                    dispStr += str("\n  -- Discarding it for the current analysis")
+                    print(dispStr)
+                    deleteTrial2.append(idx)  # create a list, otherwise deleting elements in this loop can get messy
 
-                timefreq_cond1_final = np.concatenate((timefreq_cond1_final, timefreq_cond1_transp))
-                timefreq_cond2_final = np.concatenate((timefreq_cond2_final, timefreq_cond2_transp))
+            # Remove invalid trials
+            deleteTrial = list(set(deleteTrial1 + deleteTrial2))  # set is used to remove duplicates
+            if len(deleteTrial) > 0:
+                connect_cond1 = np.delete(connect_cond1, deleteTrial, axis=0)
+                connect_cond2 = np.delete(connect_cond2, deleteTrial, axis=0)
 
+            # Concatenate into "final" arrays, along axis 0 (trials)
+            connect_cond1_final = np.concatenate((connect_cond1_final, connect_cond1)) if connect_cond1_final.size else connect_cond1
+            connect_cond2_final = np.concatenate((connect_cond2_final, connect_cond2)) if connect_cond2_final.size else connect_cond2
+            timefreq_cond1_final = np.concatenate((timefreq_cond1_final, timefreq_cond1_transp)) if timefreq_cond1_final.size else timefreq_cond1_transp
+            timefreq_cond2_final = np.concatenate((timefreq_cond2_final, timefreq_cond2_transp)) if timefreq_cond2_final.size else timefreq_cond2_transp
+
+        # ----------
+        # Detect invalid values & inform user
+        # ----------
+        invalidElec1 = check_nan_elec(connect_cond1_final)
+        invalidElec2 = check_nan_elec(connect_cond2_final)
+        discardElecs = True  # TODO : make parameter
+        nanVector = np.empty(np.shape(connect_cond1_final)[2])  # used to force all values of a given channel to NaN, hence "disabling" it in the R2 map
+        nanVector[:] = np.nan
+
+        for idx, v in enumerate(invalidElec1):
+            dispStr = str("-- WARNING -- Connectivity Cond1: Electrode idx " + str(v) + " (" + electrodeList[v] + ") is full of NaNs in " + str(invalidElec1[v]) + " trials")
+            dispStr += str("\n  -- Discarding it for the current analysis")
+            print(dispStr)
+            if discardElecs:
+                for trial in range(np.shape(connect_cond1_final)[0]):
+                    connect_cond1_final[trial, v, :] = nanVector
+                    connect_cond2_final[trial, v, :] = nanVector
+        for idx, v in enumerate(invalidElec2):
+            dispStr = str("-- WARNING -- Connectivity Cond2: Electrode idx " + str(v) + " (" + electrodeList[v] + ") is full of NaNs in " + str(invalidElec1[v]) + " trials")
+            dispStr += str("\n  -- Discarding it for the current analysis")
+            print(dispStr)
+            if discardElecs:
+                for trial in range(np.shape(connect_cond1_final)[0]):
+                    connect_cond1_final[trial, v, :] = nanVector
+                    connect_cond2_final[trial, v, :] = nanVector
+
+        # ----------
+        # Actual statistical Analysis...
+        # ----------
         self.info2.emit("Computing statistics")
         trialLengthSec = float(self.parameterDict["AcquisitionParams"]["TrialLength"])
         totalTrials = len(self.dataNp1) * trials
         fres = float(self.extractDict["FreqRes"])
 
-        # Statistical Analysis...
         freqs_array = np.arange(0, n_bins, fres)
         if np.shape(connect_cond1_final)[0] == 0 or np.shape(connect_cond2_final)[0] == 0:
             errMsg = str("Error when loading connectivity CSV files\n")
             errMsg = str(errMsg + "Not enough valid trials to proceed...\n")
             errMsg = str(errMsg + "Try again with different runs/signals\n")
-            self.over.emit(False, errMsg, None, None, None)
+            self.over.emit(False, errMsg, None, None, None, None)
             return
         else:
             Rsquare, signTab = Compute_Rsquare_Map(connect_cond1_final[:, :, :(n_bins - 1)],
@@ -663,7 +759,9 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
                                       electrodeList, connect_cond1_final, connect_cond2_final,
                                       timefreq_cond1_final, timefreq_cond2_final)
 
+        # ----------
         # Fill Features struct...
+        # ----------
         self.Features.electrodes_orig = electrodeList
         self.Features.electrodes_final = electrodes_final
         self.Features.power_cond1 = connect_cond1_2
@@ -678,7 +776,20 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         self.Features.Rsign_tab = signTab_2
 
         self.stop = True
-        self.over.emit(True, "", validFiles, initSizes, validSizes)
+
+        # PySide6 signals cannot transmit "dict" (they rely on C++ QMap which don't exist in python)
+        # ==> we convert to serialized lists...
+        # [invalidElectrode; nbOfTrialsWithInvalidData; invalidElectrode; nbOfTrialsWithInvalidData; etc.]
+        invalidElecList1 = []
+        invalidElecList2 = []
+        for idx, v in enumerate(invalidElec1):
+            invalidElecList1.append(electrodeList[v])
+            invalidElecList1.append(invalidElec1[v])
+        for idx, v in enumerate(invalidElec2):
+            invalidElecList2.append(electrodeList[v])
+            invalidElecList2.append(invalidElec2[v])
+
+        self.over.emit(True, "", len(electrodeList), invalidTrialsList1, invalidTrialsList2, invalidElecList1, invalidElecList2)
 
     def stopThread(self):
         self.stop = True
