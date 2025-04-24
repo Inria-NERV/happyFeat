@@ -56,15 +56,15 @@ connectMetricsComboText = { #connectMetrics[0]: "Magnitude Squared Coh.",
                             connectMetrics[1]: "abs(Imag(Coh.))"}
 
 global pipelineAcqSettings
-pipelineAcqSettings = { "TrialNb": 20,
+pipelineAcqSettings = { "TrialNb": 18,
                         "Class1": "MI",  # OV : LEFT
                         "Class2": "REST",  # OV : RIGHT
-                        "Baseline": 20,
+                        "Baseline": 7,
                         "TrialWait": 3,
                         "TrialLength": 1,  # Not really trial length but reaction time...
                         "FeedbackLength": 3,  # Task / Feedback duraction
-                        "EndTrialMin": 2.5,
-                        "EndTrialMax": 3.5,
+                        "EndTrialMin": 4,
+                        "EndTrialMax": 5,
                         }
 
 global pipelineExtractSettings_ov
@@ -77,7 +77,7 @@ pipelineExtractSettings_ov = {optionKeys[0]: None,
                                 "TimeWindowLength": "0.25",
                                 "TimeWindowShift": "0.161",
                                 # "AutoRegressiveOrder": "19",
-                                "AutoRegressiveOrderTime": "0.038",
+                                "AutoRegressiveOrderTime": "0.05",
                                 # "PsdSize": "500",
                                 "FreqRes": "1",
                                 },
@@ -87,10 +87,10 @@ pipelineExtractSettings_ov = {optionKeys[0]: None,
                                {"StimulationEpoch": "3",
                                 "StimulationDelay": "1",
                                 "ConnectivityMetric": connectMetrics[1],
-                                "ConnectivityLength": "0.25",
+                                "ConnectivityLength": "0.50",
                                 "ConnectivityOverlap": "36",
                                 # "AutoRegressiveOrder": "12",
-                                "AutoRegressiveOrderTime": "0.038",
+                                "AutoRegressiveOrderTime": "0.05",
                                 # "PsdSize": "256",
                                 "FreqRes": "1",
                                 },
@@ -102,26 +102,26 @@ pipelineExtractSettings_ov = {optionKeys[0]: None,
                                 "TimeWindowLength": "0.25",
                                 "TimeWindowShift": "0.161",
                                 "ConnectivityMetric": connectMetrics[1],
-                                "ConnectivityLength": "0.25",
+                                "ConnectivityLength": "0.50",
                                 "ConnectivityOverlap": "36",
                                 # "AutoRegressiveOrder": "12",
-                                "AutoRegressiveOrderTime": "0.038",
+                                "AutoRegressiveOrderTime": "0.048",
                                 # "PsdSize": "256",
                                 "FreqRes": "1",
                                 },
 
                            optionKeys[4]:
                                {"StimulationEpoch": "3",
-                                "StimulationDelay": "1",
+                                # "StimulationDelay": "1",
                                 "TimeWindowLength": "0.25",
                                 "TimeWindowShift": "0.161",
                                 "ConnectivityMetric": connectMetrics[1],
-                                "ConnectivityLength": "0.25",
+                                "ConnectivityLength": "0.50",
                                 "ConnectivityOverlap": "36",
                                 # "AutoRegressiveOrder": "12",
-                                "AutoRegressiveOrderTime": "0.038",
+                                "AutoRegressiveOrderTime": "0.048",
                                 # "PsdSize": "256",
-                                "FreqRes": "1",
+                                "FreqRes": "2",
                                 }
                            }
 
