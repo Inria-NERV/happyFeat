@@ -246,7 +246,7 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
                 errMsg = str(errMsg + "\nSampling frequency or frequency bins mismatch")
                 errMsg = str(errMsg + "\n(" + str(sampFreq1) + " vs " + str(sampFreq2) + " or ")
                 errMsg = str(errMsg + str(freqBins1) + " vs " + str(freqBins2) + ")")
-                self.over.emit(False, errMsg, None, None, None)
+                self.over.emit(False, errMsg, None, None, None, None, None)
                 return
 
             listSampFreq.append(sampFreq1)
@@ -263,7 +263,7 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
             if electrodeList1 != electrodeList2:
                 errMsg = str("Error when loading " + path1 + "\n" + " and " + path2)
                 errMsg = str(errMsg + "\nElectrode List mismatch")
-                self.over.emit(False, errMsg, None, None, None)
+                self.over.emit(False, errMsg, None, None, None, None, None)
                 return
 
             listElectrodeList.append(electrodeList1)
@@ -279,7 +279,7 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         if not all(freqsamp == listSampFreq[0] for freqsamp in listSampFreq):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Sampling frequency mismatch (" + str(listSampFreq) + ")")
-            self.over.emit(False, errMsg, None, None, None)
+            self.over.emit(False, errMsg, None, None, None, None, None)
             return
         else:
             self.samplingFreq = listSampFreq[0]
@@ -288,7 +288,7 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         if not all(electrodeList == listElectrodeList[0] for electrodeList in listElectrodeList):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Electrode List mismatch")
-            self.over.emit(False, errMsg, None, None, None)
+            self.over.emit(False, errMsg, None, None, None, None, None)
             return
         else:
             print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
@@ -296,7 +296,7 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         if not all(freqBins == listFreqBins[0] for freqBins in listFreqBins):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Not same number of frequency bins (" + str(listSampFreq) + ")")
-            self.over.emit(False, errMsg, None, None, None)
+            self.over.emit(False, errMsg, None, None, None, None, None)
             return
         else:
             print("Frequency bins: " + str(listFreqBins[0]))
@@ -444,7 +444,7 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
             errMsg = str("Error when loading power spectrum CSV files\n")
             errMsg = str(errMsg + "Not enough valid trials to proceed...\n")
             errMsg = str(errMsg + "Try again with different runs/signals\n")
-            self.over.emit(False, errMsg, None, None, None)
+            self.over.emit(False, errMsg, None, None, None, None, None)
             return
         else:
             Rsquare, signTab = Compute_Rsquare_Map(power_cond1_final[:, :, :(n_bins - 1)],
@@ -567,7 +567,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
                 errMsg = str("Error when loading " + path1 + "\n" + " and " + path2)
                 errMsg = str(errMsg + "\nfrequency bins mismatch")
                 errMsg = str(errMsg + "\n(" + str(freqBins1) + " vs " + str(freqBins2) + ")")
-                self.over.emit(False, errMsg, None, None, None, None)
+                self.over.emit(False, errMsg, None, None, None, None, None)
                 return
 
             listFreqs.append(freqBins1)
@@ -586,7 +586,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
             if electrodeList1 != electrodeList2:
                 errMsg = str("Error when loading " + path1 + "\n" + " and " + path2)
                 errMsg = str(errMsg + "\nElectrode List mismatch")
-                self.over.emit(False, errMsg, None, None, None, None)
+                self.over.emit(False, errMsg, None, None, None, None, None)
                 return
 
             listElectrodeList.append(electrodeList1)
@@ -600,7 +600,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         if not all(nbfreqs == listFreqs[0] for nbfreqs in listFreqs):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "nb of frequency mismatch (" + str(listFreqs) + ")")
-            self.over.emit(False, errMsg, None, None, None, None)
+            self.over.emit(False, errMsg, None, None, None, None, None)
             return
         else:
             print("Nb of Frequency bins for selected files : " + str(listFreqs[0]))
@@ -608,7 +608,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         if not all(electrodeList == listElectrodeList[0] for electrodeList in listElectrodeList):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Sensor List mismatch")
-            self.over.emit(False, errMsg, None, None, None, None)
+            self.over.emit(False, errMsg, None, None, None, None, None)
             return
         else:
             print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
@@ -616,7 +616,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         if not all(sampFreq == listSamplingFreqs[0] for sampFreq in listSamplingFreqs):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Sampling Freq mismatch")
-            self.over.emit(False, errMsg, None, None, None, None)
+            self.over.emit(False, errMsg, None, None, None, None, None)
             return
         else:
             print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
@@ -740,7 +740,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
             errMsg = str("Error when loading connectivity CSV files\n")
             errMsg = str(errMsg + "Not enough valid trials to proceed...\n")
             errMsg = str(errMsg + "Try again with different runs/signals\n")
-            self.over.emit(False, errMsg, None, None, None, None)
+            self.over.emit(False, errMsg, None, None, None, None, None)
             return
         else:
             Rsquare, signTab = Compute_Rsquare_Map(connect_cond1_final[:, :, :(n_bins - 1)],

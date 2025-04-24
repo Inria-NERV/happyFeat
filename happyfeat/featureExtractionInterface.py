@@ -1423,50 +1423,51 @@ class Dialog(QDialog):
 
         # ---- Handle cases in which we had to prune out trials and/or electrodes with invalid values (NaN)
 
-        # Check if trials were dropped due to containing too many NaNs
-        threshInvalid = int(nbElectrodes / 4)  # (TODO: make parameter)
-        analysisFiles = []
-        invalid = {}
-        for runIdx, selectedItem in enumerate(self.availableFilesForVizList.selectedItems()):
-            analysisFiles.append(selectedItem.text())
-            tempList = []
-            for trialIdx, nbNan in enumerate(invalidTrials1[runIdx]):
-                if nbNan > threshInvalid:
-                    tempList.append((trialIdx, nbNan))
-            for trialIdx, nbNan in enumerate(invalidTrials2[runIdx]):
-                if nbNan > threshInvalid:
-                    tempList.append((trialIdx, nbNan))
-            if len(tempList):
-                invalid[selectedItem.text()] = tempList
+        if success:
+            # Check if trials were dropped due to containing too many NaNs
+            threshInvalid = int(nbElectrodes / 4)  # (TODO: make parameter)
+            analysisFiles = []
+            invalid = {}
+            for runIdx, selectedItem in enumerate(self.availableFilesForVizList.selectedItems()):
+                analysisFiles.append(selectedItem.text())
+                tempList = []
+                for trialIdx, nbNan in enumerate(invalidTrials1[runIdx]):
+                    if nbNan > threshInvalid:
+                        tempList.append((trialIdx, nbNan))
+                for trialIdx, nbNan in enumerate(invalidTrials2[runIdx]):
+                    if nbNan > threshInvalid:
+                        tempList.append((trialIdx, nbNan))
+                if len(tempList):
+                    invalid[selectedItem.text()] = tempList
 
-        if len(invalid):
-            warnTxt = str("\t\t-- WARNING --\nSome trials have been removed because they contained too many invalid (NaN) values. \n\n")
-            for idx, run in enumerate(invalid):
-                warnTxt += str("\t- File " + str(run) + "\n")
-                tempList = invalid[run]
-                for idx2, tempTuple in enumerate(tempList):
-                    warnTxt += str("\t\tTrial " + str(tempTuple[0]) + " (" + str(tempTuple[1]) + " channels with NaNs)\n")
+            if len(invalid):
+                warnTxt = str("\t\t-- WARNING --\nSome trials have been removed because they contained too many invalid (NaN) values. \n\n")
+                for idx, run in enumerate(invalid):
+                    warnTxt += str("\t- File " + str(run) + "\n")
+                    tempList = invalid[run]
+                    for idx2, tempTuple in enumerate(tempList):
+                        warnTxt += str("\t\tTrial " + str(tempTuple[0]) + " (" + str(tempTuple[1]) + " channels with NaNs)\n")
 
-            myMsgBox(warnTxt)
+                myMsgBox(warnTxt)
 
-        # Check if electrodes were removed from the final results because they contained NaNs
-        invalidElec = {}
-        for idx in range(len(invalidElec1)):
-            if not idx % 2:  # even idx = electrode name // odd idx = nb of invalid trials
-                invalidElec[invalidElec1[idx]] = invalidElec1[idx+1]
-        for idx in range(len(invalidElec2)):
-            if not idx % 2:  # even idx = electrode name // odd idx = nb of invalid trials
-                if invalidElec[invalidElec2[idx]]:
-                    invalidElec[invalidElec2[idx]] = max(invalidElec2[idx+1], invalidElec[invalidElec2[idx]])
-                else:
-                    invalidElec[invalidElec2[idx]] = invalidElec2[idx + 1]
+            # Check if electrodes were removed from the final results because they contained NaNs
+            invalidElec = {}
+            for idx in range(len(invalidElec1)):
+                if not idx % 2:  # even idx = electrode name // odd idx = nb of invalid trials
+                    invalidElec[invalidElec1[idx]] = invalidElec1[idx+1]
+            for idx in range(len(invalidElec2)):
+                if not idx % 2:  # even idx = electrode name // odd idx = nb of invalid trials
+                    if invalidElec[invalidElec2[idx]]:
+                        invalidElec[invalidElec2[idx]] = max(invalidElec2[idx+1], invalidElec[invalidElec2[idx]])
+                    else:
+                        invalidElec[invalidElec2[idx]] = invalidElec2[idx + 1]
 
-        if len(invalidElec):
-            warnTxt = str("\t\t-- WARNING --\nSome electrodes have been removed because they contained invalid (NaN) values.\n")
-            for idx, elec in enumerate(invalidElec):
-                warnTxt += str("\t- " + str(elec) + ": " + str(invalidElec[elec]) + " trials with NaN values\n")
+            if len(invalidElec):
+                warnTxt = str("\t\t-- WARNING --\nSome electrodes have been removed because they contained invalid (NaN) values.\n")
+                for idx, elec in enumerate(invalidElec):
+                    warnTxt += str("\t- " + str(elec) + ": " + str(invalidElec[elec]) + " trials with NaN values\n")
 
-            myMsgBox(warnTxt)
+                myMsgBox(warnTxt)
 
     def loadFilesForViz_kill_PB(self, success, text, nbElectrodes, invalidTrials1, invalidTrials2, invalidElec1, invalidElec2):
         # Viz work thread2 is over, so we kill the progress bar
@@ -1497,50 +1498,51 @@ class Dialog(QDialog):
 
         # ---- Handle cases in which we had to prune out trials and/or electrodes with invalid values (NaN)
 
-        # Check if trials were dropped due to containing too many NaNs
-        threshInvalid = int(nbElectrodes / 4)  # (TODO: make parameter)
-        analysisFiles = []
-        invalid = {}
-        for runIdx, selectedItem in enumerate(self.availableFilesForVizList.selectedItems()):
-            analysisFiles.append(selectedItem.text())
-            tempList = []
-            for trialIdx, nbNan in enumerate(invalidTrials1[runIdx]):
-                if nbNan > threshInvalid:
-                    tempList.append((trialIdx, nbNan))
-            for trialIdx, nbNan in enumerate(invalidTrials2[runIdx]):
-                if nbNan > threshInvalid:
-                    tempList.append((trialIdx, nbNan))
-            if len(tempList):
-                invalid[selectedItem.text()] = tempList
+        if success:
+            # Check if trials were dropped due to containing too many NaNs
+            threshInvalid = int(nbElectrodes / 4)  # (TODO: make parameter)
+            analysisFiles = []
+            invalid = {}
+            for runIdx, selectedItem in enumerate(self.availableFilesForVizList.selectedItems()):
+                analysisFiles.append(selectedItem.text())
+                tempList = []
+                for trialIdx, nbNan in enumerate(invalidTrials1[runIdx]):
+                    if nbNan > threshInvalid:
+                        tempList.append((trialIdx, nbNan))
+                for trialIdx, nbNan in enumerate(invalidTrials2[runIdx]):
+                    if nbNan > threshInvalid:
+                        tempList.append((trialIdx, nbNan))
+                if len(tempList):
+                    invalid[selectedItem.text()] = tempList
 
-        if len(invalid):
-            warnTxt = str("\t\t-- WARNING --\nSome trials have been removed because they contained too many invalid (NaN) values.\n")
-            for idx, run in enumerate(invalid):
-                warnTxt += str("  - File " + run + "\n")
-                tempList = invalid[run]
-                for idx2, tempTuple in enumerate(tempList):
-                    warnTxt += str("    Trial " + str(tempTuple[0]) + " (" + str(tempTuple[1]) + " channels with NaNs)\n")
+            if len(invalid):
+                warnTxt = str("\t\t-- WARNING --\nSome trials have been removed because they contained too many invalid (NaN) values.\n")
+                for idx, run in enumerate(invalid):
+                    warnTxt += str("  - File " + run + "\n")
+                    tempList = invalid[run]
+                    for idx2, tempTuple in enumerate(tempList):
+                        warnTxt += str("    Trial " + str(tempTuple[0]) + " (" + str(tempTuple[1]) + " channels with NaNs)\n")
 
-            myMsgBox(warnTxt)
+                myMsgBox(warnTxt)
 
-        # Check if electrodes were removed from the final results because they contained NaNs
-        invalidElec = {}
-        for idx in range(len(invalidElec1)):
-            if not idx % 2:  # even idx = electrode name // odd idx = nb of invalid trials
-                invalidElec[invalidElec1[idx]] = invalidElec1[idx + 1]
-        for idx in range(len(invalidElec2)):
-            if not idx % 2:  # even idx = electrode name // odd idx = nb of invalid trials
-                if invalidElec[invalidElec2[idx]]:
-                    invalidElec[invalidElec2[idx]] = max(invalidElec2[idx + 1], invalidElec[invalidElec2[idx]])
-                else:
-                    invalidElec[invalidElec2[idx]] = invalidElec2[idx + 1]
+            # Check if electrodes were removed from the final results because they contained NaNs
+            invalidElec = {}
+            for idx in range(len(invalidElec1)):
+                if not idx % 2:  # even idx = electrode name // odd idx = nb of invalid trials
+                    invalidElec[invalidElec1[idx]] = invalidElec1[idx + 1]
+            for idx in range(len(invalidElec2)):
+                if not idx % 2:  # even idx = electrode name // odd idx = nb of invalid trials
+                    if invalidElec[invalidElec2[idx]]:
+                        invalidElec[invalidElec2[idx]] = max(invalidElec2[idx + 1], invalidElec[invalidElec2[idx]])
+                    else:
+                        invalidElec[invalidElec2[idx]] = invalidElec2[idx + 1]
 
-        if len(invalidElec):
-            warnTxt = str("\t\t-- WARNING --\nSome electrodes have been removed because they contained invalid (NaN) values.\n")
-            for idx, elec in enumerate(invalidElec):
-                warnTxt += str("  - " + str(elec) + ": " + str(invalidElec[elec]) + "trials containing NaN values\n")
+            if len(invalidElec):
+                warnTxt = str("\t\t-- WARNING --\nSome electrodes have been removed because they contained invalid (NaN) values.\n")
+                for idx, elec in enumerate(invalidElec):
+                    warnTxt += str("  - " + str(elec) + ": " + str(invalidElec[elec]) + "trials containing NaN values\n")
 
-            myMsgBox(warnTxt)
+                myMsgBox(warnTxt)
 
     def btnTrainClassif(self):
         # ----------

@@ -65,7 +65,7 @@ def load_csv_np(file):
     # For the data, we discard the last 3 cols (not used in our case)
     header = np.loadtxt(file, dtype=str, delimiter=',', max_rows=1)
     nbcols = header.size-3
-    data = np.loadtxt(file, dtype=float, delimiter=',', skiprows=1, usecols=list(range(nbcols)))
+    data = np.genfromtxt(file, dtype=float, delimiter=',', skip_header=1, usecols=list(range(nbcols)))
     return header, data
 
 def check_valid_np(data):
