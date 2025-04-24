@@ -1,7 +1,7 @@
 <OpenViBE-Scenario>
 	<FormatVersion>2</FormatVersion>
 	<Creator>OpenViBE Designer</Creator>
-	<CreatorVersion>3.6.0</CreatorVersion>
+	<CreatorVersion>3.5.0</CreatorVersion>
 	<Settings>
 		<Setting>
 			<Identifier>(0xcd66436a, 0xfda9a430)</Identifier>
@@ -429,7 +429,7 @@
 					<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
 					<Name>Dimension to work on</Name>
 					<DefaultValue>0</DefaultValue>
-					<Value>2</Value>
+					<Value>1</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
@@ -492,7 +492,7 @@
 					<TypeIdentifier>(0x007deef9, 0x2f3e95c6)</TypeIdentifier>
 					<Name>Dimension to work on</Name>
 					<DefaultValue>0</DefaultValue>
-					<Value>2</Value>
+					<Value>1</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
@@ -2435,7 +2435,7 @@
 			</Attributes>
 		</Box>
 		<Box>
-			<Identifier>(0x00005077, 0x00002962)</Identifier>
+			<Identifier>(0x00005077, 0x00002964)</Identifier>
 			<Name>Display cue image</Name>
 			<AlgorithmClassIdentifier>(0x005789a4, 0x3ab78a36)</AlgorithmClassIdentifier>
 			<Inputs>
@@ -2469,21 +2469,66 @@
 					<TypeIdentifier>(0x2c132d6e, 0x44ab0d97)</TypeIdentifier>
 					<Name>Clear screen Stimulation</Name>
 					<DefaultValue>OVTK_StimulationId_VisualStimulationStop</DefaultValue>
-					<Value>OVTK_GDF_End_Of_Trial</Value>
+					<Value>OVTK_GDF_Foot</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
 					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
 					<Name>Cue Image 1</Name>
 					<DefaultValue>${Path_Data}/plugins/simple-visualization/p300-magic-card/01.png</DefaultValue>
-					<Value>D:/manip/BCINET/Backup/Images/cue-center.png</Value>
+					<Value>D:/manip/BCINET/Backup/Images/cross-center.png</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 				<Setting>
 					<TypeIdentifier>(0x2c132d6e, 0x44ab0d97)</TypeIdentifier>
 					<Name>Stimulation 1</Name>
 					<DefaultValue>OVTK_StimulationId_Label_01</DefaultValue>
+					<Value>OVTK_StimulationId_ExperimentStart</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+				<Setting>
+					<Identifier>(0x4ac6cd5d, 0xa3301905)</Identifier>
+					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
+					<Name>Cue Image 2</Name>
+					<DefaultValue>${Path_Data}/plugins/simple-visualization/p300-magic-card/02.png</DefaultValue>
+					<Value>D:/Manip/BCINET/Backup/Images/cue-center-Big.png</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+				<Setting>
+					<TypeIdentifier>(0x2c132d6e, 0x44ab0d97)</TypeIdentifier>
+					<Name>Stimulation 2</Name>
+					<DefaultValue>OVTK_StimulationId_Label_02</DefaultValue>
 					<Value>OVTK_GDF_Left</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+				<Setting>
+					<Identifier>(0x09745f83, 0x88dccb18)</Identifier>
+					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
+					<Name>Cue Image 3</Name>
+					<DefaultValue>${Path_Data}/plugins/simple-visualization/p300-magic-card/03.png</DefaultValue>
+					<Value>D:/Manip/BCINET/Backup/Images/intercue-center .png</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+				<Setting>
+					<TypeIdentifier>(0x2c132d6e, 0x44ab0d97)</TypeIdentifier>
+					<Name>Stimulation 3</Name>
+					<DefaultValue>OVTK_StimulationId_Label_03</DefaultValue>
+					<Value>OVTK_GDF_Start_Of_Trial</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+				<Setting>
+					<Identifier>(0x865b7111, 0x6d422763)</Identifier>
+					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
+					<Name>Cue Image 4</Name>
+					<DefaultValue>${Path_Data}/plugins/simple-visualization/p300-magic-card/04.png</DefaultValue>
+					<Value>D:/Manip/BCINET/Backup/Images/intercue-center .png</Value>
+					<Modifiability>false</Modifiability>
+				</Setting>
+				<Setting>
+					<TypeIdentifier>(0x2c132d6e, 0x44ab0d97)</TypeIdentifier>
+					<Name>Stimulation 4</Name>
+					<DefaultValue>OVTK_StimulationId_Label_04</DefaultValue>
+					<Value>OVTK_GDF_End_Of_Trial</Value>
 					<Modifiability>false</Modifiability>
 				</Setting>
 			</Settings>
@@ -4433,6 +4478,17 @@
 			</Target>
 		</Link>
 		<Link>
+			<Identifier>(0x000015e2, 0x00004c17)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x00005077, 0x00002964)</BoxIdentifier>
+				<BoxOutputIndex>0</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x000056f9, 0x000039b4)</BoxIdentifier>
+				<BoxInputIdentifier>(0x0b66a55a, 0xc8e13b1b)</BoxInputIdentifier>
+			</Target>
+		</Link>
+		<Link>
 			<Identifier>(0x0000169e, 0x00004e17)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x0b67ca3f, 0x2a759532)</BoxIdentifier>
@@ -4697,17 +4753,6 @@
 			</Target>
 		</Link>
 		<Link>
-			<Identifier>(0x00003d51, 0x000025cc)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x00000de5, 0x00006f3e)</BoxIdentifier>
-				<BoxOutputIndex>0</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x00005077, 0x00002962)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
 			<Identifier>(0x00003e20, 0x0000782f)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x000022b1, 0x00006791)</BoxIdentifier>
@@ -4847,6 +4892,17 @@
 			</Source>
 			<Target>
 				<BoxIdentifier>(0x00002746, 0x000038d4)</BoxIdentifier>
+				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
+			<Identifier>(0x000051e7, 0x00000e17)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x00000de5, 0x00006f3e)</BoxIdentifier>
+				<BoxOutputIndex>0</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x00005077, 0x00002964)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>
@@ -5002,17 +5058,6 @@
 			<Target>
 				<BoxIdentifier>(0x000022b1, 0x00006792)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
-			<Identifier>(0x0000627e, 0x000053cd)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x00005077, 0x00002962)</BoxIdentifier>
-				<BoxOutputIndex>0</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x000056f9, 0x000039b4)</BoxIdentifier>
-				<BoxInputIdentifier>(0x0b66a55a, 0xc8e13b1b)</BoxInputIdentifier>
 			</Target>
 		</Link>
 		<Link>
@@ -5464,7 +5509,7 @@ EDF + ov files</Text>
 		<Entry>
 			<Identifier>(0x0000775c, 0x000078ff)</Identifier>
 			<Type>(0x3bcce5d2, 0x43f2d968)</Type>
-			<Data>[{"boxIdentifier":"(0x00005077, 0x00002962)","childCount":0,"identifier":"(0x00000b1c, 0x00005ed5)","parentIdentifier":"(0xffffffff, 0xffffffff)","type":3},{"boxIdentifier":"(0xffffffff, 0xffffffff)","childCount":1,"height":505,"identifier":"(0x4a4285fb, 0x630ff778)","name":"Default window","parentIdentifier":"(0xffffffff, 0xffffffff)","type":1,"width":583},{"boxIdentifier":"(0xffffffff, 0xffffffff)","childCount":1,"identifier":"(0x1d5c7e39, 0x292c8798)","index":0,"name":"Default tab","parentIdentifier":"(0x4a4285fb, 0x630ff778)","type":2},{"boxIdentifier":"(0xffffffff, 0xffffffff)","childCount":2,"dividerPosition":300,"identifier":"(0x00003bc2, 0x000047ec)","index":0,"maxDividerPosition":460,"name":"Vertical split","parentIdentifier":"(0x1d5c7e39, 0x292c8798)","type":4},{"boxIdentifier":"(0xffffffff, 0xffffffff)","childCount":2,"dividerPosition":271,"identifier":"(0x00005e84, 0x0000706c)","index":0,"maxDividerPosition":547,"name":"Horizontal split","parentIdentifier":"(0x00003bc2, 0x000047ec)","type":5},{"boxIdentifier":"(0x00004c7c, 0x00001bcf)","childCount":0,"identifier":"(0x000014cb, 0x00007868)","index":1,"parentIdentifier":"(0x00003bc2, 0x000047ec)","type":3},{"boxIdentifier":"(0x00005c3e, 0x00007499)","childCount":0,"identifier":"(0x00003d76, 0x00002c44)","index":0,"parentIdentifier":"(0x00005e84, 0x0000706c)","type":3},{"boxIdentifier":"(0x000019e5, 0x000053f9)","childCount":0,"identifier":"(0x00003af6, 0x00005dce)","index":1,"parentIdentifier":"(0x00005e84, 0x0000706c)","type":3}]</Data>
+			<Data>[{"boxIdentifier":"(0x00005077, 0x00002964)","childCount":0,"identifier":"(0x00004ae9, 0x000079a0)","parentIdentifier":"(0xffffffff, 0xffffffff)","type":3},{"boxIdentifier":"(0xffffffff, 0xffffffff)","childCount":1,"height":505,"identifier":"(0x4a4285fb, 0x630ff778)","name":"Default window","parentIdentifier":"(0xffffffff, 0xffffffff)","type":1,"width":583},{"boxIdentifier":"(0xffffffff, 0xffffffff)","childCount":1,"identifier":"(0x1d5c7e39, 0x292c8798)","index":0,"name":"Default tab","parentIdentifier":"(0x4a4285fb, 0x630ff778)","type":2},{"boxIdentifier":"(0xffffffff, 0xffffffff)","childCount":2,"dividerPosition":300,"identifier":"(0x00003bc2, 0x000047ec)","index":0,"maxDividerPosition":460,"name":"Vertical split","parentIdentifier":"(0x1d5c7e39, 0x292c8798)","type":4},{"boxIdentifier":"(0xffffffff, 0xffffffff)","childCount":2,"dividerPosition":271,"identifier":"(0x00005e84, 0x0000706c)","index":0,"maxDividerPosition":547,"name":"Horizontal split","parentIdentifier":"(0x00003bc2, 0x000047ec)","type":5},{"boxIdentifier":"(0x00004c7c, 0x00001bcf)","childCount":0,"identifier":"(0x000014cb, 0x00007868)","index":1,"parentIdentifier":"(0x00003bc2, 0x000047ec)","type":3},{"boxIdentifier":"(0x00005c3e, 0x00007499)","childCount":0,"identifier":"(0x00003d76, 0x00002c44)","index":0,"parentIdentifier":"(0x00005e84, 0x0000706c)","type":3},{"boxIdentifier":"(0x000019e5, 0x000053f9)","childCount":0,"identifier":"(0x00003af6, 0x00005dce)","index":1,"parentIdentifier":"(0x00005e84, 0x0000706c)","type":3}]</Data>
 		</Entry>
 	</Metadata>
 	<Attributes>
