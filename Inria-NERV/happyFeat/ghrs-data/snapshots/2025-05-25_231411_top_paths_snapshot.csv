@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/Inria-NERV/happyFeat,9,7
+/Inria-NERV/happyFeat/tree/main/happyfeat,4,3
+/Inria-NERV/happyFeat/tree/main/happyfeat/templates-mixed-bcinet,3,1
+/Inria-NERV/happyFeat/tree/main/happyfeat/lib,2,2
+/Inria-NERV/happyFeat/pulls,2,1
+/Inria-NERV/happyFeat/blob/main/happyfeat/featureExtractionInterface.py,1,1
+/Inria-NERV/happyFeat/blob/main/happyfeat/lib/bcipipeline_settings.py,1,1
+/Inria-NERV/happyFeat/blob/main/happyfeat/lib/__init__.py,1,1
+/Inria-NERV/happyFeat/blob/main/happyfeat/lib/Spectral_Analysis.py,1,1
+/Inria-NERV/happyFeat/blob/main/happyfeat/lib/Statistical_analysis.py,1,1
