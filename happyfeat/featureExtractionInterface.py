@@ -76,6 +76,7 @@ class Features:
 
     samplingFreq = []
 
+    autoselect_chanidx = []
     autoselected = []
 
 class Dialog(QDialog):
@@ -2656,15 +2657,25 @@ class Dialog(QDialog):
 
         # Get indices corresponding to the selected channel names
         # TODO : allow for case-insensitive selection (e.g. FCz == Fcz)
-        Index_electrode = []
+        results1.autoselect_chanidx = []
         for chan in self.autoFeatChannelList:
             try:
                 idx = results1.electrodes_final.index(chan)
             except ValueError:
                 myMsgBox("AutoFeat: Electrode " + chan + " not in electrode list of selected files")
                 return
-            Index_electrode.append(idx)
-        print("Index_electrode:  " + str(Index_electrode))
+            results1.autoselect_chanidx.append(idx)
+        print("result.autoselect_chanidx METRIC1:  " + str(results1.autoselect_chanidx))
+
+        results2.autoselect_chanidx = []
+        for chan in self.autoFeatChannelList:
+            try:
+                idx = results2.electrodes_final.index(chan)
+            except ValueError:
+                myMsgBox("AutoFeat: Electrode " + chan + " not in electrode list of selected files")
+                return
+            results2.autoselect_chanidx.append(idx)
+        print("result.autoselect_chanidx METRIC2:  " + str(results2.autoselect_chanidx))
 
         # Check if frequencies are correct...
         freqMin = int(self.autoFeatFreqRange.split(":")[0])
@@ -2681,7 +2692,7 @@ class Dialog(QDialog):
         for result in [results1, results2]:
             if len(result.Rsquare) > 0:
                 result.autoselected = []
-                Rsquare_reduced = result.Rsquare[Index_electrode, idxFreqmin:idxFreqmax+1]
+                Rsquare_reduced = result.Rsquare[result.autoselect_chanidx, idxFreqmin:idxFreqmax+1]
 
                 # if "Use the sign" is checked
                 # we apply the sign map to Rsquare
@@ -2705,12 +2716,12 @@ class Dialog(QDialog):
                         # reverse the sign for the Rsquare map...
                         tempRsign[np.where(result.Rsign_tab < 0)] = 1
                         tempRsign[np.where(result.Rsign_tab > 0)] = -1
-                    Rsign_reduced = tempRsign[Index_electrode, idxFreqmin:idxFreqmax+1]
+                    Rsign_reduced = tempRsign[result.autoselect_chanidx, idxFreqmin:idxFreqmax+1]
                     Rsquare_reduced = Rsquare_reduced * Rsign_reduced
 
                 Max_per_electrode = Rsquare_reduced.max(1)
-                indices_max = list(reversed(np.argsort(Max_per_electrode)))[0:self.autoFeatNb]  # indices of [autoFeatNb] max values within the scope of Index_electrodes
-                indices_max_final = [Index_electrode[i] for i in indices_max]
+                indices_max = list(reversed(np.argsort(Max_per_electrode)))[0:self.autoFeatNb]  # indices of [autoFeatNb] max values within the scope of result.autoselect_chanidx
+                indices_max_final = [result.autoselect_chanidx[i] for i in indices_max]
 
                 for idx in indices_max_final:
                     r2Vals = result.Rsquare[idx, idxFreqmin:idxFreqmax+1]
