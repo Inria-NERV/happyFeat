@@ -737,7 +737,7 @@ class Dialog(QDialog):
         self.lastTrainingResults = QTreeWidget()
         self.lastTrainingResults.setColumnCount(3)
         self.lastTrainingResults.setHeaderLabels(['#', 'Score', 'Feats (expand for details)'])
-        self.lastTrainingResults.setColumnWidth(0, 30)
+        self.lastTrainingResults.setColumnWidth(0, 45)
         self.lastTrainingResults.setColumnWidth(1, 60)
         minHeightTrainResults = 30
         self.lastTrainingResults.setMinimumHeight(minHeightTrainResults)
