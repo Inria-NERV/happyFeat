@@ -605,7 +605,7 @@ class Dialog(QDialog):
             self.btn_topo2.clicked.connect(lambda: self.btnTopo(self.Features2, titleTopo_c, metric_suffix="NS"))
 
             self.btn_r2mapAutoFeat2 = QPushButton("R² map (sub-select.)")
-            self.btn_r2mapAutoFeat2.clicked.connect(lambda: self.btnR2(self.Features2, titleR2, useSubselection=True, metric_suffix="NS"))
+            self.btn_r2mapAutoFeat2.clicked.connect(lambda: self.btnR2(self.Features2, titleR2_c, useSubselection=True, metric_suffix="NS"))
 
             self.parallelVizLayouts[1].addWidget(self.btn_r2map2)
             self.parallelVizLayouts[1].addWidget(self.btn_r2mapAutoFeat2)
