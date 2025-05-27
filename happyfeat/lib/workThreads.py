@@ -719,7 +719,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
                     connect_cond1_final[trial, v, :] = nanVector
                     connect_cond2_final[trial, v, :] = nanVector
         for idx, v in enumerate(invalidElec2):
-            dispStr = str("-- WARNING -- Connectivity Cond2: Electrode idx " + str(v) + " (" + electrodeList[v] + ") is full of NaNs in " + str(invalidElec1[v]) + " trials")
+            dispStr = str("-- WARNING -- Connectivity Cond2: Electrode idx " + str(v) + " (" + electrodeList[v] + ") is full of NaNs in " + str(invalidElec2[v]) + " trials")
             dispStr += str("\n  -- Discarding it for the current analysis")
             print(dispStr)
             if discardElecs:

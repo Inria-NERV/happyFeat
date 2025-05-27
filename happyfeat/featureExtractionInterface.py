@@ -1528,12 +1528,13 @@ class Dialog(QDialog):
 
             # Check if electrodes were removed from the final results because they contained NaNs
             invalidElec = {}
+            
             for idx in range(len(invalidElec1)):
                 if not idx % 2:  # even idx = electrode name // odd idx = nb of invalid trials
                     invalidElec[invalidElec1[idx]] = invalidElec1[idx + 1]
             for idx in range(len(invalidElec2)):
                 if not idx % 2:  # even idx = electrode name // odd idx = nb of invalid trials
-                    if invalidElec[invalidElec2[idx]]:
+                    if invalidElec2[idx] in invalidElec:
                         invalidElec[invalidElec2[idx]] = max(invalidElec2[idx + 1], invalidElec[invalidElec2[idx]])
                     else:
                         invalidElec[invalidElec2[idx]] = invalidElec2[idx + 1]
