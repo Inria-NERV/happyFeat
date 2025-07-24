@@ -1235,7 +1235,7 @@
 			<Attributes>
 				<Attribute>
 					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
-					<Value>320</Value>
+					<Value>288</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
@@ -1268,7 +1268,7 @@
 			</Attributes>
 		</Box>
 		<Box>
-			<Identifier>(0x00004cd8, 0x00002a32)</Identifier>
+			<Identifier>(0x00004cd8, 0x00002a33)</Identifier>
 			<Name>Reject</Name>
 			<AlgorithmClassIdentifier>(0x361722e8, 0x311574e8)</AlgorithmClassIdentifier>
 			<Inputs>
@@ -1309,11 +1309,11 @@
 			<Attributes>
 				<Attribute>
 					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
-					<Value>528</Value>
+					<Value>368</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
-					<Value>1104</Value>
+					<Value>576</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x30a4e5c9, 0x83502953)</Identifier>
@@ -2837,6 +2837,17 @@
 			</Target>
 		</Link>
 		<Link>
+			<Identifier>(0x000002fe, 0x000044a5)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x00004cd8, 0x00002a33)</BoxIdentifier>
+				<BoxOutputIndex>0</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x1f046833, 0x21a8a876)</BoxIdentifier>
+				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
 			<Identifier>(0x00000646, 0x00005fb5)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x00005705, 0x000070cc)</BoxIdentifier>
@@ -2844,6 +2855,28 @@
 			</Source>
 			<Target>
 				<BoxIdentifier>(0x0000511a, 0x00005b60)</BoxIdentifier>
+				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
+			<Identifier>(0x0000076e, 0x000004ae)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x1f046833, 0x21a8a876)</BoxIdentifier>
+				<BoxOutputIndex>0</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x000065af, 0x00006131)</BoxIdentifier>
+				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
+			<Identifier>(0x000008a8, 0x00004c88)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x00004cd8, 0x00002a31)</BoxIdentifier>
+				<BoxOutputIndex>0</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x00004cd8, 0x00002a33)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>
@@ -2947,17 +2980,6 @@
 			</Target>
 		</Link>
 		<Link>
-			<Identifier>(0x00001d90, 0x0000155a)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x00004cd8, 0x00002a32)</BoxIdentifier>
-				<BoxOutputIndex>0</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x000065af, 0x00006132)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
 			<Identifier>(0x00001e84, 0x0000520a)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x000065af, 0x00006131)</BoxIdentifier>
@@ -2965,17 +2987,6 @@
 			</Source>
 			<Target>
 				<BoxIdentifier>(0x00005705, 0x000070cc)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
-			<Identifier>(0x000021f1, 0x00006a28)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x00004cd8, 0x00002a32)</BoxIdentifier>
-				<BoxOutputIndex>0</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x000065af, 0x00006131)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>
@@ -3024,17 +3035,6 @@
 			</Target>
 		</Link>
 		<Link>
-			<Identifier>(0x00003cb7, 0x00003bf0)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x1f046833, 0x21a8a876)</BoxIdentifier>
-				<BoxOutputIndex>0</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x00004cd8, 0x00002a32)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
 			<Identifier>(0x00003f16, 0x000064f2)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x00006c51, 0x000077b6)</BoxIdentifier>
@@ -3064,6 +3064,17 @@
 			</Source>
 			<Target>
 				<BoxIdentifier>(0x00004756, 0x00003402)</BoxIdentifier>
+				<BoxInputIndex>0</BoxInputIndex>
+			</Target>
+		</Link>
+		<Link>
+			<Identifier>(0x00004888, 0x000002a1)</Identifier>
+			<Source>
+				<BoxIdentifier>(0x1f046833, 0x21a8a876)</BoxIdentifier>
+				<BoxOutputIndex>0</BoxOutputIndex>
+			</Source>
+			<Target>
+				<BoxIdentifier>(0x000065af, 0x00006132)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>
@@ -3229,17 +3240,6 @@
 			</Source>
 			<Target>
 				<BoxIdentifier>(0x00005705, 0x000070cb)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
-			<Identifier>(0x00006864, 0x000016ea)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x00004cd8, 0x00002a31)</BoxIdentifier>
-				<BoxOutputIndex>0</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x1f046833, 0x21a8a876)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>
@@ -3476,15 +3476,15 @@ exclude AUX electrodes</Text>
 		</Comment>
 		<Comment>
 			<Identifier>(0x000008e3, 0x00002911)</Identifier>
-			<Text>Reject electrodes FT9, FT10 and Iz for connectivity computation</Text>
+			<Text>Reject electrodes FT9, FT10 and Iz</Text>
 			<Attributes>
 				<Attribute>
 					<Identifier>(0x473d9a43, 0x97fc0a97)</Identifier>
-					<Value>1344</Value>
+					<Value>832</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x7234b86b, 0x2b8651a5)</Identifier>
-					<Value>528</Value>
+					<Value>368</Value>
 				</Attribute>
 			</Attributes>
 		</Comment>

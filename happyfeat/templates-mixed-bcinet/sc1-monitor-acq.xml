@@ -1,7 +1,7 @@
 <OpenViBE-Scenario>
 	<FormatVersion>2</FormatVersion>
 	<Creator>OpenViBE Designer</Creator>
-	<CreatorVersion>3.5.0</CreatorVersion>
+	<CreatorVersion>3.6.0</CreatorVersion>
 	<Settings>
 		<Setting>
 			<Identifier>(0xe4d2d40d, 0xe63616c4)</Identifier>
@@ -493,127 +493,6 @@
 			</Attributes>
 		</Box>
 		<Box>
-			<Identifier>(0x0000220f, 0x00007749)</Identifier>
-			<Name>Channel Rename</Name>
-			<AlgorithmClassIdentifier>(0x1fe50479, 0x39040f40)</AlgorithmClassIdentifier>
-			<Inputs>
-				<Input>
-					<TypeIdentifier>(0x5ba36127, 0x195feae1)</TypeIdentifier>
-					<Name>Input matrix</Name>
-				</Input>
-			</Inputs>
-			<Outputs>
-				<Output>
-					<TypeIdentifier>(0x5ba36127, 0x195feae1)</TypeIdentifier>
-					<Name>Output matrix</Name>
-				</Output>
-			</Outputs>
-			<Settings>
-				<Setting>
-					<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
-					<Name>New channel names</Name>
-					<DefaultValue>Channel 1;Channel 2</DefaultValue>
-					<Value>Fp1;Fz;F3;F7;FT9;FC5;FC1;C3;T7;FCz;CP5;CP1;Pz;P3;P7;O1;Oz;O2;P4;P8;Fpz;CP6;CP2;Cz;C4;T8;FT10;FC6;FC2;F4;F8;Fp2;AF7;AF3;AFz;F1;F5;FT7;FC3;C1;C5;TP7;CP3;P1;P5;PO7;PO3;POz;PO4;PO8;P6;P2;CPz;CP4;TP8;C6;C2;FC4;FT8;F6;AF8;AF4;F2;Iz;ECG;EMG1_G;EMG2_D;NC68;NC69;NC70;NC71;NC72;triggerStream</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-			</Settings>
-			<Attributes>
-				<Attribute>
-					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
-					<Value>-64</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
-					<Value>640</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x30a4e5c9, 0x83502953)</Identifier>
-					<Value></Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x341d3912, 0x1478de86)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
-					<Value>(0x74d8d30c, 0xfa7bdf43)</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x527ad68d, 0x16d746a0)</Identifier>
-					<Value></Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xc80ce8af, 0xf699f813)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xce18836a, 0x9c0eb403)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xcfad85b0, 0x7c6d841c)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-			</Attributes>
-		</Box>
-		<Box>
-			<Identifier>(0x0000335a, 0x00007b70)</Identifier>
-			<Name>RelayOV2Fesia</Name>
-			<AlgorithmClassIdentifier>(0x48843891, 0x7bfc57f4)</AlgorithmClassIdentifier>
-			<Inputs>
-				<Input>
-					<TypeIdentifier>(0x6f752dd0, 0x082a321e)</TypeIdentifier>
-					<Name>Stimulations</Name>
-				</Input>
-			</Inputs>
-			<Settings>
-				<Setting>
-					<TypeIdentifier>(0x2c132d6e, 0x44ab0d97)</TypeIdentifier>
-					<Name>Stimulation 1</Name>
-					<DefaultValue>OVTK_StimulationId_Label_01</DefaultValue>
-					<Value>OVTK_StimulationId_ExperimentStart</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-				<Setting>
-					<TypeIdentifier>(0x79a9edeb, 0x245d83fc)</TypeIdentifier>
-					<Name>Command 1</Name>
-					<DefaultValue></DefaultValue>
-					<Value>START "" "C:/openvibe-sender/source/repos/BCINET_Relay/Release/ConsoleApplication1.exe"</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-			</Settings>
-			<Attributes>
-				<Attribute>
-					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
-					<Value>224</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
-					<Value>688</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x341d3912, 0x1478de86)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
-					<Value>(0xe44a71e7, 0x7964dd76)</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x61d11811, 0x71e65362)</Identifier>
-					<Value></Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xce18836a, 0x9c0eb403)</Identifier>
-					<Value>2</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xcfad85b0, 0x7c6d841c)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-			</Attributes>
-		</Box>
-		<Box>
 			<Identifier>(0x000037a7, 0x000026b8)</Identifier>
 			<Name>Channel Rename</Name>
 			<AlgorithmClassIdentifier>(0x1fe50479, 0x39040f40)</AlgorithmClassIdentifier>
@@ -723,60 +602,6 @@
 				<Attribute>
 					<Identifier>(0xcfad85b0, 0x7c6d841c)</Identifier>
 					<Value>1</Value>
-				</Attribute>
-			</Attributes>
-		</Box>
-		<Box>
-			<Identifier>(0x00004840, 0x00002358)</Identifier>
-			<Name>EDF File Writer</Name>
-			<AlgorithmClassIdentifier>(0x0d454dce, 0x470a4c02)</AlgorithmClassIdentifier>
-			<Inputs>
-				<Input>
-					<TypeIdentifier>(0x403488e7, 0x565d70b6)</TypeIdentifier>
-					<Name>Experiment information</Name>
-				</Input>
-				<Input>
-					<TypeIdentifier>(0x5ba36127, 0x195feae1)</TypeIdentifier>
-					<Name>Signal</Name>
-				</Input>
-				<Input>
-					<TypeIdentifier>(0x6f752dd0, 0x082a321e)</TypeIdentifier>
-					<Name>Stimulations</Name>
-				</Input>
-			</Inputs>
-			<Settings>
-				<Setting>
-					<TypeIdentifier>(0x330306dd, 0x74a95f98)</TypeIdentifier>
-					<Name>Filename</Name>
-					<DefaultValue>record-[$core{date}-$core{time}].edf</DefaultValue>
-					<Value>${Player_ScenarioDirectory}/signals/Test-[$core{date}-$core{time}].edf</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-			</Settings>
-			<Attributes>
-				<Attribute>
-					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
-					<Value>240</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
-					<Value>48</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x341d3912, 0x1478de86)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
-					<Value>(0xd41e3037, 0xcc12644a)</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xce18836a, 0x9c0eb403)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xcfad85b0, 0x7c6d841c)</Identifier>
-					<Value>3</Value>
 				</Attribute>
 			</Attributes>
 		</Box>
@@ -1540,196 +1365,6 @@
 			</Attributes>
 		</Box>
 		<Box>
-			<Identifier>(0x00005e94, 0x00006a29)</Identifier>
-			<Name>Stimulation Filter</Name>
-			<AlgorithmClassIdentifier>(0x02f96101, 0x5e647cb8)</AlgorithmClassIdentifier>
-			<Inputs>
-				<Input>
-					<TypeIdentifier>(0x6f752dd0, 0x082a321e)</TypeIdentifier>
-					<Name>Stimulations</Name>
-				</Input>
-			</Inputs>
-			<Outputs>
-				<Output>
-					<TypeIdentifier>(0x6f752dd0, 0x082a321e)</TypeIdentifier>
-					<Name>Modified Stimulations</Name>
-				</Output>
-			</Outputs>
-			<Settings>
-				<Setting>
-					<TypeIdentifier>(0x09e59e57, 0x8d4a553a)</TypeIdentifier>
-					<Name>Default action</Name>
-					<DefaultValue>Reject</DefaultValue>
-					<Value>Select</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-				<Setting>
-					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
-					<Name>Time range begin</Name>
-					<DefaultValue>0</DefaultValue>
-					<Value>0</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-				<Setting>
-					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
-					<Name>Time range end</Name>
-					<DefaultValue>0</DefaultValue>
-					<Value>0</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-				<Setting>
-					<TypeIdentifier>(0x09e59e57, 0x8d4a553a)</TypeIdentifier>
-					<Name>Action to perform</Name>
-					<DefaultValue>Select</DefaultValue>
-					<Value>Reject</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-				<Setting>
-					<TypeIdentifier>(0x2c132d6e, 0x44ab0d97)</TypeIdentifier>
-					<Name>Stimulation range begin</Name>
-					<DefaultValue>OVTK_StimulationId_Label_00</DefaultValue>
-					<Value>OVTK_GDF_Correct</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-				<Setting>
-					<TypeIdentifier>(0x2c132d6e, 0x44ab0d97)</TypeIdentifier>
-					<Name>Stimulation range end</Name>
-					<DefaultValue>OVTK_StimulationId_Label_0F</DefaultValue>
-					<Value>OVTK_GDF_Correct</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-			</Settings>
-			<Attributes>
-				<Attribute>
-					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
-					<Value>-64</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
-					<Value>416</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x341d3912, 0x1478de86)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
-					<Value>(0x47859b3f, 0x1dfdf5cd)</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x61d11811, 0x71e65362)</Identifier>
-					<Value></Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xc80ce8af, 0xf699f813)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xce18836a, 0x9c0eb403)</Identifier>
-					<Value>6</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xcfad85b0, 0x7c6d841c)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-			</Attributes>
-		</Box>
-		<Box>
-			<Identifier>(0x00005e94, 0x00006a2a)</Identifier>
-			<Name>Stimulation Filter</Name>
-			<AlgorithmClassIdentifier>(0x02f96101, 0x5e647cb8)</AlgorithmClassIdentifier>
-			<Inputs>
-				<Input>
-					<TypeIdentifier>(0x6f752dd0, 0x082a321e)</TypeIdentifier>
-					<Name>Stimulations</Name>
-				</Input>
-			</Inputs>
-			<Outputs>
-				<Output>
-					<TypeIdentifier>(0x6f752dd0, 0x082a321e)</TypeIdentifier>
-					<Name>Modified Stimulations</Name>
-				</Output>
-			</Outputs>
-			<Settings>
-				<Setting>
-					<TypeIdentifier>(0x09e59e57, 0x8d4a553a)</TypeIdentifier>
-					<Name>Default action</Name>
-					<DefaultValue>Reject</DefaultValue>
-					<Value>Select</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-				<Setting>
-					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
-					<Name>Time range begin</Name>
-					<DefaultValue>0</DefaultValue>
-					<Value>0</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-				<Setting>
-					<TypeIdentifier>(0x512a166f, 0x5c3ef83f)</TypeIdentifier>
-					<Name>Time range end</Name>
-					<DefaultValue>0</DefaultValue>
-					<Value>0</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-				<Setting>
-					<TypeIdentifier>(0x09e59e57, 0x8d4a553a)</TypeIdentifier>
-					<Name>Action to perform</Name>
-					<DefaultValue>Select</DefaultValue>
-					<Value>Reject</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-				<Setting>
-					<TypeIdentifier>(0x2c132d6e, 0x44ab0d97)</TypeIdentifier>
-					<Name>Stimulation range begin</Name>
-					<DefaultValue>OVTK_StimulationId_Label_00</DefaultValue>
-					<Value>OVTK_GDF_Incorrect</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-				<Setting>
-					<TypeIdentifier>(0x2c132d6e, 0x44ab0d97)</TypeIdentifier>
-					<Name>Stimulation range end</Name>
-					<DefaultValue>OVTK_StimulationId_Label_0F</DefaultValue>
-					<Value>OVTK_GDF_Incorrect</Value>
-					<Modifiability>false</Modifiability>
-				</Setting>
-			</Settings>
-			<Attributes>
-				<Attribute>
-					<Identifier>(0x1fa7a38f, 0x54edbe0b)</Identifier>
-					<Value>-16</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x207c9054, 0x3c841b63)</Identifier>
-					<Value>416</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x341d3912, 0x1478de86)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x4e7b798a, 0x183beafb)</Identifier>
-					<Value>(0x47859b3f, 0x1dfdf5cd)</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x61d11811, 0x71e65362)</Identifier>
-					<Value></Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xc80ce8af, 0xf699f813)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xce18836a, 0x9c0eb403)</Identifier>
-					<Value>6</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0xcfad85b0, 0x7c6d841c)</Identifier>
-					<Value>1</Value>
-				</Attribute>
-			</Attributes>
-		</Box>
-		<Box>
 			<Identifier>(0x00006a1e, 0x000070a4)</Identifier>
 			<Name>TCP Writer</Name>
 			<AlgorithmClassIdentifier>(0x02f24947, 0x17fa0477)</AlgorithmClassIdentifier>
@@ -1952,17 +1587,6 @@
 			</Target>
 		</Link>
 		<Link>
-			<Identifier>(0x00000f32, 0x00001173)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x00005659, 0x0000361f)</BoxIdentifier>
-				<BoxOutputIndex>1</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x0000220f, 0x00007749)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
 			<Identifier>(0x00000fa2, 0x0000522c)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x00005659, 0x0000361f)</BoxIdentifier>
@@ -1971,17 +1595,6 @@
 			<Target>
 				<BoxIdentifier>(0x00001713, 0x00002d04)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
-			<Identifier>(0x00001155, 0x00001340)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x00001713, 0x00002d04)</BoxIdentifier>
-				<BoxOutputIdentifier>(0x437a3638, 0x02c8ae1f)</BoxOutputIdentifier>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x00004840, 0x00002358)</BoxIdentifier>
-				<BoxInputIndex>2</BoxInputIndex>
 			</Target>
 		</Link>
 		<Link>
@@ -2004,17 +1617,6 @@
 			<Target>
 				<BoxIdentifier>(0x00004c7c, 0x00001bd0)</BoxIdentifier>
 				<BoxInputIndex>1</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
-			<Identifier>(0x00001c5f, 0x000041df)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x00005659, 0x0000361f)</BoxIdentifier>
-				<BoxOutputIndex>2</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x00005e94, 0x00006a29)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>
 		<Link>
@@ -2058,17 +1660,6 @@
 			</Source>
 			<Target>
 				<BoxIdentifier>(0x00006a1e, 0x000070a4)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
-			<Identifier>(0x000022aa, 0x00007861)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x00005e94, 0x00006a29)</BoxIdentifier>
-				<BoxOutputIndex>0</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x00005e94, 0x00006a2a)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
 			</Target>
 		</Link>
@@ -2161,17 +1752,6 @@
 			</Target>
 		</Link>
 		<Link>
-			<Identifier>(0x000047a4, 0x000006ab)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x00001713, 0x00002d04)</BoxIdentifier>
-				<BoxOutputIndex>0</BoxOutputIndex>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x00004840, 0x00002358)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
 			<Identifier>(0x000047b1, 0x00007b07)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x00005077, 0x00002964)</BoxIdentifier>
@@ -2213,17 +1793,6 @@
 			<Target>
 				<BoxIdentifier>(0x0000108f, 0x000007c8)</BoxIdentifier>
 				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
-			<Identifier>(0x00005c9e, 0x00001402)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x00001713, 0x00002d04)</BoxIdentifier>
-				<BoxOutputIdentifier>(0x5488c06c, 0x39814bd2)</BoxOutputIdentifier>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x00004840, 0x00002358)</BoxIdentifier>
-				<BoxInputIndex>1</BoxInputIndex>
 			</Target>
 		</Link>
 		<Link>
@@ -2304,17 +1873,6 @@
 			</Target>
 		</Link>
 		<Link>
-			<Identifier>(0x000078d9, 0x00005454)</Identifier>
-			<Source>
-				<BoxIdentifier>(0x00001713, 0x00002d04)</BoxIdentifier>
-				<BoxOutputIdentifier>(0x437a3638, 0x02c8ae1f)</BoxOutputIdentifier>
-			</Source>
-			<Target>
-				<BoxIdentifier>(0x0000335a, 0x00007b70)</BoxIdentifier>
-				<BoxInputIndex>0</BoxInputIndex>
-			</Target>
-		</Link>
-		<Link>
 			<Identifier>(0x000079dc, 0x000023ed)</Identifier>
 			<Source>
 				<BoxIdentifier>(0x000056f9, 0x000039b6)</BoxIdentifier>
@@ -2338,23 +1896,6 @@
 		</Link>
 	</Links>
 	<Comments>
-		<Comment>
-			<Identifier>(0x000008e3, 0x0000290e)</Identifier>
-			<Text>Filter out the "Incrorect" and "Correct" stimulations
-When using BrainVision Recorder + OpenViBE's Acq server, with drift correction enabled,
-we get flooded with "incorrect / correct" stims (generated when drift is detected)
-This makes our stimulations disappear!</Text>
-			<Attributes>
-				<Attribute>
-					<Identifier>(0x473d9a43, 0x97fc0a97)</Identifier>
-					<Value>160</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x7234b86b, 0x2b8651a5)</Identifier>
-					<Value>-80</Value>
-				</Attribute>
-			</Attributes>
-		</Comment>
 		<Comment>
 			<Identifier>(0x00000b60, 0x00007af0)</Identifier>
 			<Text>TCP 5698
@@ -2436,25 +1977,11 @@ EDF/GDF + ov files</Text>
 			<Attributes>
 				<Attribute>
 					<Identifier>(0x473d9a43, 0x97fc0a97)</Identifier>
-					<Value>160</Value>
+					<Value>208</Value>
 				</Attribute>
 				<Attribute>
 					<Identifier>(0x7234b86b, 0x2b8651a5)</Identifier>
-					<Value>128</Value>
-				</Attribute>
-			</Attributes>
-		</Comment>
-		<Comment>
-			<Identifier>(0x0000548d, 0x00004020)</Identifier>
-			<Text>EDF deprecated with LSL acq</Text>
-			<Attributes>
-				<Attribute>
-					<Identifier>(0x473d9a43, 0x97fc0a97)</Identifier>
-					<Value>64</Value>
-				</Attribute>
-				<Attribute>
-					<Identifier>(0x7234b86b, 0x2b8651a5)</Identifier>
-					<Value>272</Value>
+					<Value>224</Value>
 				</Attribute>
 			</Attributes>
 		</Comment>
