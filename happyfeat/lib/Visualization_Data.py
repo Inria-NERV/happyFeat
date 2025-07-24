@@ -131,7 +131,7 @@ def plot_tf_plotly(timefreq_cond1, timefreq_cond2,
     nearest_fmin, index_fmin = find_nearest(freq, fmin)
     nearest_fmax, index_fmax = find_nearest(freq, fmax)
     frequencies = freq[index_fmin:index_fmax + 1]
-
+    
     # Reduce the timefreq arrays dimensions (trials, channels, timewindows, frequencies)
     # average over trials, keep channel of interest, keep only [fmin:fmax] freqs
     # ==> tf[windows, fmin:fmax]
@@ -141,7 +141,7 @@ def plot_tf_plotly(timefreq_cond1, timefreq_cond2,
     cond2 = cond2[channel, :, :]
 
     tf = 100.0 * (cond1 - cond2) / (cond1)
-    tf_reshape = np.transpose(tf[:, fmin:fmax])
+    tf_reshape = np.transpose(tf[:, index_fmin:index_fmax + 1])
 
     # scaling
     vmin = -100
