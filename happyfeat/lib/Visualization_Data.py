@@ -122,72 +122,61 @@ def topo_plot(Rsquare, title, montageStr, customMontage, electrodes, freqMin, fr
 
     fig.canvas.draw()
 
+def plot_tf_plotly(timefreq_cond1, timefreq_cond2,
+                   freq, channel, channel_array,
+                   tmin, tmax, fmin, fmax, fres,
+                   colormapScale, title):
 
-def time_frequency_map(time_freq, time, freqs, channel, fmin, fmax, fres, each_point, baseline, channel_array,
-                       std_baseline, vmin, vmax, tlength):
-    font = {'family': 'serif',
-            'color': 'black',
-            'weight': 'normal',
-            'size': 14}
+    # Get frequencies to display
+    nearest_fmin, index_fmin = find_nearest(freq, fmin)
+    nearest_fmax, index_fmax = find_nearest(freq, fmax)
+    frequencies = freq[index_fmin:index_fmax + 1]
 
-    fig, ax = plt.subplots()
-    tf = time_freq.mean(axis=0)
-    tf = np.transpose(tf[channel, :, :])
-    PSD_baseline = baseline[channel, :]
-    PSD_STD = std_baseline[channel, :]
-    A = []
-    for i in range(tf.shape[1]):
-        A.append(np.divide((tf[:, i] - PSD_baseline), PSD_baseline) * 100)
-    tf = np.transpose(A)
+    # Reduce the timefreq arrays dimensions (trials, channels, timewindows, frequencies)
+    # average over trials, keep channel of interest, keep only [fmin:fmax] freqs
+    # ==> tf[windows, fmin:fmax]
+    cond1 = timefreq_cond1.mean(axis=0)
+    cond1 = cond1[channel, :, :]
+    cond2 = timefreq_cond2.mean(axis=0)
+    cond2 = cond2[channel, :, :]
 
-    frequencies = []
+    tf = 100.0 * (cond1 - cond2) / (cond1)
+    tf_reshape = np.transpose(tf[:, fmin:fmax])
 
-    time_seres = []
-    #print(time)
-    for i in range(len(freqs)):
-        if freqs[i] == fmin:
-            index_fmin = i
-    for i in range(len(freqs)):
-        if freqs[i] == fmax:
-            index_fmax = i
+    # scaling
+    vmin = -100
+    vmax = 100
+    if colormapScale:
+        vmax = np.nanmax(abs(tf_reshape))
+        if np.nanmin(tf_reshape) < 0:
+            vmin = -np.amax(abs(tf_reshape))
 
-    tf = tf[index_fmin:index_fmax + 1, :]
-    if np.amin(tf) < 0:
-        plt.imshow(tf, cmap='jet', aspect='auto', origin='lower', vmin=vmin, vmax=vmax)
-    else:
-        plt.imshow(tf,cmap='jet',aspect='auto',origin ='lower',vmin = vmin,vmax = vmax)
-    size_time = len(time) / each_point
+    step_time_axis = (tmax-tmin)/(np.shape(tf)[0]-1)
+    time_axis = np.arange(start=tmin, step=step_time_axis, stop=tmax)
 
-    for i in range(len(time)):
-        if round(size_time) == 0:
-            time_seres.append(str(time[i]))
-        else:
-            if i % (round(size_time)) == 0:
-                if tlength < 10:
-                    time_seres.append(str((round(time[i], 1))))
-                else:
-                    time_seres.append(str((round(time[i]))))
-            else:
-                time_seres.append('')
+    fig = go.Figure(data=go.Heatmap(z=tf_reshape,
+                                    y=frequencies,
+                                    # x=np.arange(start=0, step=1, stop=np.shape(tf)[0]),
+                                    x=time_axis,
+                                    colorscale='jet',
+                                    zmin=vmin,
+                                    zmid=0,
+                                    zmax=vmax,
+                                    zsmooth='best'
+                                    ))
 
-    sizing = round(len(freqs[index_fmin:(index_fmax + 1)]) / (each_point * 1 / fres))
-    for i in freqs[index_fmin:(index_fmax + 1)]:
-        if i % (round(sizing * 1 / fres)) == 0:
-            frequencies.append(str(round(i)))
-        else:
-            frequencies.append('')
-    cm.get_cmap('jet')
-    # plt.jet()
-    ax.tick_params(axis='both', which='both', length=0)
-    cbar = plt.colorbar()
-    cbar.set_label('ERD/ERS', rotation=270, labelpad=10)
-    plt.yticks(range(len(freqs[index_fmin:index_fmax + 1])), frequencies, fontsize=7)
+    fulltitle = str(title + ', Sensor: ' + channel_array[channel])
+    fig.update_layout(title_text=fulltitle,
+                      plot_bgcolor='black',
+                      # yaxis_nticks=len(frequencies),
+                      # xaxis_nticks=len(np.arange(start=0, step=1, stop=np.shape(tf)[0])),
+                      autosize=True
+                      )
+    fig.update_xaxes(title_text="Time Window", title_font=dict(size=16), showgrid=False)
+    fig.update_yaxes(title_text="Frequency (Hz)", title_font=dict(size=16), showgrid=False)
 
-    plt.xticks(range(len(time)), time_seres, fontsize=7)
-    plt.xlabel(' Time (s)', fontdict=font)
-    plt.ylabel('Frequency (Hz)', fontdict=font)
+    return fig
 
-    # plt.show()
 
 # Plot the two class comparison of PSDs, plus the R2 value for each freq, on the same graph
 def plot_comparison_plotly(Power_class1, Power_class2, Rsquare,

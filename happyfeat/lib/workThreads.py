@@ -378,12 +378,12 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
             power_cond1_final = np.concatenate((power_cond1_final, power_cond1)) if power_cond1_final.size else power_cond1
             power_cond2_final = np.concatenate((power_cond2_final, power_cond2)) if power_cond2_final.size else power_cond2
             timefreq_cond1_final = np.concatenate((timefreq_cond1_final, timefreq_cond1)) if timefreq_cond1_final.size else timefreq_cond1
-            timefreq_cond2_final = np.concatenate((timefreq_cond2_final, timefreq_cond2)) if timefreq_cond2_final.size else timefreq_cond1
+            timefreq_cond2_final = np.concatenate((timefreq_cond2_final, timefreq_cond2)) if timefreq_cond2_final.size else timefreq_cond2
             if self.useBaselineFiles:
                 power_cond1_baseline_final = np.concatenate((power_cond1_baseline_final, power_cond1_baseline)) if power_cond1_baseline_final.size else power_cond1_baseline
                 power_cond2_baseline_final = np.concatenate((power_cond2_baseline_final, power_cond2_baseline)) if power_cond2_baseline_final.size else power_cond2_baseline
                 timefreq_cond1_baseline_final = np.concatenate((timefreq_cond1_baseline_final, timefreq_cond1_baseline)) if timefreq_cond1_baseline_final.size else timefreq_cond1_baseline
-                timefreq_cond2_baseline_final = np.concatenate((timefreq_cond2_baseline_final, timefreq_cond2_baseline)) if timefreq_cond2_baseline_final.size else timefreq_cond1_baseline
+                timefreq_cond2_baseline_final = np.concatenate((timefreq_cond2_baseline_final, timefreq_cond2_baseline)) if timefreq_cond2_baseline_final.size else timefreq_cond2_baseline
 
         # ----------
         # Detect invalid values & inform user

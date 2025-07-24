@@ -507,13 +507,13 @@ class Dialog(QDialog):
             self.btn_psd = QPushButton("Frequency profile")
             self.btn_topo = QPushButton("Brain Topography")
             titleR2 = "Freq.-chan. map of R² values of PSD"
-            titleTimeFreq = "Time-Frequency ERD/ERS analysis"
+            titleTimeFreq = "Time-Frequency analysis (PSD)"
             titlePsd = "Power Spectrum "
             metricPsd = "Power Spectral Density (dB)"
             isLogPsd = True
             titleTopo = "Topography of power spectra, for freq. "
             self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2, useSubselection=False, metric_suffix='PSD'))
-            self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq(self.Features, titleTimeFreq))
+            self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq(self.Features, titleTimeFreq, metric_suffix="PSD"))
             self.btn_psd.clicked.connect(lambda: self.btnMetric(self.Features, metricPsd, isLogPsd, titlePsd, metric_suffix="PSD"))
             self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo, metric_suffix="PSD"))
 
@@ -536,14 +536,14 @@ class Dialog(QDialog):
             self.btn_metric = QPushButton("Frequency profile")
             self.btn_topo = QPushButton("Brain Topography")
             titleR2 = "R² values of node strength"
-            titleTimeFreq = "Time-Frequency ERD/ERS analysis"
+            titleTimeFreq = "Time-Frequency analysis (Connectivity Node Strength)"
             titleMetric = "Connectivity-based node strength, "
             metricLabel = "Average Node Strength"
             isLogNodeStrength = False
             titleTopo = "Topography of node strengths, for freq. "
             self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2, useSubselection=False, metric_suffix="NS"))
             self.btn_metric.clicked.connect(lambda: self.btnMetric(self.Features, metricLabel, isLogNodeStrength, titleMetric, metric_suffix="NS"))
-            self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreqConnect(self.Features, titleTimeFreq))
+            self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq(self.Features, titleTimeFreq, metric_suffix="NS"))
             self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo, metric_suffix="NS"))
 
             self.btn_r2mapAutoFeat = QPushButton("R² map (sub-select.)")
@@ -572,15 +572,17 @@ class Dialog(QDialog):
             # Viz options for "Spectral Power" pipeline...
             self.btn_r2map = QPushButton("Freq.-chan. R² map")
             self.btn_psd = QPushButton("Frequency profile")
+            self.btn_timefreq = QPushButton("Time-freq.")
             self.btn_topo = QPushButton("Brain Topography")
             titleR2 = "Freq.-chan. map of R² values of PSD"
-            titleTimeFreq = "Time-Frequency ERD/ERS analysis"
+            titleTimeFreq = "Time-Frequency analysis (PSD)"
             titlePsd = "Power Spectrum "
             metricPsd = "Power Spectral Density (dB)"
             isLogPsd = True
             titleTopo = "Topography of power spectra, for freq. "
             self.btn_r2map.clicked.connect(lambda: self.btnR2(self.Features, titleR2, useSubselection=False, metric_suffix="PSD"))
             self.btn_psd.clicked.connect(lambda: self.btnMetric(self.Features, metricPsd, isLogPsd, titlePsd, metric_suffix="PSD"))
+            self.btn_timefreq.clicked.connect(lambda: self.btnTimeFreq(self.Features, titleTimeFreq, metric_suffix="PSD"))
             self.btn_topo.clicked.connect(lambda: self.btnTopo(self.Features, titleTopo, metric_suffix="PSD"))
 
             self.btn_r2mapAutoFeat = QPushButton("R² map (sub-select.)")
@@ -589,20 +591,24 @@ class Dialog(QDialog):
             self.parallelVizLayouts[0].addWidget(self.btn_r2map)
             self.parallelVizLayouts[0].addWidget(self.btn_r2mapAutoFeat)
             self.parallelVizLayouts[0].addWidget(self.btn_psd)
+            self.parallelVizLayouts[0].addWidget(self.btn_timefreq)
             self.parallelVizLayouts[0].addWidget(self.btn_topo)
 
             # Viz options for "Connectivity" pipeline...
             self.btn_r2map2 = QPushButton("Freq.-chan. R² map")
             self.btn_metric = QPushButton("Frequency profile")
+            self.btn_timefreq_c = QPushButton("Time-freq.")
             self.btn_topo2 = QPushButton("Brain Topography")
+
             titleR2_c = "Freq.-chan. map of R² values of node strength"
-            titleTimeFreq_c = "Time-Frequency ERD/ERS analysis"
+            titleTimeFreq_c = "Time-Frequency analysis (Connectivity Node Strength)"
             titleMetric_c = "Connectivity-based Node Strength, "
             metricLabel_c = "Average Node Strength"
             isLog_c = False
             titleTopo_c = "Topography of node strengths, for freq. "
             self.btn_r2map2.clicked.connect(lambda: self.btnR2(self.Features2, titleR2_c, useSubselection=False, metric_suffix="NS"))
             self.btn_metric.clicked.connect(lambda: self.btnMetric(self.Features2, metricLabel_c, isLog_c, titleMetric_c, metric_suffix="NS"))
+            self.btn_timefreq_c.clicked.connect(lambda: self.btnTimeFreq(self.Features2, titleTimeFreq_c, metric_suffix="NS"))
             self.btn_topo2.clicked.connect(lambda: self.btnTopo(self.Features2, titleTopo_c, metric_suffix="NS"))
 
             self.btn_r2mapAutoFeat2 = QPushButton("R² map (sub-select.)")
@@ -611,6 +617,7 @@ class Dialog(QDialog):
             self.parallelVizLayouts[1].addWidget(self.btn_r2map2)
             self.parallelVizLayouts[1].addWidget(self.btn_r2mapAutoFeat2)
             self.parallelVizLayouts[1].addWidget(self.btn_metric)
+            self.parallelVizLayouts[1].addWidget(self.btn_timefreq_c)
             self.parallelVizLayouts[1].addWidget(self.btn_topo2)
 
             # Setting up parallel layouts...
@@ -830,15 +837,10 @@ class Dialog(QDialog):
         # Update status of buttons used for plotting
         # ----------
 
-        # Deactivate some buttons for timeflux version
-        if self.parameterDict["bciPlatform"] == settings.availablePlatforms[1]:  # timeflux
-            self.btn_timefreq.setEnabled(False)
-
         if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
             self.btn_r2map.setEnabled(myBool)
             self.btn_r2mapAutoFeat.setEnabled(myBool)
-            if self.parameterDict["bciPlatform"] == settings.availablePlatforms[0]:  # openvibe
-                self.btn_timefreq.setEnabled(myBool)
+            self.btn_timefreq.setEnabled(myBool)
             self.btn_psd.setEnabled(myBool)
             self.btn_topo.setEnabled(myBool)
         elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
@@ -848,6 +850,7 @@ class Dialog(QDialog):
             self.btn_timefreq.setEnabled(myBool)
             self.btn_r2map.setEnabled(myBool)
             self.btn_r2mapAutoFeat.setEnabled(myBool)
+            self.btn_timefreq.setEnabled(myBool)
             self.btn_metric.setEnabled(myBool)
             self.btn_topo.setEnabled(myBool)
         elif self.parameterDict["pipelineType"] == settings.optionKeys[3] \
@@ -858,11 +861,17 @@ class Dialog(QDialog):
             self.btn_topo.setEnabled(myBool)
             self.btn_r2map2.setEnabled(myBool)
             self.btn_r2mapAutoFeat2.setEnabled(myBool)
+            self.btn_timefreq.setEnabled(myBool)
+            self.btn_timefreq_c.setEnabled(myBool)
             self.btn_metric.setEnabled(myBool)
             self.btn_topo2.setEnabled(myBool)
             if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
                 self.btn_r2mapAutoFeat.setEnabled(myBool)
                 self.btn_r2mapAutoFeat2.setEnabled(myBool)
+
+        # Deactivate some buttons for timeflux version
+        if self.parameterDict["bciPlatform"] == settings.availablePlatforms[1]:  # timeflux
+            self.btn_timefreq.setEnabled(False)
 
         self.btn_autoFeat.setEnabled(myBool)
 
@@ -2223,143 +2232,37 @@ class Dialog(QDialog):
                 filename = str(filename + metric_suffix + " R2map (subselection).html")
                 plotly.offline.plot(fig, filename=filename, auto_open=True)
 
-    # Wilcoxon Map. Not used - TODO : delete?
-    def btnW2(self, features, title):
+    # Btn callback: Plot "time-frequency analysis"
+    def btnTimeFreq(self, features, title, metric_suffix):
         if checkFreqsMinMax(self.userFmin, self.userFmax, self.samplingFreq):
-            smoothing = False
-            each_point = 1
-            plot_Rsquare_calcul_welch(features.Wsigned,
-                                      np.array(features.electrodes_final)[:],
-                                      features.freqs_array,
-                                      smoothing,
-                                      features.fres,
-                                      each_point,
-                                      self.userFmin,
-                                      self.userFmax,
-                                      self.colormapScale.isChecked(),
-                                      title)
-            plt.show()
+            electrodeExists = False
+            electrodeIdx = 0
+            electrodeToDisp = self.electrodePsd.text()
+            for idx, elec in enumerate(features.electrodes_final):
+                if elec == electrodeToDisp:
+                    electrodeIdx = idx
+                    electrodeExists = True
+                    break
 
-    # Btn callback: Plot "time-frequency analysis", in the POWER SPECTRUM pipeline ONLY.
-    def btnTimeFreq(self, features, title):
-        if checkFreqsMinMax(self.userFmin, self.userFmax, self.samplingFreq):
-            print("TimeFreq for sensor: " + self.electrodePsd.text())
+            if not electrodeExists:
+                myMsgBox("No sensor with this name found")
+            else:
+                tmin = self.parameterDict["Sessions"][self.currentSessionId]["ExtractionParams"].get('StimulationDelay')
+                if not tmin:
+                    tmin = 0.0
+                tmax = float(self.parameterDict["Sessions"][self.currentSessionId]["ExtractionParams"]['StimulationEpoch']) + tmin
+                fmin = self.userFmin
+                fmax = self.userFmax
 
-            tmin = float(self.parameterDict["Sessions"][self.currentSessionId]["ExtractionParams"]['StimulationDelay'])
-            tmax = float(self.parameterDict["Sessions"][self.currentSessionId]["ExtractionParams"]['StimulationEpoch'])
-            fmin = self.userFmin
-            fmax = self.userFmax
-            class1 = self.parameterDict["AcquisitionParams"]["Class1"]
-            class2 = self.parameterDict["AcquisitionParams"]["Class2"]
+                fig = plot_tf_plotly(
+                    features.timefreq_cond1, features.timefreq_cond2,
+                    features.freqs_array, electrodeIdx, features.electrodes_final,
+                    tmin, tmax, fmin, fmax, features.fres,
+                    self.colormapScale.isChecked(), title)
 
-            self.plot_tf(features.timefreq_cond1, features.timefreq_cond2,
-                         features.time_array, features.freqs_array,
-                         self.electrodePsd.text(), features.fres,
-                         features.average_baseline_cond1, features.average_baseline_cond2,
-                         features.std_baseline_cond1, features.std_baseline_cond2,
-                         features.electrodes_final,
-                         fmin, fmax, tmin, tmax, class1, class2, title)
-
-    # interface for btnTimeFreq
-    # TODO : reorganize/refactor with Visualization_Data.py
-    def plot_tf(self, timefreq_cond1, timefreq_cond2, time_array, freqs_array, electrode, fres, average_baseline_cond1, average_baseline_cond2, std_baseline_cond1, std_baseline_cond2, electrodes, f_min_var, f_max_var, tmin, tmax, class1label, class2label, title):
-        font = {'family': 'serif',
-                'color': 'black',
-                'weight': 'normal',
-                'size': 14,
-                }
-        fmin = f_min_var
-        fmax = f_max_var
-        Test_existing = False
-        Index_electrode = 0
-        for i in range(len(electrodes)):
-            if electrodes[i] == electrode:
-                Index_electrode = i
-                Test_existing = True
-
-        if not Test_existing:
-            myMsgBox("No Electrode with this name found")
-        else:
-            tf = timefreq_cond1.mean(axis=0)
-            tf = np.transpose(tf[Index_electrode, :, :])
-            PSD_baseline = average_baseline_cond1[Index_electrode, :]
-
-            A = []
-            for i in range(tf.shape[1]):
-                A.append(np.divide((tf[:, i] - PSD_baseline), PSD_baseline) * 100)
-            tf = np.transpose(A)
-            vmin = np.amin(tf[f_min_var:f_max_var, :])
-            vmax = np.amax(tf[f_min_var:f_max_var, :])
-            tlength = tmax - tmin
-            time_frequency_map(timefreq_cond1, time_array, freqs_array, Index_electrode, fmin, fmax, fres, 10,
-                               average_baseline_cond1, electrodes, std_baseline_cond1, vmin, vmax, tlength)
-            plt.title(title + '(' + class1label + ') Sensor ' + electrodes[Index_electrode], fontdict=font)
-            time_frequency_map(timefreq_cond2, time_array, freqs_array, Index_electrode, fmin, fmax, fres, 10,
-                               average_baseline_cond2, electrodes, std_baseline_cond2, vmin, vmax, tlength)
-            plt.title(title + '(' + class2label + ') Sensor ' + electrodes[Index_electrode], fontdict=font)
-            plt.show()
-
-    # Btn Callback: Plot "time-frequency analysis", in the CONNECTIVITY pipeline ONLY.
-    def btnTimeFreqConnect(self, features, title):
-        if checkFreqsMinMax(self.userFmin, self.userFmax, self.samplingFreq):
-            print("TimeFreq for sensor: " + self.electrodePsd.text())
-
-            tmin = float(self.parameterDict["Sessions"][self.currentSessionId]["ExtractionParams"]['StimulationDelay'])
-            tmax = float(self.parameterDict["Sessions"][self.currentSessionId]["ExtractionParams"]['StimulationEpoch'])
-            fmin = self.userFmin
-            fmax = self.userFmax
-            class1 = self.parameterDict["AcquisitionParams"]["Class1"]
-            class2 = self.parameterDict["AcquisitionParams"]["Class2"]
-
-            self.plot_tf_connect(features.timefreq_cond1, features.timefreq_cond2,
-                                 features.time_array, features.freqs_array,
-                                 self.electrodePsd.text(), features.fres,
-                                 features.electrodes_final,
-                                 fmin, fmax, tmin, tmax, class1, class2, title)
-
-    # interface for btnTimeFreqConnect
-    # TODO : reorganize/refactor with Visualization_Data.py
-    def plot_tf_connect(self, timefreq_cond1, timefreq_cond2, time_array, freqs_array, electrode, fres, electrodes,
-                        f_min_var, f_max_var, tmin, tmax, class1label, class2label, title):
-        font = {'family': 'serif',
-                'color': 'black',
-                'weight': 'normal',
-                'size': 14,
-                }
-        fmin = int(f_min_var / fres)
-        fmax = int(f_max_var / fres)
-
-        Test_existing = False
-        idx = 0
-        for i in range(len(electrodes)):
-            if electrodes[i] == electrode:
-                idx = i
-                Test_existing = True
-        if not Test_existing:
-            myMsgBox("No Electrode with this name found")
-        else:
-            tf = (timefreq_cond1.mean(0) - timefreq_cond2.mean(0)) / timefreq_cond1.mean(0)
-            tf = tf.transpose(0, 2, 1)
-
-        fig, ax = plt.subplots()
-        im = ax.imshow(tf[idx, fmin:fmax, :], cmap='jet', origin='lower', aspect='auto',
-                       vmin=- np.nanmax(abs(tf[idx, fmin:fmax, :])),
-                       vmax=np.nanmax(abs(tf[idx, fmin:fmax, :])), interpolation="hanning")
-
-        time_increments = (tmax - tmin) / np.shape(tf)[2]
-        time_series = np.around(np.arange(tmin, tmax, time_increments), 2)
-        freq_series = np.arange(f_min_var, f_max_var + 1, int(f_max_var - f_min_var) / 10)
-        ax.set_xticks(np.arange(0, np.shape(tf)[2], 1))
-        ax.set_xticklabels(time_series, rotation=90)
-        ax.set_yticks(np.arange(fmin, fmax + 1, int(fmax - fmin) / 10))
-        ax.set_yticklabels(freq_series)
-
-        ax.set_xlabel(' Time (s)', fontdict=font)
-        ax.set_ylabel('Frequency (Hz)', fontdict=font)
-        plt.title(title + ' (' + class1label + '/' + class2label + ') Sensor ' + electrodes[idx], fontdict=font)
-        cbar = fig.colorbar(im, ax=ax)
-        cbar.set_label('ERD/ERS', rotation=270, labelpad=15)
-        plt.show()
+                filename = self.filenameBaseForPlot
+                filename = str(filename + metric_suffix + " " + electrodeToDisp + " TimeFreq.html")
+                plotly.offline.plot(fig, filename=filename, auto_open=True)
 
     # Plot compared metric for 2 classes using Visualization_Data functions
     def btnMetric(self, features, metricLabel, isLog, title, metric_suffix):
@@ -2452,11 +2355,6 @@ class Dialog(QDialog):
 
         if error:
             myMsgBox("Invalid frequency for topography")
-
-    def btnConnectSpect(self, features, title):
-        qt_plot_connectSpectrum(features.connect_cond1, features.connect_cond2,
-                                self.userChan1.text(), self.userChan2.text(), features.electrodes_orig, features.fres,
-                                self.parameterDict["AcquisitionParams"]["Class1"], self.parameterDict["AcquisitionParams"]["Class2"], title)
 
     def btnConnectMatrices(self, features, title):
         if 0 < self.userFmin < (self.samplingFreq / 2) \
@@ -3278,37 +3176,6 @@ def checkFreqsMinMax(fmin, fmax, fs):
         myMsgBox(errorStr)
 
     return ok
-
-# Plot "connectivity spectrum" from a RAW connectivity matrix.
-# TODO: REMOVE? UNUSED!
-def qt_plot_connectSpectrum(connect1, connect2, chan1, chan2, electrodeList, fres, class1label, class2label, title):
-    chan1ok = False
-    chan2ok = False
-    chan1idx = 0
-    chan2idx = 0
-    for idx, elec in enumerate(electrodeList):
-        if elec == chan1:
-            chan1idx = idx
-            chan1ok = True
-            if chan2ok:
-                break
-            else:
-                continue
-        elif elec == chan2:
-            chan2idx = idx
-            chan2ok = True
-            if chan1ok:
-                break
-            else:
-                continue
-
-    if not chan1ok:
-        myMsgBox("No sensor with name in Chan 1 found")
-    if not chan2ok:
-        myMsgBox("No sensor with name in Chan 2 found")
-    else:
-        plot_connect_spectrum(connect1, connect2, chan1idx, chan2idx, electrodeList, 10, fres, class1label, class2label, title)
-        plt.show()
 
 # Plot full RAW connectivity matrix for a given [fmin;fmax] range.
 # TODO: REMOVE? UNUSED!
