@@ -35,13 +35,15 @@ def loadExtractedFiles(jsonFile, sessionId):
     if currentDict["Sessions"][sessionId]:
         return currentDict["Sessions"][sessionId]["ExtractedSignalFiles"]
     else:
-        return []
+        return {}
 
-def addExtractedFile(jsonFile, sessionId, filename):
+def addExtractedFile(jsonFile, sessionId, filename, valid):
     currentDict = {}
     with open(jsonFile, "r") as myjson:
         currentDict = json.load(myjson)
-    currentDict["Sessions"][sessionId]["ExtractedSignalFiles"].append(filename)
+
+    currentDict["Sessions"][sessionId]["ExtractedSignalFiles"][filename] = valid
+
     writeJson(jsonFile, currentDict)
 
 def checkIfTrainingAlreadyDone(jsonFile, sessionId, listFiles, listFeatures):

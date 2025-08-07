@@ -20,9 +20,8 @@ from PySide6.QtWidgets import QPushButton
 from PySide6.QtWidgets import QCheckBox
 from PySide6.QtWidgets import QFormLayout
 from PySide6.QtWidgets import QLineEdit
-from PySide6.QtWidgets import QListWidget
-from PySide6.QtWidgets import QTreeWidget
-from PySide6.QtWidgets import QTreeWidgetItem
+from PySide6.QtWidgets import QListWidget, QListWidgetItem
+from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem
 from PySide6.QtWidgets import QFileDialog
 from PySide6.QtWidgets import QWidget
 from PySide6.QtWidgets import QFrame
@@ -31,7 +30,7 @@ from PySide6.QtWidgets import QPlainTextEdit
 from PySide6.QtWidgets import QSizePolicy
 from PySide6.QtWidgets import QMenuBar
 from PySide6.QtWidgets import QMenu
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import QInputDialog
 from PySide6.QtWidgets import QAbstractItemView
 
@@ -106,7 +105,7 @@ class Dialog(QDialog):
         self.customMontagePath = None
         self.currentSessionId = None
         self.currentAttempt = []
-        self.currentTrainCombination = None
+        self.currentTrainCombination = 0
 
         self.filenameBaseForPlot = None
 
@@ -150,7 +149,26 @@ class Dialog(QDialog):
 
         # "Advanced mode" with more options...?
         self.advanced = False
-        
+
+        # Load icons
+
+        self.iconArm = os.path.join(os.path.abspath(os.getcwd()), r'resources\arm.png')
+        self.iconBars = os.path.join(os.path.abspath(os.getcwd()), r'resources\bars.png')
+        self.iconFile = os.path.join(os.path.abspath(os.getcwd()), r'resources\doc.png')
+        self.iconFile = os.path.join(os.path.abspath(os.getcwd()), r'resources\file.png')
+        self.iconFolder = os.path.join(os.path.abspath(os.getcwd()), r'resources\folder.png')
+        self.iconGear = os.path.join(os.path.abspath(os.getcwd()), r'resources\gear.png')
+        self.iconGlass = os.path.join(os.path.abspath(os.getcwd()), r'resources\magnify.png')
+        self.iconMinus = os.path.join(os.path.abspath(os.getcwd()), r'resources\minus.png')
+        self.iconPlus = os.path.join(os.path.abspath(os.getcwd()), r'resources\plus.png')
+        self.iconPlay = os.path.join(os.path.abspath(os.getcwd()), r'resources\play.png')
+        self.iconRobot = os.path.join(os.path.abspath(os.getcwd()), r'resources\robot.png')
+        self.iconStop = os.path.join(os.path.abspath(os.getcwd()), r'resources\stop.png')
+        self.iconUnknown = os.path.join(os.path.abspath(os.getcwd()), r'resources\unknown.png')
+        self.iconUpdate = os.path.join(os.path.abspath(os.getcwd()), r'resources\update.png')
+        self.iconWarn = os.path.join(os.path.abspath(os.getcwd()), r'resources\warning.png')
+        self.iconZap = os.path.join(os.path.abspath(os.getcwd()), r'resources\zap.png')
+
         # GET BASIC SETTINGS FROM WORKSPACE FILE
         if self.workspaceFile:
             print("--- Using parameters from workspace file: " + workspaceFile)
@@ -253,6 +271,9 @@ class Dialog(QDialog):
         self.qActionStimulations = QAction("Set Class &Stimulations", self)
         self.qActionStimulations.triggered.connect(lambda: self.extractionSetStimulations())
         self.menuExtraction.addAction(self.qActionStimulations)
+        self.qActionCheckInvalid = QAction("&Check for invalid values at extraction", self, checkable=True)
+        self.qActionCheckInvalid.setChecked(True)
+        self.menuExtraction.addAction(self.qActionCheckInvalid)
 
         # Menu "Visualization"
         self.menuVizualization = QMenu("&Visualization")
@@ -406,10 +427,12 @@ class Dialog(QDialog):
 
         # Update button
         self.btn_updateExtractParams = QPushButton("Update with current extraction params")
+        self.btn_updateExtractParams.setIcon(QIcon(self.iconUpdate))
         self.btn_updateExtractParams.clicked.connect(lambda: self.updateExtractParameters())
 
         # Extraction button
         self.btn_runExtractionScenario = QPushButton("Extract Features and Trials")
+        self.btn_runExtractionScenario.setIcon(QIcon(self.iconGear))
         self.btn_runExtractionScenario.clicked.connect(lambda: self.runExtractionScenario())
         self.btn_runExtractionScenario.setStyleSheet("font-weight: bold")
 
@@ -454,6 +477,7 @@ class Dialog(QDialog):
 
         # Button to load files...
         self.btn_loadFilesForViz = QPushButton("Load file(s) for analysis")
+        self.btn_loadFilesForViz.setIcon(QIcon(self.iconFolder))
         self.btn_loadFilesForViz.clicked.connect(lambda: self.loadFilesForViz())
         self.btn_loadFilesForViz.setStyleSheet("font-weight: bold")
         self.layoutViz.addWidget(self.btn_loadFilesForViz)
@@ -629,6 +653,7 @@ class Dialog(QDialog):
             self.layoutViz.addLayout(self.parallelVizLayoutH)
 
         self.btn_autoFeat = QPushButton("Auto. select optimal features")
+        self.btn_autoFeat.setIcon(QIcon(self.iconGlass))
         self.btn_autoFeat.clicked.connect(lambda: self.btnAutoFeat(self.Features, self.Features2))
         self.layoutViz.addWidget(self.btn_autoFeat)
 
@@ -693,7 +718,9 @@ class Dialog(QDialog):
         self.selectedFeats[0][0].setText('CP3;8')
 
         self.btn_addPair = QPushButton("Add feature")
+        self.btn_addPair.setIcon(QIcon(self.iconPlus))
         self.btn_removePair = QPushButton("Remove feature")
+        self.btn_removePair.setIcon(QIcon(self.iconMinus))
         self.btn_addPair.clicked.connect(lambda: self.btnAddPair(self.selectedFeats[0], self.qvFeatureLayouts[0], None))
         self.btn_removePair.clicked.connect(lambda: self.btnRemovePair(self.selectedFeats[0], self.qvFeatureLayouts[0]))
         self.qvFeatureLayouts[0].addWidget(self.btn_addPair)
@@ -706,7 +733,9 @@ class Dialog(QDialog):
             self.selectedFeats[1][0].setText('CP3;8')
 
             self.btn_addPair2 = QPushButton("Add feature")
+            self.btn_addPair2.setIcon(QIcon(self.iconPlus))
             self.btn_removePair2 = QPushButton("Remove feature")
+            self.btn_removePair2.setIcon(QIcon(self.iconMinus))
             self.btn_addPair2.clicked.connect(lambda: self.btnAddPair(self.selectedFeats[1], self.qvFeatureLayouts[1], None))
             self.btn_removePair2.clicked.connect(lambda: self.btnRemovePair(self.selectedFeats[1], self.qvFeatureLayouts[1]))
             self.qvFeatureLayouts[1].addWidget(self.btn_addPair2)
@@ -730,12 +759,20 @@ class Dialog(QDialog):
 
         # Classifier training button
         self.btn_trainClassif = QPushButton("TRAIN CLASSIFIER")
+        self.btn_trainClassif.setIcon(QIcon(self.iconArm))
         self.btn_trainClassif.clicked.connect(lambda: self.btnTrainClassif())
         self.btn_trainClassif.setStyleSheet("font-weight: bold")
         # Find best combination of features (present only in pipeline 4)
         self.btn_trainClassifCombination = QPushButton("TRAIN - FIND BEST COMB.")
+        self.btn_trainClassifCombination.setIcon(QIcon(self.iconRobot))
         self.btn_trainClassifCombination.clicked.connect(lambda: self.btnTrainClassifCombination())
         self.btn_trainClassifCombination.setStyleSheet("font-weight: bold")
+        # Abort training
+        self.btn_abortTraining = QPushButton("ABORT TRAINING")
+        self.btn_abortTraining.setIcon(QIcon(self.iconStop))
+        self.btn_abortTraining.clicked.connect(lambda: self.btnAbortTraining())
+        self.btn_abortTraining.setStyleSheet("font-weight: bold")
+        self.btn_abortTraining.setEnabled(False)
 
         # Label + QTreeWidget for training results
         labelLastResults = str("--- Last Training Results ---")
@@ -770,6 +807,7 @@ class Dialog(QDialog):
 
         # Use the classif. weights from selected "training attempt" in the list
         self.btn_useSelectedClassif = QPushButton("Use selected classifier (Online scen.)")
+        self.btn_useSelectedClassif.setIcon(QIcon(self.iconPlay))
         self.btn_useSelectedClassif.clicked.connect(lambda: self.btnUseSelectedClassif())
         self.btn_useSelectedClassif.setStyleSheet("font-weight: bold")
 
@@ -803,7 +841,8 @@ class Dialog(QDialog):
             self.qvTrainingLayout.addLayout(self.speedUpLayout)
         self.qvTrainingLayout.addWidget(self.btn_trainClassif)
         #if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
-        self.qvTrainingLayout.addWidget(self.btn_trainClassifCombination)  # Activate later when functional
+        self.qvTrainingLayout.addWidget(self.btn_trainClassifCombination)
+        self.qvTrainingLayout.addWidget(self.btn_abortTraining)
         self.qvTrainingLayout.addWidget(self.labelLastResults)
         self.qvTrainingLayout.addWidget(self.lastTrainingResults)
         self.qvTrainingLayout.addWidget(self.btn_useSelectedClassif)
@@ -922,7 +961,8 @@ class Dialog(QDialog):
             items.append(listwidget.item(x).text())
         for filename in filelist:
             if filename not in items:
-                listwidget.addItem(filename)
+                icon = QIcon(self.iconFile)
+                listwidget.addItem(QListWidgetItem(icon, filename))
         return
 
     def refreshAvailableFilesForVizList(self, workspaceFolder, currentSessionId):
@@ -976,15 +1016,27 @@ class Dialog(QDialog):
 
         # iterate over filelist and add new files to listwidget
         # for that, create temp list of items in listwidget
+        # use "validity" (from .hfw) to select the icon
+        extractedDict = loadExtractedFiles(self.workspaceFile, self.currentSessionId)
+        fileext = ".ov"
+        if self.parameterDict["bciPlatform"] == settings.availablePlatforms[1]:
+            fileext = ".edf"
         items = []
         for x in range(self.availableFilesForVizList.count()):
             items.append(self.availableFilesForVizList.item(x).text())
         for basename in availableCsvs:
             basenameSuffix = str(basename+suffixFinal)
             if basenameSuffix not in items:
-                self.availableFilesForVizList.addItem(basenameSuffix)
+                extractedValidity = extractedDict.get(str(basename + fileext))
+                if extractedValidity is not None:
+                    if extractedValidity == True:
+                        icon = QIcon(self.iconBars)
+                    elif extractedValidity == False:
+                        icon = QIcon(self.iconWarn)
+                    self.availableFilesForVizList.addItem(QListWidgetItem(icon, basenameSuffix))
 
         return
+
     def refreshAvailableTrainSignalList(self, workspaceFolder, currentSessionId):
         # ----------
         # Refresh available training files.
@@ -1006,12 +1058,22 @@ class Dialog(QDialog):
 
         # iterate over filelist and add new files to listwidget
         # for that, create temp list of items in listwidget
+        # use "validity" (from .hfw) to select the icon
+        extractedDict = loadExtractedFiles(self.workspaceFile, self.currentSessionId)
+        fileext = ".ov"
         items = []
         for x in range(self.fileListWidgetTrain.count()):
             items.append(self.fileListWidgetTrain.item(x).text())
         for filename in availableTrainSigs:
             if filename not in items:
-                self.fileListWidgetTrain.addItem(filename)
+                basename = filename.removesuffix("-TRIALS.csv")
+                extractedValidity = extractedDict.get(str(basename + fileext))
+                if extractedValidity is not None:
+                    if extractedValidity == True:
+                        icon = QIcon(self.iconZap)
+                    elif extractedValidity == False:
+                        icon = QIcon(self.iconWarn)
+                    self.fileListWidgetTrain.addItem(QListWidgetItem(icon, filename))
 
     def refreshAvailableTrainSignalList_Timeflux(self, workspaceFolder, currentSessionId):
         # ----------
@@ -1064,13 +1126,22 @@ class Dialog(QDialog):
 
         # iterate over filelist and add new files to listwidget
         # for that, create temp list of items in listwidget
+        # use "validity" (from .hfw) to select the icon
+        extractedDict = loadExtractedFiles(self.workspaceFile, self.currentSessionId)
+        fileext = ".edf"
         items = []
         for x in range(self.fileListWidgetTrain.count()):
             items.append(self.fileListWidgetTrain.item(x).text())
         for basename in availableCsvs:
             basenameSuffix = str(basename+suffixFinal)
             if basenameSuffix not in items:
-                self.fileListWidgetTrain.addItem(basenameSuffix)
+                extractedValidity = extractedDict.get(str(basename + fileext))
+                if extractedValidity is not None:
+                    if extractedValidity == True:
+                        icon = QIcon(self.iconZap)
+                    elif extractedValidity == False:
+                        icon = QIcon(self.iconWarn)
+                    self.fileListWidgetTrain.addItem(QListWidgetItem(icon, basenameSuffix))
 
         return
 
@@ -1233,7 +1304,7 @@ class Dialog(QDialog):
         # For each selected signal file, check if extraction has already been done
         # => in .hfw file, at current extract idx, entry exists
         # + extract files exist in corresponding folder
-        extractedFiles = loadExtractedFiles(self.workspaceFile, self.currentSessionId)
+        extractedFiles = list(loadExtractedFiles(self.workspaceFile, self.currentSessionId))
         redundantFiles = []
         for file in signalFiles:
             if file in extractedFiles:
@@ -1256,11 +1327,6 @@ class Dialog(QDialog):
                     return
                 if retval == QMessageBox.YesToAll:
                     break
-
-        # Add extracted files to .hfw config file
-        # TODO : put somewhere else, AFTER extraction has succeeded...
-        for file in signalFiles:
-            addExtractedFile(self.workspaceFile, self.currentSessionId, file)
 
         # create progress bar window...
         self.progressBarExtract = ProgressBar("Feature extraction",
@@ -1302,11 +1368,109 @@ class Dialog(QDialog):
         elapsed = self.extractTimerEnd-self.extractTimerStart
         print("=== Extraction finished in: ", str(elapsed))
 
-        self.progressBarExtract.finish()
         if not success:
+            self.progressBarExtract.finish()
             myMsgBox(text)
+        else:
+            signalFiles = []
+            validList = []
+            for selectedItem in self.fileListWidget.selectedItems():
+                signalFiles.append(selectedItem.text())
+                validList.append(True)  # by default
+            if self.qActionCheckInvalid.isChecked():
+                self.progressBarExtract.changeLabel("Checking for invalid values... This may take a few seconds...")
+                validList = self.checkForInvalidAfterExtraction(signalFiles)
+
+            print("validList ", validList)
+
+            # Add extracted files to .hfw config file
+            for idx in range(len(signalFiles)):
+                addExtractedFile(self.workspaceFile, self.currentSessionId, signalFiles[idx], validList[idx])
+
+            self.progressBarExtract.finish()
+
         self.filesRefreshTimer.start()
         self.enableExtractionGui(True)
+
+    def checkForInvalidAfterExtraction(self, signalFiles):
+
+        extractDict = self.parameterDict["Sessions"][self.parameterDict["currentSessionId"]]["ExtractionParams"].copy()
+        suffix1 = None
+        suffix2 = None
+        if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
+            suffix1 = "SPECTRUM"
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+            suffix1 = "CONNECT"
+        elif self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+            suffix1 = "SPECTRUM"
+            suffix2 = "CONNECT"
+
+        class1label = self.parameterDict["AcquisitionParams"]["Class1"]
+        class2label = self.parameterDict["AcquisitionParams"]["Class2"]
+
+        workingFolder = os.path.join(self.workspaceFolder, "sessions", self.currentSessionId, "extract")
+
+        fileext = ".ov"
+        if self.parameterDict["bciPlatform"] == settings.availablePlatforms[1]:
+            fileext = ".edf"
+
+        validList = []
+        for file in signalFiles:
+            valid = True
+            pipelines = [suffix1, suffix2]
+            # Reconstruct extracted filename(s)
+            for pipeline in pipelines:
+                if pipeline is not None:
+
+                    path1 = os.path.join(workingFolder, str(file.removesuffix(fileext) + "-" + pipeline + "-" + class1label + ".csv"))
+                    path2 = os.path.join(workingFolder, str(file.removesuffix(fileext) + "-" + pipeline + "-" + class2label + ".csv"))
+                    [header1, data1] = load_csv_np(path1)
+                    [header2, data2] = load_csv_np(path2)
+
+                    threshInvalid = 0
+
+                    if pipeline == "SPECTRUM":
+                        nbElec = int(header1[0].split(":")[1].split("x")[0])
+                        n_bins = int(header1[0].split(":")[1].split("x")[1])
+                        threshInvalid = int(nbElec / 4)  # (TODO: make parameter)
+                        trialLength = float(extractDict["StimulationEpoch"])
+                        winLen = float(extractDict["TimeWindowLength"])
+                        winShift = float(extractDict["TimeWindowShift"])
+                        extract_cond1, _ = Extract_CSV_Data(data1, trialLength, nbElec, n_bins, winLen, winShift)
+                        extract_cond2, _ = Extract_CSV_Data(data2, trialLength, nbElec, n_bins, winLen, winShift)
+
+                    elif pipeline == "CONNECT":
+                        nbElec = int(header1[0].split(":")[-1].split("x")[1])
+                        n_bins = int(header1[0].split(":")[-1].split("x")[0])
+                        threshInvalid = int(nbElec / 4)  # (TODO: make parameter)
+                        trialLength = float(extractDict["StimulationEpoch"])
+                        winLen = float(extractDict["ConnectivityLength"])
+                        overlap = float(extractDict["ConnectivityOverlap"])
+                        extract_cond1, _ = Extract_Connect_NodeStrength_TimeFreq_CSV_Data(data1, trialLength, nbElec,
+                                                                                          n_bins, winLen, overlap)
+                        extract_cond2, _ = Extract_Connect_NodeStrength_TimeFreq_CSV_Data(data2, trialLength, nbElec,
+                                                                                          n_bins, winLen, overlap)
+
+                    # Check for invalid trials / electrodes
+                    invalid1 = check_invalid_trials_in_run(extract_cond1)
+                    invalid2 = check_invalid_trials_in_run(extract_cond2)
+                    invalidElec1 = check_nan_elec(extract_cond1)
+                    invalidElec2 = check_nan_elec(extract_cond2)
+
+                    for idx, nbNan in enumerate(invalid1):
+                        if nbNan > threshInvalid:
+                            valid = False
+                    for idx, nbNan in enumerate(invalid2):
+                        if nbNan > threshInvalid:
+                            valid = False
+
+                    if len(invalidElec1) > 0 or len(invalidElec2) > 0:
+                        valid = False
+
+            validList.append(valid)
+
+        return validList
 
     def loadFilesForViz(self):
         # ----------
@@ -1565,6 +1729,8 @@ class Dialog(QDialog):
 
         # TODO : REFACTOR TO BETTER MERGE OPENVIBE/TIMEFLUX BRANCHES
 
+        self.btn_abortTraining.setEnabled(True)
+
         if not self.fileListWidgetTrain.selectedItems():
             myMsgBox("Please select a set of files for training")
             return
@@ -1754,8 +1920,9 @@ class Dialog(QDialog):
         elapsed = self.trainTimerEnd - self.trainTimerStart
         print("=== Training done in: ", str(elapsed))
         self.trainClassThread.clear()
-
+        self.btn_abortTraining.setEnabled(False)
         self.progressBarTrain.finish()
+
         if success:
             # Add training attempt in workspace file
             print("=== Checking if attempt already done...")
@@ -1805,6 +1972,8 @@ class Dialog(QDialog):
         #
         # provide the classification score/accuracy as a textbox
         # ----------
+
+        self.btn_abortTraining.setEnabled(True)
 
         # basic checks
         if not self.fileListWidgetTrain.selectedItems():
@@ -1965,6 +2134,22 @@ class Dialog(QDialog):
         self.currentTrainCombination = 0
         self.trainTimerStart = time.perf_counter()
 
+    def btnAbortTraining(self):
+
+        print("self.currentTrainCombination ", self.currentTrainCombination)
+        print("self.trainClassThread ", self.trainClassThread)
+        print("self.trainClassThread[self.currentTrainCombination] ", self.trainClassThread[self.currentTrainCombination])
+        self.trainClassThread[0].stopThread()
+        self.trainClassThread[0].wait()
+        self.trainClassThread.clear()
+        if hasattr(self, 'progressBarTrainCombination'):
+            self.progressBarTrainCombination.finish()
+        if hasattr(self, 'progressBarTrain'):
+            self.progressBarTrain.finish()
+
+        self.enableGui(True)
+        return
+
     def trainingCombination_over(self, success, attemptIdTemp, resultsText):
         # Training work thread is over, so we update (or kill) the progress bar,
         # display a msg with results at the end of all attemps,
@@ -1986,6 +2171,7 @@ class Dialog(QDialog):
             elapsed = self.trainTimerEnd - self.trainTimerStart
             print("=== Training done in: ", str(elapsed))
             self.trainClassThread.clear()
+            self.btn_abortTraining.setEnabled(False)
             lastCombination = True
 
         if success:
@@ -2131,6 +2317,7 @@ class Dialog(QDialog):
         self.enableExtractionGui(myBool)
         self.enableVizGui(myBool)
         self.enableTrainGui(myBool)
+        self.btn_abortTraining.setEnabled(False)
 
     def getExperimentalParameters(self):
         # ----------

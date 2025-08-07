@@ -828,6 +828,7 @@ class TrainClassifier(QtCore.QThread):
         self.freqRes = float(self.extractDict["FreqRes"])
         self.samplingFreq = sampFreq
         self.exitText = ""
+        self.subproc = []
 
         self.usingDualFeatures = False
         if self.parameterDict["pipelineType"] == optionKeys[3] \
@@ -1177,6 +1178,11 @@ class TrainClassifier(QtCore.QThread):
 
     def stopThread(self):
         self.stop = True
+        if len(self.subproc) > 0:
+            self.subproc[0].kill()
+            self.subproc[0].wait()
+        self.subproc.clear()
+        self.terminate()
 
     def errorMessageTrainer(self):
         textError = str("Error running \"Training\" scenario\n")
@@ -1246,6 +1252,7 @@ class TrainClassifier(QtCore.QThread):
         # Run actual command (openvibe-designer.cmd --no-gui --play-fast <scen.xml>)
         p = subprocess.Popen([command, "--invisible", "--play-fast", scenFile],
                              stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        self.subproc.append(p)
 
         # Read console output to detect end of process
         # and prompt user with classification score. Quite artisanal but works
@@ -1271,6 +1278,8 @@ class TrainClassifier(QtCore.QThread):
                     if "trainer>" in stringToWrite:
                         stringToWrite = stringToWrite.split("trainer> ")
                         classifierOutputStr = str(classifierOutputStr + stringToWrite[1] + "\n")
+
+        self.subproc.clear()
 
         if activateScoreMsgBox:
             lines = classifierOutputStr.splitlines()
@@ -1333,6 +1342,7 @@ class TrainClassifier(QtCore.QThread):
         # Run actual command (openvibe-designer.cmd --no-gui --play-fast <scen.xml>)
         p = subprocess.Popen([command, "--invisible", "--play-fast", scenXml],
                              stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        self.subproc.append(p)
 
         # Read console output to detect end of process
         # and prompt user with classification score. Quite artisanal but works
@@ -1352,6 +1362,7 @@ class TrainClassifier(QtCore.QThread):
                     outputStr = str(outputStr + "\n")
                     break
 
+        self.subproc.clear()
         return success
 
 class RunClassifier(QtCore.QThread):
