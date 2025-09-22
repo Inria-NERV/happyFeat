@@ -32,8 +32,9 @@ def loadExtractedFiles(jsonFile, sessionId):
     currentDict = {}
     with open(jsonFile, "r") as myjson:
         currentDict = json.load(myjson)
-    if currentDict["Sessions"][sessionId]:
-        return currentDict["Sessions"][sessionId]["ExtractedSignalFiles"]
+    extFileDict = currentDict.get("Sessions").get(sessionId).get("ExtractedSignalFiles")
+    if extFileDict:
+        return extFileDict
     else:
         return {}
 
@@ -106,7 +107,7 @@ def getTrainingResults(jsonFile, sessionId):
 
 def newSession(jsonFile, paramDict, newId, newParamDict):
     paramDict["Sessions"][newId] = {"ExtractionParams": newParamDict,
-                                    "ExtractedSignalFiles": [],
+                                    "ExtractedSignalFiles": {},
                                     "TrainingAttempts": {}}
     with open(jsonFile, "r") as myjson:
         currentDict = json.load(myjson)

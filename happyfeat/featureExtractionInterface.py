@@ -920,6 +920,7 @@ class Dialog(QDialog):
         # ----------
         # Refresh all lists. Called once at the init, then once every timer click (see init method)
         # ----------
+
         self.refreshSignalList(self.fileListWidget, self.workspaceFolder)
         self.refreshAvailableFilesForVizList(self.workspaceFolder, self.currentSessionId)
 
@@ -1331,7 +1332,7 @@ class Dialog(QDialog):
         # create progress bar window...
         self.progressBarExtract = ProgressBar("Feature extraction",
                                               str("Extracting data for file "+signalFiles[0]+"..."),
-                                              len(signalFiles))
+                                              len(signalFiles)+1)
 
         # deactivate this part of the GUI
         self.enableExtractionGui(False)
@@ -1379,6 +1380,7 @@ class Dialog(QDialog):
                 validList.append(True)  # by default
             if self.qActionCheckInvalid.isChecked():
                 self.progressBarExtract.changeLabel("Checking for invalid values... This may take a few seconds...")
+                self.progressBarExtract.increment()
                 validList = self.checkForInvalidAfterExtraction(signalFiles)
 
             print("validList ", validList)
@@ -1386,6 +1388,10 @@ class Dialog(QDialog):
             # Add extracted files to .hfw config file
             for idx in range(len(signalFiles)):
                 addExtractedFile(self.workspaceFile, self.currentSessionId, signalFiles[idx], validList[idx])
+
+            end = time.perf_counter()
+            elapsed = end - self.extractTimerEnd
+            print("=== Validity checked in: ", str(elapsed))
 
             self.progressBarExtract.finish()
 
