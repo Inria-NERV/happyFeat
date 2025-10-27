@@ -14,6 +14,10 @@ HappyFeat also allows to interface with BCI softwares (OpenViBE for the moment!)
 
 The focus is put on ease of use, trial-and-error training of the classifier, and fast and efficient analysis of features of interest from BCI sessions.
 
+## Publication
+
+Desbois, Arthur and Venot, Tristan and De Vico Fallani, Fabrizio and Corsi, Marie-Constance (2024). **HappyFeat—An interactive and efficient BCI framework for clinical applications**. *Software Impacts*, 19, 100610. ISSN: 2665-9638. [https://doi.org/10.1016/j.simpa.2023.100610](https://doi.org/10.1016/j.simpa.2023.100610)
+    
 ## Key Features
 
 * **Easy to use GUI** allowing to extract and visualize classification features, and select the most relevant ones for training a classifier.
