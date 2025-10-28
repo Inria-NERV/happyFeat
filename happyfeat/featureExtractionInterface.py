@@ -151,23 +151,22 @@ class Dialog(QDialog):
         self.advanced = False
 
         # Load icons
-
-        self.iconArm = os.path.join(os.path.abspath(os.getcwd()), r'resources\arm.png')
-        self.iconBars = os.path.join(os.path.abspath(os.getcwd()), r'resources\bars.png')
-        self.iconFile = os.path.join(os.path.abspath(os.getcwd()), r'resources\doc.png')
-        self.iconFile = os.path.join(os.path.abspath(os.getcwd()), r'resources\file.png')
-        self.iconFolder = os.path.join(os.path.abspath(os.getcwd()), r'resources\folder.png')
-        self.iconGear = os.path.join(os.path.abspath(os.getcwd()), r'resources\gear.png')
-        self.iconGlass = os.path.join(os.path.abspath(os.getcwd()), r'resources\magnify.png')
-        self.iconMinus = os.path.join(os.path.abspath(os.getcwd()), r'resources\minus.png')
-        self.iconPlus = os.path.join(os.path.abspath(os.getcwd()), r'resources\plus.png')
-        self.iconPlay = os.path.join(os.path.abspath(os.getcwd()), r'resources\play.png')
-        self.iconRobot = os.path.join(os.path.abspath(os.getcwd()), r'resources\robot.png')
-        self.iconStop = os.path.join(os.path.abspath(os.getcwd()), r'resources\stop.png')
-        self.iconUnknown = os.path.join(os.path.abspath(os.getcwd()), r'resources\unknown.png')
-        self.iconUpdate = os.path.join(os.path.abspath(os.getcwd()), r'resources\update.png')
-        self.iconWarn = os.path.join(os.path.abspath(os.getcwd()), r'resources\warning.png')
-        self.iconZap = os.path.join(os.path.abspath(os.getcwd()), r'resources\zap.png')
+        self.iconArm = os.path.join(os.path.abspath(os.getcwd()), r'happyfeat\resources\arm.png')
+        self.iconBars = os.path.join(os.path.abspath(os.getcwd()), r'happyfeat\resources\bars.png')
+        self.iconFile = os.path.join(os.path.abspath(os.getcwd()), r'happyfeat\resources\doc.png')
+        self.iconFile = os.path.join(os.path.abspath(os.getcwd()), r'happyfeat\resources\file.png')
+        self.iconFolder = os.path.join(os.path.abspath(os.getcwd()), r'happyfeat\resources\folder.png')
+        self.iconGear = os.path.join(os.path.abspath(os.getcwd()), r'happyfeat\resources\gear.png')
+        self.iconGlass = os.path.join(os.path.abspath(os.getcwd()), r'happyfeat\resources\magnify.png')
+        self.iconMinus = os.path.join(os.path.abspath(os.getcwd()), r'happyfeat\resources\minus.png')
+        self.iconPlus = os.path.join(os.path.abspath(os.getcwd()), r'happyfeat\resources\plus.png')
+        self.iconPlay = os.path.join(os.path.abspath(os.getcwd()), r'happyfeat\resources\play.png')
+        self.iconRobot = os.path.join(os.path.abspath(os.getcwd()), r'happyfeat\resources\robot.png')
+        self.iconStop = os.path.join(os.path.abspath(os.getcwd()), r'happyfeat\resources\stop.png')
+        self.iconUnknown = os.path.join(os.path.abspath(os.getcwd()), r'happyfeat\resources\unknown.png')
+        self.iconUpdate = os.path.join(os.path.abspath(os.getcwd()), r'happyfeat\resources\update.png')
+        self.iconWarn = os.path.join(os.path.abspath(os.getcwd()), r'happyfeat\resources\warning.png')
+        self.iconZap = os.path.join(os.path.abspath(os.getcwd()), r'happyfeat\resources\zap.png')
 
         # GET BASIC SETTINGS FROM WORKSPACE FILE
         if self.workspaceFile:
