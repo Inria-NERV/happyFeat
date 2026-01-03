@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/Inria-NERV/happyFeat,6,2
+/Inria-NERV/happyFeat/blob/main/happyfeat/lib/modifyOpenvibeScen.py,2,1
+/Inria-NERV/happyFeat/tree/main/happyfeat,2,1
+/Inria-NERV/happyFeat/tree/main/happyfeat/templates-mixed-bcinet,2,1
+/Inria-NERV/happyFeat/actions/runs/16763434708/workflow,1,1
+/Inria-NERV/happyFeat/blob/main/happyfeat/templates-mixed-bcinet/sc1-monitor-acq.xml,1,1
+/Inria-NERV/happyFeat/blob/main/happyfeat/templates-mixed-bcinet/sc2-extract.xml,1,1
+/Inria-NERV/happyFeat/blob/main/happyfeat/templates-spectralpower/sc2-train-composite.xml,1,1
+/Inria-NERV/happyFeat/blob/main/pyproject.toml,1,1
+/Inria-NERV/happyFeat/commit/ade51c628735465cad687505f1669d15ee2750cb,1,1
