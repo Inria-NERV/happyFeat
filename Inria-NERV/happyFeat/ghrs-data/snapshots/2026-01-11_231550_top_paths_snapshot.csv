@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/Inria-NERV/happyFeat,14,5
+/Inria-NERV/happyFeat/tree/main/happyfeat,5,2
+/Inria-NERV/happyFeat/tree/main/happyfeat/lib,4,2
+/Inria-NERV/happyFeat/blob/main/happyfeat/featureExtractionInterface.py,4,1
+/Inria-NERV/happyFeat/blob/main/happyfeat/bcipipeline_setup.py,2,1
+/Inria-NERV/happyFeat/actions/runs/12932388482/usage,1,1
+/Inria-NERV/happyFeat/actions/runs/16763434708/workflow,1,1
+/Inria-NERV/happyFeat/blob/main/happyfeat/lib/Statistical_analysis.py,1,1
+/Inria-NERV/happyFeat/blob/main/happyfeat/lib/bcipipeline_settings.py,1,1
+/Inria-NERV/happyFeat/blob/main/happyfeat/lib/extractMetaData.py,1,1
