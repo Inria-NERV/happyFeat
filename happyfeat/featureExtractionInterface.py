@@ -151,7 +151,6 @@ class Dialog(QDialog):
         self.advanced = False
 
         # Load icons
-
         self.iconArm = os.path.join(os.path.abspath(os.getcwd()), r'happyfeat\resources\arm.png')
         self.iconBars = os.path.join(os.path.abspath(os.getcwd()), r'happyfeat\resources\bars.png')
         self.iconFile = os.path.join(os.path.abspath(os.getcwd()), r'happyfeat\resources\doc.png')
