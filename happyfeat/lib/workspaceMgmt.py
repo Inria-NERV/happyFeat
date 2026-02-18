@@ -28,13 +28,20 @@ def getExperimentalParameters(jsonFile):
         else:
             return None
 
+# def convertExtractedFilesListToDict(jsonFile):
+    
 def loadExtractedFiles(jsonFile, sessionId):
     currentDict = {}
     with open(jsonFile, "r") as myjson:
         currentDict = json.load(myjson)
     extFileDict = currentDict.get("Sessions").get(sessionId).get("ExtractedSignalFiles")
     if extFileDict:
-        return extFileDict
+        if isinstance(extFileDict, list):  # retrocompat with HF 0.3.0
+            # here we can only assume all files contain valid values, since the check hasn't been done...
+            extFileDict2 = {filename: True for filename in extFileDict}
+            return extFileDict2
+        else:
+            return extFileDict
     else:
         return {}
 
