@@ -162,7 +162,7 @@ def Extract_CSV_Data_Timeflux(data_cond, nbElectrodes, bins):
 class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
     info = Signal(bool)
     info2 = Signal(str)
-    over = Signal(bool, str, list, list, list)
+    over = Signal(bool, str, int, list, list, list, list)
 
     def __init__(self, analysisFiles, workingFolder, parameterDict, Features, sampFreq, parent=None):
 
@@ -190,10 +190,11 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
         # self.useBaselineFiles = self.parameterDict["pipelineType"] == optionKeys[1]
         self.useBaselineFiles = False
 
-        # load files per class
-        validFiles = []
-        initSizes = []
-        validSizes = []
+        invalidTrialsList1 = []
+        invalidTrialsList2 = []
+        invalidElec1 = {}
+        invalidElec2 = {}
+
         for selectedFilesForViz in self.analysisFiles:
             idxFile += 1
             pipelineLabel = "SPECTRUM"
@@ -220,7 +221,7 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
                 errMsg = str(errMsg + "\nSampling frequency or frequency bins mismatch")
                 errMsg = str(errMsg + "\n(" + str(sampFreq1) + " vs " + str(sampFreq2) + " or ")
                 errMsg = str(errMsg + str(freqBins1) + " vs " + str(freqBins2) + ")")
-                self.over.emit(False, errMsg, None, None, None)
+                self.over.emit(False, errMsg, None, None, None, None, None)
                 return
 
             listSampFreq.append(sampFreq1)
@@ -237,26 +238,10 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
             if electrodeList1 != electrodeList2:
                 errMsg = str("Error when loading " + path1 + "\n" + " and " + path2)
                 errMsg = str(errMsg + "\nElectrode List mismatch")
-                self.over.emit(False, errMsg, None, None, None)
+                self.over.emit(False, errMsg, None, None, None, None, None)
                 return
 
             listElectrodeList.append(electrodeList1)
-
-            # check for invalid values...
-            initSize1 = 0
-            validSize1 = 0
-            initSize2 = 0
-            validSize2 = 0
-            newData1, valid1, initSize1, validSize1 = check_valid_np(data1)
-            newData2, valid2, initSize2, validSize2 = check_valid_np(data2)
-
-            if valid1 and valid2:
-                validFiles.append(True)
-            else:
-                validFiles.append(False)
-
-            initSizes.append(initSize1 + initSize2)
-            validSizes.append(validSize1 + validSize2)
 
             self.dataNp1.append(data1)
             self.dataNp2.append(data2)
@@ -267,7 +252,7 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
         if not all(freqsamp == listSampFreq[0] for freqsamp in listSampFreq):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Sampling frequency mismatch (" + str(listSampFreq) + ")")
-            self.over.emit(False, errMsg, None, None, None)
+            self.over.emit(False, errMsg, None, None, None, None, None)
             return
         else:
             self.samplingFreq = listSampFreq[0]
@@ -276,7 +261,7 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
         if not all(electrodeList == listElectrodeList[0] for electrodeList in listElectrodeList):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Electrode List mismatch")
-            self.over.emit(False, errMsg, None, None, None)
+            self.over.emit(False, errMsg, None, None, None, None, None)
             return
         else:
             print("Sensor list for selected files : " + ";".join(listElectrodeList[0]))
@@ -284,7 +269,7 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
         if not all(freqBins == listFreqBins[0] for freqBins in listFreqBins):
             errMsg = str("Error when loading CSV files\n")
             errMsg = str(errMsg + "Not same number of frequency bins (" + str(listSampFreq) + ")")
-            self.over.emit(False, errMsg, None, None, None)
+            self.over.emit(False, errMsg, None, None, None, None, None)
             return
         else:
             print("Frequency bins: " + str(listFreqBins[0]))
@@ -306,6 +291,9 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
         timefreq_cond1_final = None
         timefreq_cond2_final = None
         idxFile = 0
+
+        threshInvalid = int(nbElectrodes / 4)  # (TODO: make parameter)
+
         for run in range(len(self.dataNp1)):
             idxFile += 1
             self.info2.emit(str("Processing data for file " + str(idxFile)))
@@ -314,6 +302,39 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
             power_cond2, timefreq_cond2 = \
                 Extract_CSV_Data_Timeflux(self.dataNp2[run], nbElectrodes, n_bins)
 
+            # Check if trial contains more than a quarter  of bad electrodes
+            invalid1 = check_invalid_trials_in_run(power_cond1)
+            invalid2 = check_invalid_trials_in_run(power_cond2)
+            invalidTrialsList1.append(invalid1)
+            invalidTrialsList2.append(invalid2)
+
+            deleteTrial1 = []
+            for idx, nbNan in enumerate(invalid1):
+                if nbNan > threshInvalid:
+                    dispStr = str("-- WARNING -- PowSpectrum Cond1 : Trial " + str(
+                        idx) + " in selected file idx " + str(run) +
+                                  " is mostly composed of electrodes containing NaN values ("
+                                  + str(nbNan) + ")")
+                    dispStr += str("\nDiscarding it for the current analysis")
+                    print(dispStr)
+                    deleteTrial1.append(idx)  # create a list, otherwise deleting elements in this loop can get messy
+
+            deleteTrial2 = []
+            for idx, nbNan in enumerate(invalid2):
+                if nbNan > threshInvalid:
+                    dispStr = str("-- WARNING -- PowSpectrum Cond2 : Trial " + str(
+                        idx) + " in selected file idx " + str(run) +
+                                  " is mostly composed of electrodes containing NaN values ("
+                                  + str(nbNan) + ")")
+                    dispStr += str("\n  -- Discarding it for the current analysis")
+                    print(dispStr)
+                    deleteTrial2.append(idx)  # create a list, otherwise deleting elements in this loop can get messy
+
+            # Remove invalid trials
+            deleteTrial = list(set(deleteTrial1 + deleteTrial2))  # set is used to remove duplicates
+            if len(deleteTrial) > 0:
+                power_cond1 = np.delete(power_cond1, deleteTrial, axis=0)
+                power_cond2 = np.delete(power_cond2, deleteTrial, axis=0)
             # experimental: if mismatch in number of trials for the 2 classes,
             # only keep the lowest amount...
             if np.shape(power_cond1)[0] != np.shape(power_cond2)[0]:
@@ -332,6 +353,39 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
                 power_cond2_final = np.concatenate((power_cond2_final, power_cond2))
                 timefreq_cond1_final = np.concatenate((timefreq_cond1_final, timefreq_cond1))
                 timefreq_cond2_final = np.concatenate((timefreq_cond2_final, timefreq_cond2))
+
+        # ----------
+        # Detect invalid values & inform user
+        # ----------
+        invalidElec1 = check_nan_elec(power_cond1_final)
+        invalidElec2 = check_nan_elec(power_cond2_final)
+        discardElecs = True  # TODO : make parameter
+        nanVector = np.empty(np.shape(power_cond1_final)[
+                                 2])  # used to force all values of a given channel to NaN, hence "disabling" it in the R2 map
+        nanVector[:] = np.nan
+
+        for idx, v in enumerate(invalidElec1):
+            dispStr = str("-- WARNING -- PowSpectrum Cond1: Electrode idx " + str(v) + " (" + electrodeList[
+                v] + ") is full of NaNs in " + str(invalidElec1[v]) + " trials")
+            dispStr += str("\n  -- Discarding it for the current analysis")
+            print(dispStr)
+            if discardElecs:
+                for trial in range(np.shape(power_cond1_final)[0]):
+                    power_cond1_final[trial, v, :] = nanVector
+                    power_cond2_final[trial, v, :] = nanVector
+        for idx, v in enumerate(invalidElec2):
+            dispStr = str("-- WARNING -- PowSpectrum Cond2: Electrode idx " + str(v) + " (" + electrodeList[
+                v] + ") is full of NaNs in " + str(invalidElec1[v]) + " trials")
+            dispStr += str("\n  -- Discarding it for the current analysis")
+            print(dispStr)
+            if discardElecs:
+                for trial in range(np.shape(power_cond2_final)[0]):
+                    power_cond1_final[trial, v, :] = nanVector
+                    power_cond2_final[trial, v, :] = nanVector
+
+        # ----------
+        # Actual statistical Analysis...
+        # ----------
 
         self.info2.emit("Computing statistics")
 
@@ -375,7 +429,21 @@ class LoadFilesForVizPowSpectrum_Timeflux(QtCore.QThread):
         self.Features.samplingFreq = self.samplingFreq
 
         self.stop = True
-        self.over.emit(True, "", validFiles, initSizes, validSizes)
+
+        # PySide6 signals cannot transmit "dict" (they rely on C++ QMap which don't exist in python)
+        # ==> we convert to serialized lists...
+        # [invalidElectrode; nbOfTrialsWithInvalidData; invalidElectrode; nbOfTrialsWithInvalidData; etc.]
+        invalidElecList1 = []
+        invalidElecList2 = []
+        for idx, v in enumerate(invalidElec1):
+            invalidElecList1.append(electrodeList[v])
+            invalidElecList1.append(invalidElec1[v])
+        for idx, v in enumerate(invalidElec2):
+            invalidElecList2.append(electrodeList[v])
+            invalidElecList2.append(invalidElec2[v])
+
+        self.over.emit(True, "", len(electrodeList), invalidTrialsList1, invalidTrialsList2, invalidElecList1,
+                       invalidElecList2)
 
     def stopThread(self):
         self.stop = True

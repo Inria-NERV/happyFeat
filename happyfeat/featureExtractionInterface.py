@@ -1435,27 +1435,40 @@ class Dialog(QDialog):
 
                     threshInvalid = 0
 
-                    if pipeline == "SPECTRUM":
-                        nbElec = int(header1[0].split(":")[1].split("x")[0])
-                        n_bins = int(header1[0].split(":")[1].split("x")[1])
-                        threshInvalid = int(nbElec / 4)  # (TODO: make parameter)
-                        trialLength = float(extractDict["StimulationEpoch"])
-                        winLen = float(extractDict["TimeWindowLength"])
-                        winShift = float(extractDict["TimeWindowShift"])
-                        extract_cond1, _ = Extract_CSV_Data(data1, trialLength, nbElec, n_bins, winLen, winShift)
-                        extract_cond2, _ = Extract_CSV_Data(data2, trialLength, nbElec, n_bins, winLen, winShift)
+                    if self.parameterDict["bciPlatform"] == settings.availablePlatforms[0]:
+                        # OPENVIBE
 
-                    elif pipeline == "CONNECT":
-                        nbElec = int(header1[0].split(":")[-1].split("x")[1])
-                        n_bins = int(header1[0].split(":")[-1].split("x")[0])
-                        threshInvalid = int(nbElec / 4)  # (TODO: make parameter)
-                        trialLength = float(extractDict["StimulationEpoch"])
-                        winLen = float(extractDict["ConnectivityLength"])
-                        overlap = float(extractDict["ConnectivityOverlap"])
-                        extract_cond1, _ = Extract_Connect_NodeStrength_TimeFreq_CSV_Data(data1, trialLength, nbElec,
-                                                                                          n_bins, winLen, overlap)
-                        extract_cond2, _ = Extract_Connect_NodeStrength_TimeFreq_CSV_Data(data2, trialLength, nbElec,
-                                                                                          n_bins, winLen, overlap)
+                        if pipeline == "SPECTRUM":
+                            nbElec = int(header1[0].split(":")[1].split("x")[0])
+                            n_bins = int(header1[0].split(":")[1].split("x")[1])
+                            threshInvalid = int(nbElec / 4)  # (TODO: make parameter)
+                            trialLength = float(extractDict["StimulationEpoch"])
+                            winLen = float(extractDict["TimeWindowLength"])
+                            winShift = float(extractDict["TimeWindowShift"])
+                            extract_cond1, _ = Extract_CSV_Data(data1, trialLength, nbElec, n_bins, winLen, winShift)
+                            extract_cond2, _ = Extract_CSV_Data(data2, trialLength, nbElec, n_bins, winLen, winShift)
+
+                        elif pipeline == "CONNECT":
+                            nbElec = int(header1[0].split(":")[-1].split("x")[1])
+                            n_bins = int(header1[0].split(":")[-1].split("x")[0])
+                            threshInvalid = int(nbElec / 4)  # (TODO: make parameter)
+                            trialLength = float(extractDict["StimulationEpoch"])
+                            winLen = float(extractDict["ConnectivityLength"])
+                            overlap = float(extractDict["ConnectivityOverlap"])
+                            extract_cond1, _ = Extract_Connect_NodeStrength_TimeFreq_CSV_Data(data1, trialLength, nbElec,
+                                                                                              n_bins, winLen, overlap)
+                            extract_cond2, _ = Extract_Connect_NodeStrength_TimeFreq_CSV_Data(data2, trialLength, nbElec,
+                                                                                              n_bins, winLen, overlap)
+
+                    elif self.parameterDict["bciPlatform"] == settings.availablePlatforms[1]:
+                        # TIMEFLUX
+
+                        if pipeline == "SPECTRUM":
+                            nbElec = int(header1[0].split(":")[1].split("x")[0])
+                            n_bins = int(header1[0].split(":")[1].split("x")[1])
+                            extract_cond1, _ = Extract_CSV_Data_Timeflux(data1, nbElec, n_bins)
+                            extract_cond2, _ = Extract_CSV_Data_Timeflux(data2, nbElec, n_bins)
+
 
                     # Check for invalid trials / electrodes
                     invalid1 = check_invalid_trials_in_run(extract_cond1)
@@ -2743,30 +2756,33 @@ class Dialog(QDialog):
                 self.autoFeatChannelList = results2.electrodes_final
 
         print("AutoFeat: Sublist of channels: " + str(self.autoFeatChannelList))
+        print("  (for ref, list of available channels: " + str(results1.electrodes_final))
         print("AutoFeat: Frequency range: " + str(self.autoFeatFreqRange))
         print("AutoFeat: Frequency resolution: " + str(results1.fres))
 
         # Get indices corresponding to the selected channel names
         # TODO : allow for case-insensitive selection (e.g. FCz == Fcz)
-        results1.autoselect_chanidx = []
-        for chan in self.autoFeatChannelList:
-            try:
-                idx = results1.electrodes_final.index(chan)
-            except ValueError:
-                myMsgBox("AutoFeat: Electrode " + chan + " not in electrode list of selected files")
-                return
-            results1.autoselect_chanidx.append(idx)
-        print("result.autoselect_chanidx METRIC1:  " + str(results1.autoselect_chanidx))
+        if len(results1.electrodes_final):
+            results1.autoselect_chanidx = []
+            for chan in self.autoFeatChannelList:
+                try:
+                    idx = results1.electrodes_final.index(chan)
+                except ValueError:
+                    myMsgBox("AutoFeat: Electrode " + chan + " not in electrode list of selected files")
+                    return
+                results1.autoselect_chanidx.append(idx)
+            print("result.autoselect_chanidx METRIC1:  " + str(results1.autoselect_chanidx))
 
-        results2.autoselect_chanidx = []
-        for chan in self.autoFeatChannelList:
-            try:
-                idx = results2.electrodes_final.index(chan)
-            except ValueError:
-                myMsgBox("AutoFeat: Electrode " + chan + " not in electrode list of selected files")
-                return
-            results2.autoselect_chanidx.append(idx)
-        print("result.autoselect_chanidx METRIC2:  " + str(results2.autoselect_chanidx))
+        if len(results2.electrodes_final):
+            results2.autoselect_chanidx = []
+            for chan in self.autoFeatChannelList:
+                try:
+                    idx = results2.electrodes_final.index(chan)
+                except ValueError:
+                    myMsgBox("AutoFeat: Electrode " + chan + " not in electrode list of selected files")
+                    return
+                results2.autoselect_chanidx.append(idx)
+            print("result.autoselect_chanidx METRIC2:  " + str(results2.autoselect_chanidx))
 
         # Check if frequencies are correct...
         freqMin = int(self.autoFeatFreqRange.split(":")[0])
