@@ -45,6 +45,8 @@ from happyfeat.lib.workspaceMgmt import *
 from happyfeat.lib.workThreads import *
 from happyfeat.lib.myProgressBar import ProgressBar, ProgressBarNoInfo
 from happyfeat.timeflux.Threads import *
+from happyfeat.lib.cluster import *
+
 import happyfeat.lib.bcipipeline_settings as settings
 
 import plotly
@@ -77,6 +79,16 @@ class Features:
 
     autoselect_chanidx = []
     autoselected = []
+
+    clustering_t_obs = []
+    clustering_p_vals = []
+    clustering_p_thresh = []
+    clusters = []
+    clustermask = []
+
+    clustering_fmin_idx = []
+    clustering_fmax_idx = []
+
 
 class Dialog(QDialog):
 
@@ -134,6 +146,9 @@ class Dialog(QDialog):
         self.autoFeatFreqRange = ""
         self.autoFeatNb = 3  # default
         self.combiTrainingRange = "1:3"  # default
+        self.permNb = 5000  # default
+        self.clusterThresh = 0.05  # default
+        self.clusterFmax = None
 
         # Work Threads & Progress bars
         self.acquisitionThread = None
@@ -182,6 +197,12 @@ class Dialog(QDialog):
             self.autoFeatFreqRange = self.parameterDict.get("autoFeatFreqRange")
             self.autoFeatChannelList = self.parameterDict.get("autoFeatChannelList")
             self.autoFeatNb = self.parameterDict.get("autoFeatNb")
+            if self.parameterDict.get("clusterThresh"):
+                self.clusterThresh = self.parameterDict.get("clusterThresh")
+            if self.parameterDict.get("clusterFmax"):
+                self.clusterFmax = self.parameterDict.get("clusterFmax")
+            if self.parameterDict.get("permNb"):
+                self.permNb = self.parameterDict.get("permNb")
             self.combiTrainingRange = self.parameterDict.get("combiTrainingRange")
             if self.bciPlatform == settings.availablePlatforms[0]:  # openvibe
                 self.ovScript = self.parameterDict.get("ovDesignerPath")
@@ -291,6 +312,23 @@ class Dialog(QDialog):
         # Menu "Auto-select"
         self.menuAutoSelect = QMenu("&Feature AutoSelect")
         self.menuBar.addMenu(self.menuAutoSelect)
+
+        self.qActionEnableClustering = QAction("Enable &Clustering", self, checkable=True)
+        self.qActionEnableClustering.setChecked(True)
+        self.menuAutoSelect.addAction(self.qActionEnableClustering)
+        self.qActionSetPermutationNb = QAction("Set permutation number for clustering", self)
+        self.qActionSetPermutationNb.triggered.connect(lambda: self.setPermutationNb())
+        self.menuAutoSelect.addAction(self.qActionSetPermutationNb)
+        self.qActionSetClusterThreshold = QAction("Set threshold for clustering", self)
+        self.qActionSetClusterThreshold.triggered.connect(lambda: self.setClusterThreshold())
+        self.menuAutoSelect.addAction(self.qActionSetClusterThreshold)
+        self.qActionSetClusterFmax = QAction("Set max freq for clustering", self)
+        self.qActionSetClusterFmax.triggered.connect(lambda: self.setClusterFmax())
+        self.menuAutoSelect.addAction(self.qActionSetClusterFmax)
+        self.qActionBalanceFeatNb = QAction("Clustering: Balance number of features for the 2 metrics", self, checkable=True)
+        self.qActionBalanceFeatNb.setChecked(True)
+        self.menuAutoSelect.addAction(self.qActionBalanceFeatNb)
+
         self.qActionChanList = QAction("Set &Channel sub-selection", self)
         self.qActionChanList.triggered.connect(lambda: self.autoFeatSetChannelSubselection())
         self.menuAutoSelect.addAction(self.qActionChanList)
@@ -498,6 +536,11 @@ class Dialog(QDialog):
         self.colormapScale.setTristate(False)
         self.colormapScale.setChecked(True)
         self.formLayoutViz.addRow('Scale Colormap for max contrast', self.colormapScale)
+        # Param : checkbox for R2map + clustering
+        self.r2mapCluster = QCheckBox()
+        self.r2mapCluster.setTristate(False)
+        self.r2mapCluster.setChecked(True)
+        self.formLayoutViz.addRow('Apply clustering to R2 display', self.r2mapCluster)
 
         # Consider sign of class2-class1 (R2map/topomap colors, NOT AutoFeat selection)
         # Not the same options given between pipelines 1-2-3 and 4 (BCINET)
@@ -1532,15 +1575,15 @@ class Dialog(QDialog):
         # TODO : refactor using automatic feature selection possibility
         if self.parameterDict["bciPlatform"] == settings.availablePlatforms[0]:  # openvibe
             if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
-                self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq)
+                self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq, self.qActionEnableClustering.isChecked(), self.permNb, self.clusterThresh, self.clusterFmax)
             elif self.parameterDict["pipelineType"] == settings.optionKeys[2]:
-                self.loadFilesForVizThread = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features, self.samplingFreq)
+                self.loadFilesForVizThread = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features, self.samplingFreq, self.qActionEnableClustering.isChecked(), self.permNb, self.clusterThresh, self.clusterFmax)
             elif self.parameterDict["pipelineType"] == settings.optionKeys[3]:
-                self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq)
-                self.loadFilesForVizThread2 = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features2, self.samplingFreq)
+                self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq, self.qActionEnableClustering.isChecked(), self.permNb, self.clusterThresh, self.clusterFmax)
+                self.loadFilesForVizThread2 = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features2, self.samplingFreq, self.qActionEnableClustering.isChecked(), self.permNb, self.clusterThresh, self.clusterFmax)
             elif self.parameterDict["pipelineType"] == settings.optionKeys[4]:
-                self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq)
-                self.loadFilesForVizThread2 = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features2, self.samplingFreq)
+                self.loadFilesForVizThread = LoadFilesForVizPowSpectrum(analysisFiles, workingFolder, self.parameterDict, self.Features, self.samplingFreq, self.qActionEnableClustering.isChecked(), self.permNb, self.clusterThresh, self.clusterFmax)
+                self.loadFilesForVizThread2 = LoadFilesForVizConnectivity(analysisFiles, workingFolder, metaFolder, self.parameterDict, self.Features2, self.samplingFreq, self.qActionEnableClustering.isChecked(), self.permNb, self.clusterThresh, self.clusterFmax)
 
         elif self.parameterDict["bciPlatform"] == settings.availablePlatforms[1]:  # timeflux
             if self.parameterDict["pipelineType"] == settings.optionKeys[1]:
@@ -2299,6 +2342,7 @@ class Dialog(QDialog):
         self.electrodePsd.setEnabled(myBool)
         self.freqTopo.setEnabled(myBool)
         self.colormapScale.setEnabled(myBool)
+        self.r2mapCluster.setEnabled(myBool)
 
         if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
             self.autofeatUseSign.setEnabled(myBool)
@@ -2372,6 +2416,16 @@ class Dialog(QDialog):
             # if "consider the sign" is checked,
             # modify the R2 to display
             tempR2 = features.Rsquare.copy()
+
+            # Manage clustering
+            if self.r2mapCluster.isChecked():
+                if self.qActionEnableClustering.isChecked():
+                    print("btnR2: shape features.clustermask" + str(np.shape(features.clustermask)))
+                    print("btnR2: shape tempR2" + str(np.shape(tempR2)))
+                    tempR2 = np.where(features.clustermask, tempR2, np.nan)
+                else:
+                    myMsgBox("Clustering is disabled. Please uncheck \"display clustered R2 map\" or enable Clustering (in top menu) and re-load files")
+                    return
 
             if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
                 # if BCINET: only a checkbox, and if checked we reverse the sign
@@ -2756,7 +2810,7 @@ class Dialog(QDialog):
                 self.autoFeatChannelList = results2.electrodes_final
 
         print("AutoFeat: Sublist of channels: " + str(self.autoFeatChannelList))
-        print("  (for ref, list of available channels: " + str(results1.electrodes_final))
+        print("   (for ref, list of available channels: " + str(results1.electrodes_final))
         print("AutoFeat: Frequency range: " + str(self.autoFeatFreqRange))
         print("AutoFeat: Frequency resolution: " + str(results1.fres))
 
@@ -2796,51 +2850,126 @@ class Dialog(QDialog):
         valueFreqmax, idxFreqmax = find_nearest(freqsArray, freqMax)
 
         # Loop and find best features in the R² sub-map
-        for result in [results1, results2]:
-            if len(result.Rsquare) > 0:
-                result.autoselected = []
-                Rsquare_reduced = result.Rsquare[result.autoselect_chanidx, idxFreqmin:idxFreqmax+1]
+        foundFeatNb = False
+        forceFeatNb = True  #  by default ... todo: make parameter?
 
-                # if "Use the sign" is checked
-                # we apply the sign map to Rsquare
-                # ==> R² values corresponding to Class1 < Class2 will be negative and won't count
-                # for the search of max values
-                # if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
-                #     # if BCINET: only a checkbox, and if checked we DON'T reverse the sign
-                #     # (result.Rsign_tab = class2 - class1 = REST - MI)
-                #     # ==> we want to select the highest REST>MI features
-                #     useSign = 1 if self.autofeatUseSign.isChecked() else 0
-                # else:
-                #     useSign = self.autofeatUseSignComboBox.currentIndex()
+        while not foundFeatNb:
 
-                # WARNING This mechanism is disabled for now.
-                # "consider sign" is only used to change the way the R2 map is displayed
-                useSign = 0
+            for result in [results1, results2]:
+                if len(result.Rsquare) > 0:
+                    result.autoselected = []
+                    fmax = idxFreqmax+1
+                    emptyClustermask = False
+                    processedRsquare = result.Rsquare.copy()
 
-                if useSign > 0:
-                    tempRsign = result.Rsign_tab.copy()
-                    if useSign == 1:
-                        # reverse the sign for the Rsquare map...
-                        tempRsign[np.where(result.Rsign_tab < 0)] = 1
-                        tempRsign[np.where(result.Rsign_tab > 0)] = -1
-                    Rsign_reduced = tempRsign[result.autoselect_chanidx, idxFreqmin:idxFreqmax+1]
-                    Rsquare_reduced = Rsquare_reduced * Rsign_reduced
+                    # manage clustering mask
+                    if self.qActionEnableClustering.isChecked():
+                        emptyClustermask = not np.any(result.clustermask)
+                        if self.clusterFmax:
+                            fmax = int(self.clusterFmax / result.fres)
+                        else:
+                            fmax = int(result.samplingFreq / (2 * result.fres))
 
-                Max_per_electrode = Rsquare_reduced.max(1)
-                indices_max = list(reversed(np.argsort(Max_per_electrode)))[0:self.autoFeatNb]  # indices of [autoFeatNb] max values within the scope of result.autoselect_chanidx
-                indices_max_final = [result.autoselect_chanidx[i] for i in indices_max]
+                        print(np.shape(result.clustermask))
+                        print(np.shape(processedRsquare))
 
-                for idx in indices_max_final:
-                    r2Vals = result.Rsquare[idx, idxFreqmin:idxFreqmax+1]
-                    idxMaxValue = idxFreqmin + np.argmax(r2Vals)
-                    # The selected frequency is in "index" mode, we need to translate it to a human-readable format
-                    result.autoselected.append((result.electrodes_final[idx], int(freqsArray[idxMaxValue])))
+                        if not emptyClustermask:
+                            processedRsquare = np.where(result.clustermask, processedRsquare, 0.0)
 
-                if len(result.autoselected) < 1:
-                    myMsgBox("AutoFeat: Error in automatic selection of best features")
-                    # Todo: make more secure & explicit
-                    return
-                print("Best feats: " + str(result.autoselected))
+                    if emptyClustermask:
+                        print("Not cluster found with p=" + str(result.clustering_p_thresh))
+                    else:
+                        Rsquare_reduced = processedRsquare[result.autoselect_chanidx, idxFreqmin:min(idxFreqmax+1, fmax)]
+
+                        # if "Use the sign" is checked
+                        # we apply the sign map to Rsquare
+                        # ==> R² values corresponding to Class1 < Class2 will be negative and won't count
+                        # for the search of max values
+                        # if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+                        #     # if BCINET: only a checkbox, and if checked we DON'T reverse the sign
+                        #     # (result.Rsign_tab = class2 - class1 = REST - MI)
+                        #     # ==> we want to select the highest REST>MI features
+                        #     useSign = 1 if self.autofeatUseSign.isChecked() else 0
+                        # else:
+                        #     useSign = self.autofeatUseSignComboBox.currentIndex()
+
+                        # WARNING This mechanism is disabled for now.
+                        # "consider sign" is only used to change the way the R2 map is displayed
+                        useSign = 0
+
+                        if useSign > 0:
+                            tempRsign = result.Rsign_tab.copy()
+                            if useSign == 1:
+                                # reverse the sign for the Rsquare map...
+                                tempRsign[np.where(result.Rsign_tab < 0)] = 1
+                                tempRsign[np.where(result.Rsign_tab > 0)] = -1
+                            Rsign_reduced = tempRsign[result.autoselect_chanidx, idxFreqmin:idxFreqmax+1]
+                            Rsquare_reduced = Rsquare_reduced * Rsign_reduced
+
+                        Max_per_electrode = Rsquare_reduced.max(1)
+                        indices_max = list(reversed(np.argsort(Max_per_electrode)))[0:self.autoFeatNb]  # indices of [autoFeatNb] max values within the scope of result.autoselect_chanidx
+                        indices_max_final = [result.autoselect_chanidx[i] for i in indices_max]
+
+                        for idx in indices_max_final:
+                            r2Vals = result.Rsquare[idx, idxFreqmin:idxFreqmax+1]
+                            idxMaxValue = idxFreqmin + np.argmax(r2Vals)
+                            # The selected frequency is in "index" mode, we need to translate it to a human-readable format
+                            result.autoselected.append((result.electrodes_final[idx], int(freqsArray[idxMaxValue])))
+
+                        if len(result.autoselected) < 1:
+                            myMsgBox("AutoFeat: Error in automatic selection of best features")
+                            # Todo: make more secure & explicit
+                            return
+                        print("Best feats: " + str(result.autoselected))
+
+            # clustering only:
+            # Check if we found the right amount of features. Otherwise, increase p threshold and re-run autoselect
+            if self.qActionEnableClustering.isChecked():
+
+                if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
+                        or self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+                    if len(results1.autoselected) == self.autoFeatNb:
+                        foundFeatNb = True
+                elif self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                        or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+                            if len(results1.autoselected) == self.autoFeatNb and len(results2.autoselected) == self.autoFeatNb:
+                                foundFeatNb = True
+
+                if not foundFeatNb:
+                    print("Feature Autoselect with Clustering: didn't manage to find AutoFeatNb (" + str(self.autoFeatNb) + ") for all metrics")
+                    if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
+                            or self.parameterDict["pipelineType"] == settings.optionKeys[2]:
+                        print(" (metric1: " + str(len(results1.autoselected)))
+
+                    if self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                            or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+                        print(" (metric1: " + str(len(results1.autoselected)) + " / metric2: " + str(len(results2.autoselected)))
+
+                    # Autoselected features are not sufficient
+                    # we increase the threshold, until we reach the required number of feats.
+                    if len(results1.autoselected) < self.autoFeatNb:
+                        results1.clustering_p_thresh += 0.05
+                        print("Increased metric1 clustering threshold to " + str(results1.clustering_p_thresh))
+                        clusterMask = filter_map(results1.clustering_t_obs, results1.clustering_p_vals,
+                                                 results1.clustering_p_thresh, results1.clusters)
+                        results1.clustermask = clusterMask
+                        results1.clustermask = np.zeros_like(results1.Rsquare, dtype=bool)
+                        results1.clustermask[:, results1.clustering_fmin_idx:results1.clustering_fmax_idx] = clusterMask
+
+                    if self.parameterDict["pipelineType"] == settings.optionKeys[3] \
+                            or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
+                        if len(results2.autoselected) < self.autoFeatNb:
+                            results2.clustering_p_thresh += 0.05
+                            print("Increased metric2 clustering threshold to " + str(results2.clustering_p_thresh))
+                            clusterMask = filter_map(results2.clustering_t_obs, results2.clustering_p_vals,
+                                                     results2.clustering_p_thresh, results2.clusters)
+                            results2.clustermask = clusterMask
+                            results2.clustermask = np.zeros_like(results2.Rsquare, dtype=bool)
+                            results2.clustermask[:, results2.clustering_fmin_idx:results2.clustering_fmax_idx] = clusterMask
+
+                    print("Re-running Auto-select...")
+
+
 
         # Remove all pairs of features in columns
         # TODO : refactor. A bit dirty...
@@ -2986,6 +3115,93 @@ class Dialog(QDialog):
             # Save in workspace file
             setKeyValue(self.workspaceFile, "autoFeatNb", self.autoFeatNb)
             self.parameterDict["autoFeatNb"] = self.autoFeatNb
+
+        return
+
+    def setPermutationNb(self):
+        # ----------
+        # Set the number of permutations used for clustering
+        # ----------
+        text, ok = QInputDialog.getText(self, 'Number of permutations used for clustering',
+                                        'Enter one number (no value = 5000 by default)',
+                                        text=str(self.permNb))
+        if ok:
+            # Check if it's all alphanumeric
+            for c in text:
+                if not c.isalnum():
+                    myMsgBox("Please use digits [0:9]")
+                    return
+
+            if text == "":
+                self.permNb = 5000
+                return
+
+            if int(text) > 10000:
+                myMsgBox("Warning: using more than 10000 permutations may slow down the process")
+
+            self.permNb = int(text)
+            # Save in workspace file
+            setKeyValue(self.workspaceFile, "permNb", self.permNb)
+            self.parameterDict["permNb"] = self.permNb
+
+        return
+
+    def setClusterThreshold(self):
+        # ----------
+        # Set the threshold for clustering
+        # ----------
+        text, ok = QInputDialog.getText(self, 'Clustering threshold',
+                                        'Enter one float btw 0.0 and 1.0 (no value = 0.05 by default)',
+                                        text=str(self.clusterThresh))
+        if ok:
+            # Check if it's all alphanumeric
+            for c in text:
+                if not c.isalnum():
+                    if not c == ".":
+                        myMsgBox("Please use digits [0:9] and . ")
+                        return
+
+            if text == "":
+                self.clusterThresh = 0.05
+                return
+
+            if float(text) > 1.0 or float(text) < 0.0:
+                myMsgBox("Please use a value between 0 and 1")
+                return
+
+            self.clusterThresh = float(text)
+            # Save in workspace file
+            setKeyValue(self.workspaceFile, "clusterThresh", self.clusterThresh)
+            self.parameterDict["clusterThresh"] = self.clusterThresh
+
+        return
+
+    def setClusterFmax(self):
+        # ----------
+        # Set the max frequency for clustering
+        # ----------
+        text, ok = QInputDialog.getText(self, 'Clustering max freq',
+                                        'Enter one int (no value = all freqs by default)',
+                                        text="")
+        if ok:
+            # Check if it's all alphanumeric
+            for c in text:
+                if not c.isalnum():
+                    myMsgBox("Please use digits [0:9]")
+                    return
+
+            if text == "":
+                self.clusterFmax = None
+                return
+
+            if int(text) > 250 or int(text) < 0:
+                myMsgBox("Please use a value between 0 and 250")
+                return
+
+            self.clusterFmax = int(text)
+            # Save in workspace file
+            setKeyValue(self.workspaceFile, "clusterFmax", self.clusterFmax)
+            self.parameterDict["clusterFmax"] = self.clusterFmax
 
         return
 

@@ -15,6 +15,7 @@ from happyfeat.lib.modifyOpenvibeScen import *
 from happyfeat.lib.Visualization_Data import *
 from happyfeat.lib.featureExtractUtils import *
 from happyfeat.lib.utils import *
+from happyfeat.lib.cluster import *
 
 from happyfeat.lib.bcipipeline_settings import *
 
@@ -183,7 +184,8 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
     info2 = Signal(str)
     over = Signal(bool, str, int, list, list, list, list)
 
-    def __init__(self, analysisFiles, workingFolder, parameterDict, Features, sampFreq, parent=None):
+    def __init__(self, analysisFiles, workingFolder, parameterDict,
+                 Features, sampFreq, clustering, permNb, clusterThresh, clusterFmax, parent=None):
 
         super().__init__(parent)
         self.stop = False
@@ -194,6 +196,10 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         self.Features = Features
         self.samplingFreq = sampFreq
         self.useBaselineFiles = False
+        self.clustering = clustering
+        self.permNb = permNb
+        self.clusterThresh = clusterThresh
+        self.clusterFmax = clusterFmax
 
         self.dataNp1 = []
         self.dataNp2 = []
@@ -484,6 +490,37 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
 
         self.Features.samplingFreq = self.samplingFreq
 
+        # clustering
+        if self.clustering:
+            if len(self.Features.Rsquare) > 0:
+                fmin = 0
+                if self.clusterFmax:
+                    fmax = int(self.clusterFmax/self.Features.fres)
+                else:
+                    fmax = int(self.Features.samplingFreq / (2 * self.Features.fres))
+                print("Processing clustering with parameters:")
+                print("   permutation number:" + str(self.permNb))
+                print("   threshold:" + str(self.clusterThresh))
+                print("   fmax index:" + str(fmax))
+                T_obs, p_vals, p_thresh, clusters = doClustering(self.Features, self.permNb, self.clusterThresh,
+                                                                    self.Features.samplingFreq, fmin, fmax, verbose=True)
+
+                self.Features.clustering_t_obs = T_obs
+                self.Features.clustering_p_vals = p_vals
+                self.Features.clustering_p_thresh = p_thresh
+                self.Features.clusters = clusters
+
+                # compute filter map from given parameters
+                clusterMask = filter_map(T_obs, p_vals, p_thresh, clusters)
+
+                print("clusterMask size " + str(np.shape(clusterMask)))
+                self.Features.clustermask = np.zeros_like(self.Features.Rsquare, dtype=bool)
+                self.Features.clustermask[:, fmin:fmax] = clusterMask.copy()
+
+                self.Features.clustering_fmin_idx = fmin
+                self.Features.clustering_fmax_idx = fmax
+
+
         self.stop = True
 
         # PySide6 signals cannot transmit "dict" (they rely on C++ QMap which don't exist in python)
@@ -511,7 +548,8 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
     info2 = Signal(str)
     over = Signal(bool, str, int, list, list, list, list)
 
-    def __init__(self, analysisFiles, workingFolder, metaFolder, parameterDict, Features, sampFreq, parent=None):
+    def __init__(self, analysisFiles, workingFolder, metaFolder, parameterDict,
+                 Features, sampFreq, clustering, permNb, clusterThresh, clusterFmax, parent=None):
 
         super().__init__(parent)
         self.stop = False
@@ -522,6 +560,10 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         self.extractDict = parameterDict["Sessions"][parameterDict["currentSessionId"]]["ExtractionParams"].copy()
         self.Features = Features
         self.samplingFreq = sampFreq
+        self.clustering = clustering
+        self.permNb = permNb
+        self.clusterThresh = clusterThresh
+        self.clusterFmax = clusterFmax
 
         self.dataNp1 = []
         self.dataNp2 = []
@@ -774,6 +816,38 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
 
         self.Features.Rsquare = Rsquare_2
         self.Features.Rsign_tab = signTab_2
+
+        # clustering
+        if self.clustering:
+            if len(self.Features.Rsquare) > 0:
+                fmin = 1
+                if self.clusterFmax:
+                    fmax = int(self.clusterFmax / self.Features.fres)
+                else:
+                    fmax = int(self.Features.samplingFreq / (2 * self.Features.fres))
+                print("Processing clustering with parameters:")
+                print("   permutation number:" + str(self.permNb))
+                print("   threshold:" + str(self.clusterThresh))
+                print("   fmax index:" + str(fmax))
+                T_obs, p_vals, p_thresh, clusters = doClustering(self.Features, self.permNb, self.clusterThresh,
+                                                                    self.Features.samplingFreq, fmin, fmax, verbose=True)
+
+                self.Features.clustering_t_obs = T_obs
+                self.Features.clustering_p_vals = p_vals
+                self.Features.clustering_p_thresh = p_thresh
+                self.Features.clusters = clusters
+                print("         ==found " +str(len(clusters)) + " clusters")
+
+                # compute filter map from given parameters
+                clusterMask = filter_map(T_obs, p_vals, p_thresh, clusters)
+
+                print("clusterMask size " + str(np.shape(clusterMask)))
+                self.Features.clustermask = np.zeros_like(self.Features.Rsquare, dtype=bool)
+                self.Features.clustermask[:, fmin:fmax] = clusterMask
+
+                self.Features.clustering_fmin_idx = fmin
+                self.Features.clustering_fmax_idx = fmax
+
 
         self.stop = True
 
@@ -1742,3 +1816,4 @@ class RunClassifier(QtCore.QThread):
                         classifiedList.append(2)
 
         return success, targetList, classifiedList
+
