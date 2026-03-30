@@ -79,6 +79,7 @@ class Features:
 
     autoselect_chanidx = []
     autoselected = []
+    autoselected_cluster_pval = []
 
     clustering_t_obs = []
     clustering_p_vals = []
@@ -2870,9 +2871,6 @@ class Dialog(QDialog):
                         else:
                             fmax = int(result.samplingFreq / (2 * result.fres))
 
-                        print(np.shape(result.clustermask))
-                        print(np.shape(processedRsquare))
-
                         if not emptyClustermask:
                             processedRsquare = np.where(result.clustermask, processedRsquare, 0.0)
 
@@ -2910,17 +2908,25 @@ class Dialog(QDialog):
                         indices_max = list(reversed(np.argsort(Max_per_electrode)))[0:self.autoFeatNb]  # indices of [autoFeatNb] max values within the scope of result.autoselect_chanidx
                         indices_max_final = [result.autoselect_chanidx[i] for i in indices_max]
 
+                        result.autoselected_cluster_pval = []
                         for idx in indices_max_final:
                             r2Vals = result.Rsquare[idx, idxFreqmin:idxFreqmax+1]
                             idxMaxValue = idxFreqmin + np.argmax(r2Vals)
                             # The selected frequency is in "index" mode, we need to translate it to a human-readable format
                             result.autoselected.append((result.electrodes_final[idx], int(freqsArray[idxMaxValue])))
 
+                            if self.qActionEnableClustering.isChecked():
+                                for idxclu, clu in enumerate(result.clusters):
+                                    if clu[idx, idxMaxValue]:
+                                        result.autoselected_cluster_pval.append(result.clustering_p_vals[idxclu])
+
                         if len(result.autoselected) < 1:
                             myMsgBox("AutoFeat: Error in automatic selection of best features")
                             # Todo: make more secure & explicit
                             return
                         print("Best feats: " + str(result.autoselected))
+                        if self.qActionEnableClustering.isChecked():
+                            print("  Associated p-vals (determined during clustering): " + str(result.autoselected_cluster_pval))
 
             # clustering only:
             # Check if we found the right amount of features. Otherwise, increase p threshold and re-run autoselect
@@ -3024,6 +3030,14 @@ class Dialog(QDialog):
                 featText = str(featPair[0]) + ';' + str(featPair[1])
                 self.btnAddPair(self.selectedFeats[0], self.qvFeatureLayouts[0], featText)
 
+            textDisplay = str("FEATURE AUTOSELECTION:\n")
+            textDisplay += str(results1.autoselected)
+            if self.qActionEnableClustering.isChecked():
+                textDisplay += str("  Associated p-vals (determined during clustering): \n")
+                textDisplay += str(results1.autoselected_cluster_pval)
+            myMsgBox(textDisplay)
+
+        np.set_printoptions(legacy='1.25')
         # Special cases for pipelines 3&4 (dual features)
         if self.parameterDict["pipelineType"] == settings.optionKeys[3] \
                 or self.parameterDict["pipelineType"] == settings.optionKeys[4] :
@@ -3033,6 +3047,19 @@ class Dialog(QDialog):
             for featPair in results2.autoselected:
                 featText = str(featPair[0]) + ';' + str(featPair[1])
                 self.btnAddPair(self.selectedFeats[1], self.qvFeatureLayouts[1], featText)
+
+            textDisplay = str("FEATURE AUTOSELECTION:\n")
+            textDisplay += str("  PSD:\t\t") + str(results1.autoselected)
+            if self.qActionEnableClustering.isChecked():
+                textDisplay += str("\n  p-vals (clustering):\t")
+                textDisplay += str(results1.autoselected_cluster_pval)
+            textDisplay += str("\n  NS:\t\t") + str(results2.autoselected)
+            if self.qActionEnableClustering.isChecked():
+                textDisplay += str("\n  p-vals (clustering): \t")
+                textDisplay += str(results2.autoselected_cluster_pval)
+            myMsgBox(textDisplay)
+
+        np.set_printoptions(legacy=None)
 
     def autoFeatSetChannelSubselection(self):
         # ----------
