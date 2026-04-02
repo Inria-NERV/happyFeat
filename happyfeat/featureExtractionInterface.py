@@ -2852,130 +2852,107 @@ class Dialog(QDialog):
 
         # Loop and find best features in the R² sub-map
         foundFeatNb = False
-        forceFeatNb = True  #  by default ... todo: make parameter?
 
-        while not foundFeatNb:
+        for result in [results1, results2]:
+            if len(result.Rsquare) > 0:
+                result.autoselected = []
+                fmax = idxFreqmax+1
+                processedRsquare = result.Rsquare.copy()
 
-            for result in [results1, results2]:
-                if len(result.Rsquare) > 0:
-                    result.autoselected = []
-                    fmax = idxFreqmax+1
-                    emptyClustermask = False
-                    processedRsquare = result.Rsquare.copy()
+                Rsquare_reduced = processedRsquare[result.autoselect_chanidx, idxFreqmin:min(idxFreqmax+1, fmax)]
 
-                    # manage clustering mask
-                    if self.qActionEnableClustering.isChecked():
-                        emptyClustermask = not np.any(result.clustermask)
-                        if self.clusterFmax:
-                            fmax = int(self.clusterFmax / result.fres)
-                        else:
-                            fmax = int(result.samplingFreq / (2 * result.fres))
+                Max_per_electrode = Rsquare_reduced.max(1)
+                indices_max = list(reversed(np.argsort(Max_per_electrode)))  # sorted indices of electrodes, considering each one's max R2 along freq axis
+                # indices_max_final = [result.autoselect_chanidx[i] for i in indices_max]
 
-                        if not emptyClustermask:
-                            processedRsquare = np.where(result.clustermask, processedRsquare, 0.0)
+                print("  Sorted chans with max R2: " + str([result.electrodes_final[result.autoselect_chanidx[i]] for i in indices_max]))
+                print("  max R2:                   " + str([Rsquare_reduced[i].max() for i in indices_max]))
 
-                    if emptyClustermask:
-                        print("Not cluster found with p=" + str(result.clustering_p_thresh))
+                #sortedpvals = list(reversed(np.argsort(result.clustering_p_vals)))
+                #for i in range(5):
+                #    plt.imshow(result.clusters[sortedpvals[i]])
+                #    plt.show()
+
+                # pvalmap = pvalmap(result.clustering_t_obs, result.clustering_p_vals, result.clustering_p_thresh, result.clusters)
+                #plt.imshow(result.clustering_t_obs)
+                #plt.show()
+
+                # if clustering is enabled, we first try to find self.autoFeatNb features that
+                # are in clusters with p<threshold
+                # if we don't find enough, we fill the rest with the unfiltered R2 map
+                result.autoselected_cluster_pval = []
+                processClustering = False
+
+                if self.qActionEnableClustering.isChecked():
+                    # first parse all clusters to see if at least one has p<threshold... otherwise it's no use
+                    for idxclu, clu in enumerate(result.clusters):
+                        if result.clustering_p_vals[idxclu] < result.clustering_p_thresh:
+                            processClustering = True
+                            break
+                    if not processClustering:
+                        print("No cluster with p<" + str(result.clustering_p_thresh) + ". Falling back on regular R2 map for Feature autoselect")
                     else:
-                        Rsquare_reduced = processedRsquare[result.autoselect_chanidx, idxFreqmin:min(idxFreqmax+1, fmax)]
+                        for idx in indices_max:
+                            print("  Autoselect with clustering: Trying chan: " + str(result.electrodes_final[result.autoselect_chanidx[idx]]) + \
+                                  " with idx " + str(idx) + " (original idx : " + str(result.autoselect_chanidx[idx]))
+                            r2Vals = Rsquare_reduced[idx]
+                            idxMaxValue = idxFreqmin + np.argmax(r2Vals)  # for current channel, the idx of max R2 (in terms of frequency)
+                            print("    Max R2: " + str(max(r2Vals)) + " at idx " + str(idxMaxValue) + " (" + str(int(freqsArray[idxMaxValue])) + ")")
+                            # parse all clusters
+                            foundCluster = False
 
-                        # if "Use the sign" is checked
-                        # we apply the sign map to Rsquare
-                        # ==> R² values corresponding to Class1 < Class2 will be negative and won't count
-                        # for the search of max values
-                        # if self.parameterDict["pipelineType"] == settings.optionKeys[4]:
-                        #     # if BCINET: only a checkbox, and if checked we DON'T reverse the sign
-                        #     # (result.Rsign_tab = class2 - class1 = REST - MI)
-                        #     # ==> we want to select the highest REST>MI features
-                        #     useSign = 1 if self.autofeatUseSign.isChecked() else 0
-                        # else:
-                        #     useSign = self.autofeatUseSignComboBox.currentIndex()
+                            for idxclu, clu in enumerate(result.clusters):
+                                if np.any(clu[result.autoselect_chanidx[idx]]):
+                                    print("       found: " + str(result.electrodes_final[result.autoselect_chanidx[idx]]) + " in cluster " + str(idxclu))
+                                    print("       pval: " + str(result.clustering_p_vals[idxclu]))
+                                    print("       frequencies (14:25) at chan idx " + str(idx) + " " + str(clu[result.autoselect_chanidx[idx]][14:25]))
+                                    plt.figure(), plt.imshow(clu), plt.title(idxclu)
 
-                        # WARNING This mechanism is disabled for now.
-                        # "consider sign" is only used to change the way the R2 map is displayed
-                        useSign = 0
+                                if clu[result.autoselect_chanidx[idx], idxMaxValue]:
+                                    # print("       found: " + str(idx) + " in cluster " + str(idxclu))
+                                    # print("       found: " + str(idx) + " in cluster " + str(idxclu))
+                                    # print("          previous idx (" + str(idx-1) + "): " + str(clu[idx-1]))
+                                    result.autoselected_cluster_pval.append(result.clustering_p_vals[idxclu])
+                                    foundCluster = True
+                                    # break
 
-                        if useSign > 0:
-                            tempRsign = result.Rsign_tab.copy()
-                            if useSign == 1:
-                                # reverse the sign for the Rsquare map...
-                                tempRsign[np.where(result.Rsign_tab < 0)] = 1
-                                tempRsign[np.where(result.Rsign_tab > 0)] = -1
-                            Rsign_reduced = tempRsign[result.autoselect_chanidx, idxFreqmin:idxFreqmax+1]
-                            Rsquare_reduced = Rsquare_reduced * Rsign_reduced
+                            # we only add the feature if its significance is high (p<thresh)
+                            # otherwise (no cluster found) ==> skip it !
+                            if foundCluster:
+                                # The selected frequency is in "index" mode, we need to translate it to a human-readable format
+                                result.autoselected.append((result.electrodes_final[result.autoselect_chanidx[idx]], int(freqsArray[idxMaxValue])))
+                                print("  Nb autoselected feats: " + str(len(result.autoselected)))
+                                if len(result.autoselected) == self.autoFeatNb:
+                                    # we found all our features with p<thresh! Congrats!
+                                    break
 
-                        Max_per_electrode = Rsquare_reduced.max(1)
-                        indices_max = list(reversed(np.argsort(Max_per_electrode)))[0:self.autoFeatNb]  # indices of [autoFeatNb] max values within the scope of result.autoselect_chanidx
-                        indices_max_final = [result.autoselect_chanidx[i] for i in indices_max]
+                # Either we still have features to find after using clustering,
+                # or we did not find enough.
+                # Either way, find best R2 in the submap.
+                while len(result.autoselected) < self.autoFeatNb:
 
-                        result.autoselected_cluster_pval = []
-                        for idx in indices_max_final:
-                            r2Vals = result.Rsquare[idx, idxFreqmin:idxFreqmax+1]
-                            idxMaxValue = idxFreqmin + np.argmax(r2Vals)
+                    for idx in indices_max:  # indices_max is already sorted per descending R2 values
+                        r2Vals = result.Rsquare[idx, idxFreqmin:idxFreqmax + 1]
+                        idxMaxValue = idxFreqmin + np.argmax(r2Vals)  # for current channel, the idx of max R2 (in terms of frequency)
+
+                        # Add the (chanidx, freq) pair to the list if it's not already there
+                        if (result.electrodes_final[idx], int(freqsArray[idxMaxValue])) not in result.autoselected:
+                            if self.qActionEnableClustering.isChecked():
+                                result.autoselected_cluster_pval.append(None)
                             # The selected frequency is in "index" mode, we need to translate it to a human-readable format
                             result.autoselected.append((result.electrodes_final[idx], int(freqsArray[idxMaxValue])))
 
-                            if self.qActionEnableClustering.isChecked():
-                                for idxclu, clu in enumerate(result.clusters):
-                                    if clu[idx, idxMaxValue]:
-                                        result.autoselected_cluster_pval.append(result.clustering_p_vals[idxclu])
-
-                        if len(result.autoselected) < 1:
-                            myMsgBox("AutoFeat: Error in automatic selection of best features")
-                            # Todo: make more secure & explicit
-                            return
-                        print("Best feats: " + str(result.autoselected))
-                        if self.qActionEnableClustering.isChecked():
-                            print("  Associated p-vals (determined during clustering): " + str(result.autoselected_cluster_pval))
-
-            # clustering only:
-            # Check if we found the right amount of features. Otherwise, increase p threshold and re-run autoselect
-            if self.qActionEnableClustering.isChecked():
-
-                if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
-                        or self.parameterDict["pipelineType"] == settings.optionKeys[2]:
-                    if len(results1.autoselected) == self.autoFeatNb:
-                        foundFeatNb = True
-                elif self.parameterDict["pipelineType"] == settings.optionKeys[3] \
-                        or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
-                            if len(results1.autoselected) == self.autoFeatNb and len(results2.autoselected) == self.autoFeatNb:
-                                foundFeatNb = True
-
-                if not foundFeatNb:
-                    print("Feature Autoselect with Clustering: didn't manage to find AutoFeatNb (" + str(self.autoFeatNb) + ") for all metrics")
-                    if self.parameterDict["pipelineType"] == settings.optionKeys[1] \
-                            or self.parameterDict["pipelineType"] == settings.optionKeys[2]:
-                        print(" (metric1: " + str(len(results1.autoselected)))
-
-                    if self.parameterDict["pipelineType"] == settings.optionKeys[3] \
-                            or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
-                        print(" (metric1: " + str(len(results1.autoselected)) + " / metric2: " + str(len(results2.autoselected)))
-
-                    # Autoselected features are not sufficient
-                    # we increase the threshold, until we reach the required number of feats.
-                    if len(results1.autoselected) < self.autoFeatNb:
-                        results1.clustering_p_thresh += 0.05
-                        print("Increased metric1 clustering threshold to " + str(results1.clustering_p_thresh))
-                        clusterMask = filter_map(results1.clustering_t_obs, results1.clustering_p_vals,
-                                                 results1.clustering_p_thresh, results1.clusters)
-                        results1.clustermask = clusterMask
-                        results1.clustermask = np.zeros_like(results1.Rsquare, dtype=bool)
-                        results1.clustermask[:, results1.clustering_fmin_idx:results1.clustering_fmax_idx] = clusterMask
-
-                    if self.parameterDict["pipelineType"] == settings.optionKeys[3] \
-                            or self.parameterDict["pipelineType"] == settings.optionKeys[4]:
-                        if len(results2.autoselected) < self.autoFeatNb:
-                            results2.clustering_p_thresh += 0.05
-                            print("Increased metric2 clustering threshold to " + str(results2.clustering_p_thresh))
-                            clusterMask = filter_map(results2.clustering_t_obs, results2.clustering_p_vals,
-                                                     results2.clustering_p_thresh, results2.clusters)
-                            results2.clustermask = clusterMask
-                            results2.clustermask = np.zeros_like(results2.Rsquare, dtype=bool)
-                            results2.clustermask[:, results2.clustering_fmin_idx:results2.clustering_fmax_idx] = clusterMask
-
-                    print("Re-running Auto-select...")
+                if len(result.autoselected) < 1:
+                    myMsgBox("AutoFeat: Error in automatic selection of best features")
+                    # Todo: make more secure & explicit
+                    return
+                print("Best feats: " + str(result.autoselected))
+                if self.qActionEnableClustering.isChecked():
+                    print("  Associated p-vals (determined during clustering): " + str(result.autoselected_cluster_pval))
 
 
+        plt.show()
+        # MANAGE THE TRAINING FEATURE LIST IN THE GUI
 
         # Remove all pairs of features in columns
         # TODO : refactor. A bit dirty...

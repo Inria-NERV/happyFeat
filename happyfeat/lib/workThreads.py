@@ -820,7 +820,7 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         # clustering
         if self.clustering:
             if len(self.Features.Rsquare) > 0:
-                fmin = 1
+                fmin = 0
                 if self.clusterFmax:
                     fmax = int(self.clusterFmax / self.Features.fres)
                 else:
