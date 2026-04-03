@@ -45,21 +45,10 @@ def filter_map(metric_map, p_map, threshold, clusters=None):
     if clusters is None:
         SigMask = p_map < threshold
     else:
-        print("==========filter_map")
         for clu, p in zip(clusters, p_map):
             if p < threshold:
-                print(np.where(clu))
                 SigMask[clu] = True
     return SigMask
-
-def pvalmap(metric_map, p_map, threshold, clusters=None):
-    pvalmap = np.zeros_like(metric_map, dtype=bool)
-    if clusters is None:
-        SigMask = p_map < threshold
-    else:
-        for clu, p in zip(clusters, p_map):
-            pvalmap[clu] = p
-    return pvalmap
 
 def cluster_perm_spatiofreq(cond1, cond2, eeg_ch_names, montageStr="standard_1020",
                             n_perm=2000, sfreq=500, tail=0, verbose=False):

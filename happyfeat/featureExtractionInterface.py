@@ -2827,6 +2827,7 @@ class Dialog(QDialog):
                     return
                 results1.autoselect_chanidx.append(idx)
             print("result.autoselect_chanidx METRIC1:  " + str(results1.autoselect_chanidx))
+            print("result.autoselect_chanidx METRIC1:  " + str([results1.electrodes_final[id] for id in results1.autoselect_chanidx]))
 
         if len(results2.electrodes_final):
             results2.autoselect_chanidx = []
@@ -2838,6 +2839,7 @@ class Dialog(QDialog):
                     return
                 results2.autoselect_chanidx.append(idx)
             print("result.autoselect_chanidx METRIC2:  " + str(results2.autoselect_chanidx))
+            print("result.autoselect_chanidx METRIC2:  " + str([results2.electrodes_final[id] for id in results2.autoselect_chanidx]))
 
         # Check if frequencies are correct...
         freqMin = int(self.autoFeatFreqRange.split(":")[0])
@@ -2850,8 +2852,22 @@ class Dialog(QDialog):
         valueFreqmin, idxFreqmin = find_nearest(freqsArray, freqMin)
         valueFreqmax, idxFreqmax = find_nearest(freqsArray, freqMax)
 
-        # Loop and find best features in the R² sub-map
-        foundFeatNb = False
+
+        # AUTOFEAT + CLUSTERING
+
+        # Parse "result" (Features) structures from metric 1 & 2
+        # Reduce the R2 map to the selected list of channels and frequency range
+        # Sort the best R2:
+        # 1/ look for the max R2 value for each channel (R2map (chan x freq) => list of max R2 (chan) )
+        # 2/ sort this list (==> sorted list of max R2)
+        # 3/ parse list from the max value and apply:
+        # 3/ a/ if clustering activated, for each channel (from the top one ine the list) find the freq idx of max R2,
+        #       and look in the list of clusters (p<thresh) if this (chan, freq) is part of a cluster
+        #           if yes => add to the list of best features, up to autofeatNb
+        #           if no  => skip and go to the next
+        # 3/ b/ if clustering disabled OR nb of "best features" found after 3/a/ is not sufficient:
+        #       parse the list of 2/ from the top, and add the pair (chan, freq) to the list of best features,
+        #       if it had not been added already.
 
         for result in [results1, results2]:
             if len(result.Rsquare) > 0:
@@ -2859,27 +2875,17 @@ class Dialog(QDialog):
                 fmax = idxFreqmax+1
                 processedRsquare = result.Rsquare.copy()
 
+                # Reduce the R2 map to a submap according to the list of channels and freqs.
+                # /!\ watch out with the indices of channels !!! (from full R2map / clusters, to reduced R2 mao)
                 Rsquare_reduced = processedRsquare[result.autoselect_chanidx, idxFreqmin:min(idxFreqmax+1, fmax)]
 
                 Max_per_electrode = Rsquare_reduced.max(1)
-                indices_max = list(reversed(np.argsort(Max_per_electrode)))  # sorted indices of electrodes, considering each one's max R2 along freq axis
-                # indices_max_final = [result.autoselect_chanidx[i] for i in indices_max]
+                # sort indices of electrodes, considering each one's max R2 along freq axis
+                indices_max = list(reversed(np.argsort(Max_per_electrode)))  
+                
+                # print("  Sorted chans with max R2: " + str([result.electrodes_final[result.autoselect_chanidx[i]] for i in indices_max]))
+                # print("  max R2:                   " + str([Rsquare_reduced[i].max() for i in indices_max]))
 
-                print("  Sorted chans with max R2: " + str([result.electrodes_final[result.autoselect_chanidx[i]] for i in indices_max]))
-                print("  max R2:                   " + str([Rsquare_reduced[i].max() for i in indices_max]))
-
-                #sortedpvals = list(reversed(np.argsort(result.clustering_p_vals)))
-                #for i in range(5):
-                #    plt.imshow(result.clusters[sortedpvals[i]])
-                #    plt.show()
-
-                # pvalmap = pvalmap(result.clustering_t_obs, result.clustering_p_vals, result.clustering_p_thresh, result.clusters)
-                #plt.imshow(result.clustering_t_obs)
-                #plt.show()
-
-                # if clustering is enabled, we first try to find self.autoFeatNb features that
-                # are in clusters with p<threshold
-                # if we don't find enough, we fill the rest with the unfiltered R2 map
                 result.autoselected_cluster_pval = []
                 processClustering = False
 
@@ -2889,39 +2895,40 @@ class Dialog(QDialog):
                         if result.clustering_p_vals[idxclu] < result.clustering_p_thresh:
                             processClustering = True
                             break
+
                     if not processClustering:
                         print("No cluster with p<" + str(result.clustering_p_thresh) + ". Falling back on regular R2 map for Feature autoselect")
                     else:
                         for idx in indices_max:
                             print("  Autoselect with clustering: Trying chan: " + str(result.electrodes_final[result.autoselect_chanidx[idx]]) + \
-                                  " with idx " + str(idx) + " (original idx : " + str(result.autoselect_chanidx[idx]))
-                            r2Vals = Rsquare_reduced[idx]
+                                  " with idx in R2 submap " + str(idx) + " (original idx in full R2 map: " + str(result.autoselect_chanidx[idx]))
+                            
+                            r2Vals = Rsquare_reduced[idx]  # R2 values for channel idx = across freqs 
                             idxMaxValue = idxFreqmin + np.argmax(r2Vals)  # for current channel, the idx of max R2 (in terms of frequency)
                             print("    Max R2: " + str(max(r2Vals)) + " at idx " + str(idxMaxValue) + " (" + str(int(freqsArray[idxMaxValue])) + ")")
-                            # parse all clusters
+                            
+                            # parse list of clusters to see if we can find one where (chanidx, freqidx) is at True
                             foundCluster = False
 
                             for idxclu, clu in enumerate(result.clusters):
-                                if np.any(clu[result.autoselect_chanidx[idx]]):
-                                    print("       found: " + str(result.electrodes_final[result.autoselect_chanidx[idx]]) + " in cluster " + str(idxclu))
-                                    print("       pval: " + str(result.clustering_p_vals[idxclu]))
-                                    print("       frequencies (14:25) at chan idx " + str(idx) + " " + str(clu[result.autoselect_chanidx[idx]][14:25]))
-                                    plt.figure(), plt.imshow(clu), plt.title(idxclu)
+                                # cluster needs to be significant!
+                                if result.clustering_p_vals[idxclu] < result.clustering_p_thresh:
+                                    if clu[result.autoselect_chanidx[idx], idxMaxValue]:
+                                        # Found!
+                                        result.autoselected_cluster_pval.append(result.clustering_p_vals[idxclu])
+                                        foundCluster = True
 
-                                if clu[result.autoselect_chanidx[idx], idxMaxValue]:
-                                    # print("       found: " + str(idx) + " in cluster " + str(idxclu))
-                                    # print("       found: " + str(idx) + " in cluster " + str(idxclu))
-                                    # print("          previous idx (" + str(idx-1) + "): " + str(clu[idx-1]))
-                                    result.autoselected_cluster_pval.append(result.clustering_p_vals[idxclu])
-                                    foundCluster = True
-                                    # break
+                                        print("       Autoselect+cluster, found: " + str(result.electrodes_final[result.autoselect_chanidx[idx]]) \
+                                              + " in cluster #" + str(idxclu) + " (pval = " + str(result.clustering_p_vals[idxclu]) + ")")
+                                        
+                                        # Don't need (nor want) to find another cluster, exit the loop
+                                        break
 
                             # we only add the feature if its significance is high (p<thresh)
                             # otherwise (no cluster found) ==> skip it !
                             if foundCluster:
                                 # The selected frequency is in "index" mode, we need to translate it to a human-readable format
                                 result.autoselected.append((result.electrodes_final[result.autoselect_chanidx[idx]], int(freqsArray[idxMaxValue])))
-                                print("  Nb autoselected feats: " + str(len(result.autoselected)))
                                 if len(result.autoselected) == self.autoFeatNb:
                                     # we found all our features with p<thresh! Congrats!
                                     break
@@ -2950,8 +2957,6 @@ class Dialog(QDialog):
                 if self.qActionEnableClustering.isChecked():
                     print("  Associated p-vals (determined during clustering): " + str(result.autoselected_cluster_pval))
 
-
-        plt.show()
         # MANAGE THE TRAINING FEATURE LIST IN THE GUI
 
         # Remove all pairs of features in columns
