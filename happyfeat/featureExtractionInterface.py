@@ -2936,18 +2936,20 @@ class Dialog(QDialog):
                 # Either we still have features to find after using clustering,
                 # or we did not find enough.
                 # Either way, find best R2 in the submap.
-                while len(result.autoselected) < self.autoFeatNb:
+                for idx in indices_max:  # indices_max is already sorted per descending R2 values
+                    r2Vals = result.Rsquare[idx, idxFreqmin:idxFreqmax + 1]
+                    idxMaxValue = idxFreqmin + np.argmax(r2Vals)  # for current channel, the idx of max R2 (in terms of frequency)
 
-                    for idx in indices_max:  # indices_max is already sorted per descending R2 values
-                        r2Vals = result.Rsquare[idx, idxFreqmin:idxFreqmax + 1]
-                        idxMaxValue = idxFreqmin + np.argmax(r2Vals)  # for current channel, the idx of max R2 (in terms of frequency)
+                    # Add the (chanidx, freq) pair to the list if it's not already there
+                    if (result.electrodes_final[result.autoselect_chanidx[idx]], int(freqsArray[idxMaxValue])) not in result.autoselected:
+                        if self.qActionEnableClustering.isChecked():
+                            result.autoselected_cluster_pval.append(None)
+                        # The selected frequency is in "index" mode, we need to translate it to a human-readable format
+                        result.autoselected.append((result.electrodes_final[result.autoselect_chanidx[idx]], int(freqsArray[idxMaxValue])))
 
-                        # Add the (chanidx, freq) pair to the list if it's not already there
-                        if (result.electrodes_final[idx], int(freqsArray[idxMaxValue])) not in result.autoselected:
-                            if self.qActionEnableClustering.isChecked():
-                                result.autoselected_cluster_pval.append(None)
-                            # The selected frequency is in "index" mode, we need to translate it to a human-readable format
-                            result.autoselected.append((result.electrodes_final[idx], int(freqsArray[idxMaxValue])))
+                    if len(result.autoselected) == self.autoFeatNb:
+                        # we found all our features! Congrats!
+                        break
 
                 if len(result.autoselected) < 1:
                     myMsgBox("AutoFeat: Error in automatic selection of best features")
@@ -3190,7 +3192,7 @@ class Dialog(QDialog):
         # Set the max frequency for clustering
         # ----------
         text, ok = QInputDialog.getText(self, 'Clustering max freq',
-                                        'Enter one int (no value = all freqs by default)',
+                                        'Enter one int (no value = 40Hz by default)',
                                         text="")
         if ok:
             # Check if it's all alphanumeric
@@ -3200,7 +3202,7 @@ class Dialog(QDialog):
                     return
 
             if text == "":
-                self.clusterFmax = None
+                self.clusterFmax = 40
                 return
 
             if int(text) > 250 or int(text) < 0:
