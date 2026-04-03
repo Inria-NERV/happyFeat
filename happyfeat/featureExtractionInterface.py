@@ -2937,7 +2937,7 @@ class Dialog(QDialog):
                 # or we did not find enough.
                 # Either way, find best R2 in the submap.
                 for idx in indices_max:  # indices_max is already sorted per descending R2 values
-                    r2Vals = result.Rsquare[idx, idxFreqmin:idxFreqmax + 1]
+                    r2Vals = Rsquare_reduced[idx]  # R2 values for channel idx = across freqs 
                     idxMaxValue = idxFreqmin + np.argmax(r2Vals)  # for current channel, the idx of max R2 (in terms of frequency)
 
                     # Add the (chanidx, freq) pair to the list if it's not already there
