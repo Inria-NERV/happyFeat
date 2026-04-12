@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/Inria-NERV/happyFeat,6,6
+/Inria-NERV/happyFeat/blob/main/happyfeat/templates-mixed-bcinet/sc2-train-composite.xml,3,1
+/Inria-NERV/happyFeat/actions,1,1
+/Inria-NERV/happyFeat/blob/main/README.md,1,1
+/Inria-NERV/happyFeat/blob/main/happyfeat/templates-connectivity/sc1-monitor-acq.xml,1,1
+/Inria-NERV/happyFeat/blob/main/happyfeat/templates-connectivity/sc2-train-composite.xml,1,1
+/Inria-NERV/happyFeat/blob/main/happyfeat/templates-mixed-bcinet/sc2-extract.xml,1,1
+/Inria-NERV/happyFeat/blob/main/happyfeat/templates-mixed-bcinet/sc2-train-speedup-finalize.xml,1,1
+/Inria-NERV/happyFeat/blob/main/workspaceMgmt.py,1,1
+/Inria-NERV/happyFeat/commit/8225d7c9658ff4086080e434d82103566021c2c3,1,1
