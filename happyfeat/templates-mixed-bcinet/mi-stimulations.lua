@@ -5,13 +5,17 @@ function initialize(box)
 
 	number_of_trials = box:get_setting(2)
 	first_class = _G[box:get_setting(3)]
-	baseline_duration = box:get_setting(4)
-	wait_for_cue_duration = box:get_setting(5)
+	setup_duration = box:get_setting(4) --ex_baseline_duration
+	baseline_rest_duration = box:get_setting(5) -- ex_wait_for_cue_duration
 	display_cue_duration = box:get_setting(6)
 	feedback_duration = box:get_setting(7)
 	end_of_trial_min_duration = box:get_setting(8)
 	end_of_trial_max_duration = box:get_setting(9)
 
+end
+
+local function random_float(min, max)
+	return math.random()*(max-min)
 end
 
 function process(box)
@@ -25,7 +29,7 @@ function process(box)
 
 	box:send_stimulation(1, OVTK_StimulationId_BaselineStart, t, 0)
 	box:send_stimulation(1, OVTK_StimulationId_Beep, t, 0)
-	t = t + baseline_duration
+	t = t + setup_duration
 
 	box:send_stimulation(1, OVTK_StimulationId_BaselineStop, t, 0)
 	box:send_stimulation(1, OVTK_StimulationId_Beep, t, 0)
@@ -39,11 +43,11 @@ function process(box)
 		box:send_stimulation(1, OVTK_GDF_Start_Of_Trial, t, 0)
 		box:send_stimulation(1, OVTK_GDF_Cross_On_Screen, t, 0)
 
-		t = t + wait_for_cue_duration
+		t = t + baseline_rest_duration
 		
 		-- add 1 s of delay before moving on to the actual trial
 		
-		t = t + 2
+		t = t + 1
 
 		-- display cue
 
@@ -59,7 +63,12 @@ function process(box)
 		-- ends trial
 		box:send_stimulation(1, OVTK_GDF_End_Of_Trial, t, 0)
 		
-		t = t + math.random(end_of_trial_min_duration, end_of_trial_max_duration)
+		print(t)
+		
+		-- t = t + math.random(end_of_trial_min_duration, end_of_trial_max_duration)
+		t = t + end_of_trial_min_duration + random_float(end_of_trial_min_duration, end_of_trial_max_duration)
+		
+		print(t)
 
 	end
 
