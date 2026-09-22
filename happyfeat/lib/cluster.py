@@ -25,18 +25,26 @@ def doClusteringFull(result, n_perm=5000, p_threshold=0.05, sfreq=500, fmin=0, f
 
     return tempRsquare, clusterMask
 
-def doClustering(result, n_perm=5000, p_threshold=0.05, sfreq=500, fmin=0, fmax=250, verbose=False):
+def doClustering(result, n_perm=5000, p_threshold=0.05, sfreq=500, fmin=0, fmax=250, electrodes_interest=None, tail=0, verbose=False):
 
     if len(result.power_cond1) > 0 and len(result.power_cond2) > 0:
         cond1_corr = np.nan_to_num(result.power_cond1[:, :, fmin:fmax])
         cond2_corr = np.nan_to_num(result.power_cond2[:, :, fmin:fmax])
-
-        T_obs, clusters, p_vals, info = cluster_perm_spatiofreq(
-            cond1=cond1_corr, cond2=cond2_corr,
-            eeg_ch_names=result.electrodes_final,
-            n_perm=n_perm, sfreq=sfreq, tail=0,
-            montageStr="standard_1020", verbose=verbose
-        )
+    if electrodes_interest:
+        ch_idx = np.array([result.electrodes_final.index(ch)
+                    for ch in electrodes_interest if ch in result.electrodes_final])
+        cond1_corr = cond1_corr[:,ch_idx,:]
+        cond2_corr = cond2_corr[:,ch_idx,:]
+        ch_name = electrodes_interest
+    else:
+        ch_name = result.electrodes_final
+    
+    T_obs, clusters, p_vals, info = cluster_perm_spatiofreq(
+        cond1=cond1_corr, cond2=cond2_corr,
+        eeg_ch_names=ch_name,
+        n_perm=n_perm, sfreq=sfreq, tail=tail,
+        montageStr="standard_1020", verbose=verbose
+    )
 
     return T_obs, p_vals, p_threshold, clusters
 
@@ -78,12 +86,14 @@ def cluster_perm_spatiofreq(cond1, cond2, eeg_ch_names, montageStr="standard_102
     T_obs, clusters, p_values, H0 = mne.stats.spatio_temporal_cluster_1samp_test(
         D,
         adjacency=adjacency,  # spatial only
-        max_step=1,  # adjacency across neighboring freqs ~ 1 bin
+        max_step=1,  # adjacency across neighboring freqs ~ 1 bin of 2hz
         n_permutations=n_perm,
-        n_jobs=4,
+        threshold=None,#  If threshold is a dict (with keys 'start' and 'step') then threshold-free cluster enhancement (TFCE) 
+        n_jobs=-1,
         tail=tail,
         out_type="mask",
-        verbose=verbose
+        verbose=verbose,
+        seed=13,
     )  ## -> check_disjoint=True if freq high
 
     # Remettre T_obs en (ch, freq)

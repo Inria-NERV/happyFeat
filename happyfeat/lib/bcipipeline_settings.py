@@ -35,7 +35,9 @@ templateScenFilenames = ["sc1-monitor-acq.xml",
                          "sc2-train-speedup-firststep.xml",
                          "sc2-train-speedup-finalize.xml",
                          "sc4-run-replay.xml",
-                         "mi-stimulations.lua"]
+                         "mi-stimulations.lua",
+                         "sc0_rsEEG.xml",                        
+                         "rsEEG.lua"]
 
 global templateScenFilenames_timeflux
 templateScenFilenames_timeflux = ["sc2_extract_one.yaml",
@@ -59,8 +61,8 @@ global pipelineAcqSettings
 pipelineAcqSettings = { "TrialNb": 18,
                         "Class1": "MI",  # OV : LEFT
                         "Class2": "REST",  # OV : RIGHT
-                        "Baseline": 7,
-                        "TrialWait": 3,
+                        "Baseline": 7, # Setup time
+                        "TrialWait": 3, # Rest period analysis
                         "TrialLength": 1,  # Not really trial length but reaction time...
                         "FeedbackLength": 3,  # Task / Feedback duraction
                         "EndTrialMin": 4,
@@ -149,7 +151,7 @@ paramIdText = {"TrialNb": "Nb Trials per class",
                "Class1": "Class / Stimulation 1",
                "Class2": "Class / Stimulation 2",
                "Baseline": "\"Get Set\" time (s)",
-               "TrialWait": "Pre-Stimulus time (s)",
+               "TrialWait": "Pre-Stimulus time (s)", # Rest perdiod analysis
                "TrialLength": "Reaction time (s)",
                "FeedbackLength": "Task / Feedback time (s)",
                "EndTrialMin": "Inter-trial interval min (s)",

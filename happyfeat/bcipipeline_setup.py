@@ -353,8 +353,8 @@ class Dialog(QDialog):
                                                          'FC1', 'Cz', 'CPz', 'C6', 'C4', 'C2', 'CP6', 'CP4',
                                                          'CP2', 'FC6', 'FC4', 'FC2']
             self.parameterDict["autoFeatFreqRange"] = "8:31"
-            self.parameterDict["autoFeatNb"] = 3
-            self.parameterDict["combiTrainingRange"] = "1:3"
+            self.parameterDict["autoFeatNb"] = 5
+            self.parameterDict["combiTrainingRange"] = "1:5"
 
 
             # Acquisition parameters, set in this GUI...
@@ -459,8 +459,8 @@ class Dialog(QDialog):
                                                   'FC1', 'Cz', 'CPz', 'FCz', 'C6', 'C4', 'C2', 'CP6', 'CP4',
                                                   'CP2', 'FC6', 'FC4', 'FC2']
         self.parameterDict["autoFeatFreqRange"] = "8:31"
-        self.parameterDict["autoFeatNb"] = 3
-        self.parameterDict["combiTrainingRange"] = "1:3"
+        self.parameterDict["autoFeatNb"] = 5
+        self.parameterDict["combiTrainingRange"] = "1:5"
 
         # Acquisition parameters, set in this GUI...
         self.parameterDict["AcquisitionParams"] = {}

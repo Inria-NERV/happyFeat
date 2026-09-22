@@ -89,6 +89,8 @@ class Features:
 
     clustering_fmin_idx = []
     clustering_fmax_idx = []
+    
+    cluster_ch_idx = []
 
 
 class Dialog(QDialog):
@@ -145,11 +147,11 @@ class Dialog(QDialog):
         # default parameters for automatic selection
         self.autoFeatChannelList = []
         self.autoFeatFreqRange = ""
-        self.autoFeatNb = 3  # default
-        self.combiTrainingRange = "1:3"  # default
+        self.autoFeatNb = 5  # default
+        self.combiTrainingRange = "1:5"  # default
         self.permNb = 5000  # default
         self.clusterThresh = 0.05  # default
-        self.clusterFmax = None
+        self.clusterFmax = 40 # default
 
         # Work Threads & Progress bars
         self.acquisitionThread = None
@@ -243,13 +245,13 @@ class Dialog(QDialog):
                 setKeyValue(self.workspaceFile, "autoFeatChannelList", [])
                 myMsgBox(str("Warning: missing key \"autoFeatChannelList\" in " + workspaceFile + ". Adding (empty) default entry in the .hfw file"))
             if not self.autoFeatNb:
-                self.autoFeatNb = 3
-                setKeyValue(self.workspaceFile, "autoFeatNb", 3)
-                myMsgBox(str("Warning: missing key \"autoFeatNb\" in " + workspaceFile + ". Adding default entry (3) in the .hfw file"))
+                self.autoFeatNb = 5
+                setKeyValue(self.workspaceFile, "autoFeatNb", 5)
+                myMsgBox(str("Warning: missing key \"autoFeatNb\" in " + workspaceFile + ". Adding default entry (5) in the .hfw file"))
             if not self.combiTrainingRange:
-                self.combiTrainingRange = "1:3"
-                setKeyValue(self.workspaceFile, "combiTrainingRange", "1:3")
-                myMsgBox(str("Warning: missing key \"combiTrainingRange\" in " + workspaceFile + ". Adding default entry (1:3) in the .hfw file"))
+                self.combiTrainingRange = "1:5"
+                setKeyValue(self.workspaceFile, "combiTrainingRange", "1:5")
+                myMsgBox(str("Warning: missing key \"combiTrainingRange\" in " + workspaceFile + ". Adding default entry (1:5) in the .hfw file"))
 
         self.class1Label = self.parameterDict["AcquisitionParams"]["Class1"]
         self.class2Label = self.parameterDict["AcquisitionParams"]["Class2"]
@@ -2895,6 +2897,20 @@ class Dialog(QDialog):
                         if result.clustering_p_vals[idxclu] < result.clustering_p_thresh:
                             processClustering = True
                             break
+                        
+                    #  Mapping electrodes_final -> espace cluster
+                    clustering_ch_idx  = getattr(result, 'clustering_ch_idx', None)
+                    if clustering_ch_idx  is not None:
+                        chanidx_full_to_clu = {}
+                        for i, chanidx_full in enumerate(clustering_ch_idx):
+                            chanidx_full_to_clu[chanidx_full] = i                    
+                    else:
+                        chanidx_full_to_clu  = None  # cluster indexé sur electrodes_final
+
+                    # offset fmin
+                    clu_fmin = getattr(result, 'clustering_fmin_idx', 0)
+                    clu_fmax = getattr(result, 'clustering_fmax_idx', None)
+
 
                     if not processClustering:
                         print("No cluster with p<" + str(result.clustering_p_thresh) + ". Falling back on regular R2 map for Feature autoselect")
@@ -2907,13 +2923,29 @@ class Dialog(QDialog):
                             idxMaxValue = idxFreqmin + np.argmax(r2Vals)  # for current channel, the idx of max R2 (in terms of frequency)
                             print("    Max R2: " + str(max(r2Vals)) + " at idx " + str(idxMaxValue) + " (" + str(int(freqsArray[idxMaxValue])) + ")")
                             
+                            # Convert chan idx from full R2 map space to clustering ROI space
+                            chanidx_full  = result.autoselect_chanidx[idx]
+                            if chanidx_full_to_clu is not None:
+                                if chanidx_full  not in chanidx_full_to_clu:
+                                    # canal hors ROI clustering => pas de cluster possible pour lui
+                                    print("       Chan not in clustering ROI, skipping cluster check")
+                                    continue
+                                chanidx_clu = chanidx_full_to_clu[chanidx_full]
+                            else:
+                                chanidx_clu = chanidx_full 
+
+                            if idxMaxValue < clu_fmin or (clu_fmax is not None and idxMaxValue >= clu_fmax):
+                                print("       Freq not in clustering range, skipping cluster check")
+                                continue
+                            freqidx_clu = idxMaxValue - clu_fmin
+
                             # parse list of clusters to see if we can find one where (chanidx, freqidx) is at True
                             foundCluster = False
 
                             for idxclu, clu in enumerate(result.clusters):
                                 # cluster needs to be significant!
                                 if result.clustering_p_vals[idxclu] < result.clustering_p_thresh:
-                                    if clu[result.autoselect_chanidx[idx], idxMaxValue]:
+                                    if clu[chanidx_clu , freqidx_clu]:
                                         # Found!
                                         result.autoselected_cluster_pval.append(result.clustering_p_vals[idxclu])
                                         foundCluster = True
@@ -3106,7 +3138,7 @@ class Dialog(QDialog):
         # Set the number of features (channel/freq pairs) automatically selected
         # ----------
         text, ok = QInputDialog.getText(self, 'Number of features picked by auto-selection',
-                                        'Enter one number (no value = 3 by default)',
+                                        'Enter one number (no value = 5 by default)',
                                         text=str(self.autoFeatNb))
         if ok:
             # Check if it's all alphanumeric
@@ -3116,7 +3148,7 @@ class Dialog(QDialog):
                     return
 
             if text == "":
-                self.autoFeatNb = 3
+                self.autoFeatNb = 5
                 return
 
             if int(text) > 5:
@@ -3231,8 +3263,8 @@ class Dialog(QDialog):
                         return
 
             if text == "":
-                self.combiTrainingRange = "1:3"
-                myMsgBox("No values entered. Using default value [1:3]")
+                self.combiTrainingRange = "1:5"
+                myMsgBox("No values entered. Using default value [1:5]")
                 return
 
             range = text.split(":")

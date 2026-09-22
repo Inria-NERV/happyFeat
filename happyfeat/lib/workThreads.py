@@ -200,6 +200,8 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         self.permNb = permNb
         self.clusterThresh = clusterThresh
         self.clusterFmax = clusterFmax
+        self.clusterFmin = 8 #clusterFmin
+        self.motorChannelList = parameterDict["autoFeatChannelList"]
 
         self.dataNp1 = []
         self.dataNp2 = []
@@ -493,17 +495,28 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
         # clustering
         if self.clustering:
             if len(self.Features.Rsquare) > 0:
-                fmin = 0
+                fmin = self.clusterFmin
+                electrode_motor = self.motorChannelList
                 if self.clusterFmax:
+                    fmin = int(fmin/self.Features.fres)
                     fmax = int(self.clusterFmax/self.Features.fres)
                 else:
+                    fmin = int(fmin/self.Features.fres)
                     fmax = int(self.Features.samplingFreq / (2 * self.Features.fres))
                 print("Processing clustering with parameters:")
                 print("   permutation number:" + str(self.permNb))
                 print("   threshold:" + str(self.clusterThresh))
                 print("   fmax index:" + str(fmax))
+                print("   fmin index:" + str(fmin))
+                print("   Electrodes for clustering:" + str(electrode_motor))
+
+
+
                 T_obs, p_vals, p_thresh, clusters = doClustering(self.Features, self.permNb, self.clusterThresh,
-                                                                    self.Features.samplingFreq, fmin, fmax, verbose=True)
+                                                                    self.Features.samplingFreq, fmin, fmax, electrode_motor, tail=0, verbose=True) #☺ tail -1 for next patients
+
+                ch_idx = np.array([electrodes_final.index(ch)
+                    for ch in electrode_motor if ch in electrodes_final])
 
                 self.Features.clustering_t_obs = T_obs
                 self.Features.clustering_p_vals = p_vals
@@ -515,11 +528,13 @@ class LoadFilesForVizPowSpectrum(QtCore.QThread):
 
                 print("clusterMask size " + str(np.shape(clusterMask)))
                 self.Features.clustermask = np.zeros_like(self.Features.Rsquare, dtype=bool)
-                self.Features.clustermask[:, fmin:fmax] = clusterMask.copy()
+                self.Features.clustermask[np.ix_(ch_idx, np.arange(fmin,fmax))] = clusterMask.copy()
+
+                #self.Features.clustermask[:, fmin:fmax] = clusterMask.copy()
 
                 self.Features.clustering_fmin_idx = fmin
                 self.Features.clustering_fmax_idx = fmax
-
+                self.Features.clustering_ch_idx = ch_idx
 
         self.stop = True
 
@@ -564,6 +579,9 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         self.permNb = permNb
         self.clusterThresh = clusterThresh
         self.clusterFmax = clusterFmax
+        self.clusterFmin = 8 ### hardcoded
+        self.motorChannelList = parameterDict["autoFeatChannelList"]
+
 
         self.dataNp1 = []
         self.dataNp2 = []
@@ -820,33 +838,47 @@ class LoadFilesForVizConnectivity(QtCore.QThread):
         # clustering
         if self.clustering:
             if len(self.Features.Rsquare) > 0:
-                fmin = 0
+                fmin = self.clusterFmin 
+                electrode_motor = self.motorChannelList 
+
                 if self.clusterFmax:
-                    fmax = int(self.clusterFmax / self.Features.fres)
+                    fmin = int(fmin/self.Features.fres)
+                    fmax = int(self.clusterFmax/self.Features.fres)
                 else:
+                    fmin = int(fmin/self.Features.fres)
                     fmax = int(self.Features.samplingFreq / (2 * self.Features.fres))
                 print("Processing clustering with parameters:")
                 print("   permutation number:" + str(self.permNb))
                 print("   threshold:" + str(self.clusterThresh))
                 print("   fmax index:" + str(fmax))
+                print("   fmin index:" + str(fmin))
+                print("   Electrodes for clustering:" + str(electrode_motor))
+
+
+
                 T_obs, p_vals, p_thresh, clusters = doClustering(self.Features, self.permNb, self.clusterThresh,
-                                                                    self.Features.samplingFreq, fmin, fmax, verbose=True)
+                                                                    self.Features.samplingFreq, fmin, fmax, electrode_motor, tail=0, verbose=True)
+
+                ch_idx = np.array([electrodes_final.index(ch)
+                    for ch in electrode_motor if ch in electrodes_final])
 
                 self.Features.clustering_t_obs = T_obs
                 self.Features.clustering_p_vals = p_vals
                 self.Features.clustering_p_thresh = p_thresh
                 self.Features.clusters = clusters
-                print("         ==found " +str(len(clusters)) + " clusters")
 
                 # compute filter map from given parameters
                 clusterMask = filter_map(T_obs, p_vals, p_thresh, clusters)
 
                 print("clusterMask size " + str(np.shape(clusterMask)))
                 self.Features.clustermask = np.zeros_like(self.Features.Rsquare, dtype=bool)
-                self.Features.clustermask[:, fmin:fmax] = clusterMask
+                self.Features.clustermask[np.ix_(ch_idx, np.arange(fmin,fmax))] = clusterMask.copy()
+
+                #self.Features.clustermask[:, fmin:fmax] = clusterMask.copy()
 
                 self.Features.clustering_fmin_idx = fmin
                 self.Features.clustering_fmax_idx = fmax
+                self.Features.clustering_ch_idx = ch_idx
 
 
         self.stop = True
